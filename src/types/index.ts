@@ -44,6 +44,7 @@ export interface AppData {
 export interface Recurring {
   id: string; user_id: string; account_id: string
   name: string; amount: string | number; date_label: string
+  icon?: string
 }
 
 export interface DetectedRecurring {
