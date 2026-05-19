@@ -1,16 +1,28 @@
 import type { Account, Transaction } from '../types'
 
+function localDateStr(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+/**
+ * Reconstruct daily end-of-day balance history for an account.
+ *
+ * Precondition: `account.bal` must be the current end-of-day balance
+ * (i.e., after all transactions that have occurred today).
+ */
 export function buildBalanceHistory(
   account: Account,
   allTxs: Transaction[],
   days: number
 ): { date: string; bal: number }[] {
   const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const todayStr = today.toISOString().slice(0, 10)
+  const todayStr = localDateStr(today)
   const cutoff = new Date(today)
   cutoff.setDate(cutoff.getDate() - days)
-  const cutoffStr = cutoff.toISOString().slice(0, 10)
+  const cutoffStr = localDateStr(cutoff)
 
   // Filter to this account and this date range
   const accountTxs = allTxs.filter(tx =>
@@ -28,24 +40,23 @@ export function buildBalanceHistory(
   // Generate all calendar days in range (cutoff → today inclusive)
   const dates: string[] = []
   const cursor = new Date(cutoff)
-  while (cursor <= today) {
-    dates.push(cursor.toISOString().slice(0, 10))
+  while (cursor.getTime() <= today.getTime()) {
+    dates.push(localDateStr(cursor))
     cursor.setDate(cursor.getDate() + 1)
   }
 
   // Walk backwards: end-of-day balance for each date
-  // Start from today's current balance (account.bal = balance after all txs today)
   const result: { date: string; bal: number }[] = []
   let bal = account.bal
   for (let i = dates.length - 1; i >= 0; i--) {
     const date = dates[i]
     result.unshift({ date, bal: parseFloat(bal.toFixed(2)) })
-    // Undo this day's net change to get balance at start of day (= end of previous day)
     bal -= (netByDate[date] || 0)
   }
 
   // Downsample to max 60 points for large ranges
-  if (result.length <= 60) return result
-  const step = Math.ceil(result.length / 60)
+  const MAX_CHART_POINTS = 60
+  if (result.length <= MAX_CHART_POINTS) return result
+  const step = Math.ceil(result.length / MAX_CHART_POINTS)
   return result.filter((_, i) => i % step === 0 || i === result.length - 1)
 }
