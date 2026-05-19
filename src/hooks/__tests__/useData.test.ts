@@ -153,6 +153,29 @@ describe('useData — addTx', () => {
 
     expect(err).toBeNull()
   })
+
+  it('inserts transaction with negative amount (negated)', async () => {
+    let insertedAmount: number | null = null
+    server.use(
+      http.post(`${R}/transactions`, async ({ request }) => {
+        const body = await request.json() as any
+        insertedAmount = body.amount
+        return HttpResponse.json([], { status: 201 })
+      }),
+    )
+
+    const { result } = renderHook(() => useData(TEST_UID))
+    await waitFor(() => expect(result.current.data).not.toBeNull(), { timeout: 5000 })
+
+    await act(async () => {
+      await result.current.addTx({
+        merchant: 'Carrefour', category: 'Courses',
+        amount: 45, account_id: 'acc-1',
+      })
+    })
+
+    expect(insertedAmount).toBe(-45)
+  })
 })
 
 describe('useData — deleteTx', () => {
@@ -176,6 +199,26 @@ describe('useData — deleteTx', () => {
     })
 
     expect(patchedBalance).toBe(1045.5)
+  })
+
+  it('calls DELETE on the transaction', async () => {
+    let deletedId: string | null = null
+    server.use(
+      http.delete(`${R}/transactions`, ({ request }) => {
+        const url = new URL(request.url)
+        deletedId = url.searchParams.get('id')?.replace('eq.', '') ?? null
+        return HttpResponse.json([], { status: 200 })
+      }),
+    )
+
+    const { result } = renderHook(() => useData(TEST_UID))
+    await waitFor(() => expect(result.current.data).not.toBeNull(), { timeout: 5000 })
+
+    await act(async () => {
+      await result.current.deleteTx('tx-1')
+    })
+
+    expect(deletedId).toBe('tx-1')
   })
 })
 
