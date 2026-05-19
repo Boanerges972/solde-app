@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { sp } from '../lib/theme'
 import { fmt, fmtS } from '../lib/currency'
+import { buildBalanceHistory } from '../lib/buildBalanceHistory'
+import { BalanceCurve } from '../components/BalanceCurve'
 import type { Theme, AppData, Transaction } from '../types'
 
 interface Props {
@@ -113,6 +115,8 @@ const DonutCats = ({ cats, total, sz = 180, sw = 20, t }: { cats: { total: numbe
 export const Analyse = ({ D, t, allTxs, allHistory }: Props) => {
   const [analyseMode, setAnalyseMode] = useState('perso')
   const [view, setView] = useState('apercu')
+  const [evoPeriod, setEvoPeriod] = useState<7 | 30 | 90>(30)
+  const [evoAccId, setEvoAccId] = useState<string>(() => D.accounts[0]?.id ?? '')
 
   // ── Filtrage Pro/Perso (doit être en premier) ────────────────
   const proAccIds_a = new Set((D.proAccs || []).map(a => a.id))
@@ -209,7 +213,7 @@ export const Analyse = ({ D, t, allTxs, allHistory }: Props) => {
   const rem = D.budget - D.spent
 
   const tabItems: [string, string][] = [
-    ['apercu', 'Aperçu'], ['semaines', 'Semaines'], ['abonnements', 'Abonnements'], ['previsions', 'Prévisions']
+    ['apercu', 'Aperçu'], ['evolution', 'Évolution'], ['abonnements', 'Abonnements'], ['previsions', 'Prévisions']
   ]
 
   return (
@@ -360,83 +364,79 @@ export const Analyse = ({ D, t, allTxs, allHistory }: Props) => {
           </div>
         )}
 
-        {/* ════════ SEMAINES ════════ */}
-        {view === 'semaines' && (
-          <div>
-            <div style={{ background: t.card, borderRadius: 20, border: '1px solid ' + t.bo, padding: '20px', marginBottom: 12 }}>
-              <div style={{ fontSize: 11, ...sp('s', 600), color: t.sub, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 16 }}>8 dernières semaines</div>
-              {weeks.length > 0 ? (
-                <>
-                  <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', height: 120, marginBottom: 10 }}>
-                    {weeks.map((w, i) => {
-                      const h = Math.max(4, Math.round((w.total / maxWeekAmt) * 110))
-                      const isCur = w.wk === D.week
-                      const isOver = w.total > D.budget
-                      const col = isOver ? t.rose : isCur ? t.mint : '#4D96FF'
-                      return (
-                        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, height: 120, justifyContent: 'flex-end' }}>
-                          {w.total > 0 && <div style={{ fontSize: 8, ...sp('m'), color: isCur ? t.mint : isOver ? t.rose : t.sub, marginBottom: 1, textAlign: 'center' }}>
-                            {w.total >= 1000 ? (w.total / 1000).toFixed(1) + 'k' : Math.round(w.total)}
-                          </div>}
-                          <div style={{
-                            width: '100%', borderRadius: '4px 4px 0 0', background: isCur ? t.mint : isOver ? t.rose : col + '99',
-                            height: h, transition: 'height .6s ease', minHeight: 4,
-                            boxShadow: isCur ? '0 0 8px ' + t.mint + '66' : 'none'
-                          }} />
-                          <div style={{ fontSize: 9, ...sp('o', isCur ? 700 : 400), color: isCur ? t.mint : t.sub, textAlign: 'center' }}>{w.label}</div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                  {/* Légende */}
-                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 4 }}>
-                    {[
-                      { col: t.mint, label: 'Semaine en cours' },
-                      { col: t.rose, label: 'Budget dépassé' },
-                      { col: '#4D96FF99', label: 'Semaine passée' },
-                    ].map((l, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <div style={{ width: 10, height: 10, borderRadius: 2, background: l.col }} />
-                        <span style={{ fontSize: 10, ...sp('o'), color: t.muted }}>{l.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div style={{ padding: '32px', textAlign: 'center', ...sp('o'), fontSize: 13, color: t.muted }}>
-                  Pas encore de données — importez vos relevés
-                </div>
-              )}
+        {/* ════════ ÉVOLUTION ════════ */}
+        {view === 'evolution' && (() => {
+          const evoAcc = D.accounts.find(a => a.id === evoAccId) ?? D.accounts[0]
+          if (!evoAcc) return (
+            <div style={{ padding: 32, textAlign: 'center', fontSize: 13, color: t.muted }}>
+              Aucun compte — ajoutez un compte d'abord
             </div>
-
-            {/* Détail semaines */}
-            {[...weeks].reverse().slice(0, 5).map((w, i) => (
-              <div key={i} style={{
-                padding: '14px 16px', background: t.card, borderRadius: 16, marginBottom: 8,
-                border: '1px solid ' + (w.wk === D.week ? t.mint + '55' : t.bo)
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: 2, background: w.wk === D.week ? t.mint : w.total > D.budget ? t.rose : '#4D96FF' }} />
-                    <span style={{ fontSize: 14, ...sp('s', 600), color: w.wk === D.week ? t.mint : t.tx }}>Semaine {w.wk}</span>
-                    {w.wk === D.week && <span style={{ fontSize: 10, ...sp('o'), color: t.mint, background: t.mD, padding: '2px 7px', borderRadius: 6 }}>En cours</span>}
-                  </div>
-                  <span style={{ fontSize: 16, ...sp('m', 600), color: w.total > D.budget ? t.rose : t.tx }}>{fmt(w.total, 0)}</span>
-                </div>
-                <div style={{ height: 5, background: t.el, borderRadius: 3, overflow: 'hidden', marginBottom: 6 }}>
-                  <div style={{
-                    width: Math.min(w.total / D.budget * 100, 100) + '%', height: '100%',
-                    background: w.total > D.budget ? t.rose : w.wk === D.week ? t.mint : '#4D96FF', borderRadius: 3, transition: 'width .6s ease'
-                  }} />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 11, ...sp('o'), color: t.sub }}>{w.txs.length} transaction{w.txs.length > 1 ? 's' : ''}</span>
-                  <span style={{ fontSize: 11, ...sp('o'), color: w.total > D.budget ? t.rose : t.sub }}>{Math.round(w.total / D.budget * 100)}% du budget</span>
+          )
+          const evoPoints = buildBalanceHistory(evoAcc, allTxs, evoPeriod)
+          const evoDelta = evoPoints.length >= 2 ? evoAcc.bal - evoPoints[0].bal : 0
+          const deltaColor = evoDelta >= 0 ? t.mint : t.rose
+          const deltaArrow = evoDelta >= 0 ? '↑' : '↓'
+          const periodDays: { label: string; value: 7 | 30 | 90 }[] = [
+            { label: '7j', value: 7 },
+            { label: '1m', value: 30 },
+            { label: '3m', value: 90 },
+          ]
+          return (
+            <div style={{ background: t.card, borderRadius: 20, border: '1px solid ' + t.bo, padding: '20px', marginBottom: 12 }}>
+              {/* Controls row */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                {/* Account dropdown */}
+                <select
+                  value={evoAccId}
+                  onChange={e => setEvoAccId(e.target.value)}
+                  style={{
+                    background: t.el, border: '1px solid ' + t.bo, color: t.tx,
+                    borderRadius: 10, padding: '6px 10px', fontSize: 13,
+                    ...sp('o', 500), cursor: 'pointer', outline: 'none', maxWidth: 160,
+                  }}
+                >
+                  {D.accounts.map(a => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
+                </select>
+                {/* Period pills */}
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {periodDays.map(({ label, value }) => (
+                    <button
+                      key={value}
+                      onClick={() => setEvoPeriod(value)}
+                      style={{
+                        padding: '5px 10px', borderRadius: 8, border: '1px solid',
+                        cursor: 'pointer', fontSize: 12, ...sp('o', 600),
+                        background: evoPeriod === value ? t.mD : t.el,
+                        color: evoPeriod === value ? t.mint : t.sub,
+                        borderColor: evoPeriod === value ? t.mint + '44' : t.bo,
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
                 </div>
               </div>
-            ))}
-          </div>
-        )}
+
+              {/* KPI row */}
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 16 }}>
+                <span style={{ fontSize: 22, ...sp('m', 600), color: t.tx }}>{fmtS(evoAcc.bal)}</span>
+                <span style={{ fontSize: 13, ...sp('o', 500), color: deltaColor }}>
+                  {deltaArrow} {evoDelta >= 0 ? '+' : ''}{fmtS(evoDelta)} sur la période
+                </span>
+              </div>
+
+              {/* Curve */}
+              <BalanceCurve
+                points={evoPoints}
+                color={evoAcc.col || t.mint}
+                t={t}
+                height={160}
+              />
+            </div>
+          )
+        })()}
 
         {/* ════════ ABONNEMENTS ════════ */}
         {view === 'abonnements' && (
