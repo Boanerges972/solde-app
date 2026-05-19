@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useId } from 'react'
 import { fmt } from '../lib/currency'
 import type { Theme } from '../types'
 
@@ -14,6 +14,7 @@ const W = 303 // 375 - 2×16 page padding - 2×20 card padding
 
 export const BalanceCurve = ({ points, color, t, height = 160 }: BalanceCurveProps) => {
   const [touchIdx, setTouchIdx] = useState<number | null>(null)
+  const uid = useId()
 
   if (points.length < 2) {
     return (
@@ -67,7 +68,7 @@ export const BalanceCurve = ({ points, color, t, height = 160 }: BalanceCurvePro
     setTouchIdx(bestIdx)
   }
 
-  const gradId = `bcGrad-${color.replace('#', '')}`
+  const gradId = `bcGrad-${uid.replace(/:/g, '')}-${color.replace('#', '')}`
   const touchPt = touchIdx !== null ? points[touchIdx] : null
 
   return (
