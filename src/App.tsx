@@ -28,6 +28,7 @@ import { ImportNickel } from './screens/modals/ImportNickel'
 import { ImportCSV } from './screens/modals/ImportCSV'
 import { BankPicker } from './screens/modals/BankPicker'
 import { ProfileScreen } from './screens/modals/ProfileScreen'
+import { DepositModal } from './screens/modals/DepositModal'
 import type { Profile } from './types'
 import type { Session } from '@supabase/supabase-js'
 
@@ -53,6 +54,7 @@ export default function App() {
   const [showReset, setShowReset] = useState(false);
   const [showTransfer, setShowTransfer] = useState(false);
   const [showRecurring, setShowRecurring] = useState(false);
+  const [depositAccount, setDepositAccount] = useState<import('./types').Account | null>(null);
   const [locked, setLocked] = useState(() => localStorage.getItem('qdq-pin-enabled') === '1');
   const [profile, setProfile] = useState<Profile>(() => {
     try { return JSON.parse(localStorage.getItem('qdq-profile') || '{}') } catch { return {} }
@@ -131,7 +133,7 @@ export default function App() {
     }
   }, []);
 
-  const { data, loading, error, reload: reloadData, addTx, deleteTx, addTransfer } = useData(session ? session.user.id : null);
+  const { data, loading, error, reload: reloadData, addTx, deleteTx, addTransfer, addDeposit } = useData(session ? session.user.id : null);
   const { recurrings, allHistory, reload: reloadRec, addRecurring, deleteRecurring, updateRecurring } = useRecurring(session ? session.user.id : null);
   const reload = () => { setAlertDismissed(false); reloadData(); };
   const { group, members, reload: reloadGroup, createGroup, joinGroup, leaveGroup } = useGroup(session ? session.user.id : null);
@@ -169,7 +171,7 @@ export default function App() {
         <Home D={data} t={t} onAcc={() => setTab('comptes')} onAdd={() => setShowEntry(true)} onEditBudget={() => setEditBudget(true)} onDelete={deleteTx} rtConnected={rtConnected} profile={profile} onSearch={() => setShowSearch(true)} recurrings={recurrings || []} onManageRecurring={() => setShowRecurring(true)} onTransfer={() => setShowTransfer(true)} />
       </div>
     );
-    if (tab === 'comptes') return <Comptes D={data} t={t} onEdit={(a: unknown) => setEditAccount(a)} onNew={() => setEditAccount('new')} onImport={(bank: string) => { if (bank === 'pick') { setShowBankPicker(true); } else { setImportBank(bank); setShowImport(true); } }} />;
+    if (tab === 'comptes') return <Comptes D={data} t={t} onEdit={(a: unknown) => setEditAccount(a)} onNew={() => setEditAccount('new')} onImport={(bank: string) => { if (bank === 'pick') { setShowBankPicker(true); } else { setImportBank(bank); setShowImport(true); } }} onDeposit={(a) => setDepositAccount(a)} />;
     if (tab === 'groupe') return <Groupe t={t} uid={session.user.id} group={group} members={members} createGroup={createGroup} joinGroup={joinGroup} leaveGroup={leaveGroup} txs={data.txs} />;
     if (tab === 'reglages') return <Settings t={t} dark={dark} toggle={() => setDark(d => !d)} user={session.user} onLogout={logout} profile={profile} onProfile={() => setShowProfile(true)} onSecurity={() => setShowPinSetup(true)} onRecurring={() => setShowRecurring(true)} onReset={() => setShowReset(true)} />;
     if (tab === 'analyse') return <Analyse D={data} t={t} allTxs={data.txs} allHistory={allHistory || []} />;
@@ -201,6 +203,7 @@ export default function App() {
       {showImport && data && importBank === 'nickel' && <ImportNickel t={t} uid={session.user.id} accounts={data.accounts} onClose={() => setShowImport(false)} onImported={reload} />}
       {showImport && data && (importBank === 'cm' || importBank === 'qonto') && <ImportCSV t={t} uid={session.user.id} accounts={data.accounts} bank={importBank} onClose={() => setShowImport(false)} onImported={reload} />}
       {editAccount && data && <EditAccount account={editAccount === 'new' ? null : editAccount as import('./types').Account} isNew={editAccount === 'new'} t={t} uid={session.user.id} onClose={() => setEditAccount(null)} onSaved={reload} />}
+      {depositAccount && <DepositModal account={depositAccount} t={t} onClose={() => setDepositAccount(null)} onSave={addDeposit} />}
     </div>
   );
 }

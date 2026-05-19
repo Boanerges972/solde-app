@@ -154,9 +154,19 @@ export function useData(uid: string | null) {
   }, [uid, data, load])
 
   const deleteTx = useCallback(async (txId: string) => {
+    const tx = data?.txs?.find(t => t.id === txId)
     await db.from('transactions').delete().eq('id', txId)
+    if (tx && data?.accounts) {
+      const acc = data.accounts.find(a => a.id === tx.account_id)
+      if (acc) {
+        // tx.amt est négatif pour les dépenses → soustraire l'inverse restaure le solde
+        const newBal = parseFloat((acc.bal - tx.amt).toFixed(2))
+        await db.from('accounts').update({ balance: newBal, free: newBal })
+          .eq('id', acc.id).eq('user_id', uid)
+      }
+    }
     await load()
-  }, [uid, load])
+  }, [uid, data, load])
 
   // ── Virement interne ────────────────────────────────────────
   // Insère 2 transactions liées (catégorie="Virement interne")
@@ -215,5 +225,28 @@ export function useData(uid: string | null) {
     }
   }, [uid, data, load])
 
-  return { data, loading, error, reload: load, addTx, deleteTx, addTransfer }
+  const addDeposit = useCallback(async (payload: {
+    merchant: string; category: string; icon?: string
+    amount: number | string; account_id: string
+  }) => {
+    const n = Math.abs(parseFloat(String(payload.amount)))
+    const { error: e } = await db.from('transactions').insert({
+      user_id: uid, merchant: payload.merchant, category: payload.category,
+      icon: payload.icon || '💰', amount: n,
+      account_id: payload.account_id,
+      tx_date: new Date().toISOString().slice(0, 10),
+    })
+    if (!e) {
+      const acc = data?.accounts?.find(a => a.id === payload.account_id)
+      if (acc) {
+        const newBal = parseFloat((acc.bal + n).toFixed(2))
+        await db.from('accounts').update({ balance: newBal, free: newBal })
+          .eq('id', acc.id).eq('user_id', uid)
+      }
+      await load()
+    }
+    return e
+  }, [uid, data, load])
+
+  return { data, loading, error, reload: load, addTx, deleteTx, addTransfer, addDeposit }
 }
