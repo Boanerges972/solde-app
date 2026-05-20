@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { db } from '../lib/supabase'
+import { saveAccounts, saveTransactions, loadAccounts, loadTransactions, enqueue } from '../lib/idb'
+import { applyOptimisticTx } from './useOfflineSync'
 import type { AppData, Transaction, Account } from '../types'
 
 export function useData(uid: string | null) {
@@ -80,6 +82,8 @@ export function useData(uid: string | null) {
       const proMonthSpent = proMonthTxs.filter((tx: any) => parseFloat(tx.amount) < 0).reduce((s: number, tx: any) => s + Math.abs(parseFloat(tx.amount)), 0)
       const proMonthIncome = proMonthTxs.filter((tx: any) => parseFloat(tx.amount) > 0).reduce((s: number, tx: any) => s + parseFloat(tx.amount), 0)
 
+      saveAccounts(accs)        // fire-and-forget — persist to IDB for offline use
+      saveTransactions(txs)     // fire-and-forget — persist to IDB for offline use
       setData({
         user: bud.user_name || 'Utilisateur', week: wk, budget, spent, rem: budget - spent,
         accounts: accs, txs, cats, wk,
@@ -91,7 +95,40 @@ export function useData(uid: string | null) {
         monthLabel: now.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }),
       })
       setError(null)
-    } catch (e: any) { setError(e.message || 'Erreur') }
+    } catch (e: any) {
+      if (!navigator.onLine) {
+        // Offline fallback: serve cached data from IndexedDB
+        try {
+          const cachedAccs = await loadAccounts()
+          const cachedTxs = await loadTransactions()
+          if (cachedAccs.length > 0) {
+            const now = new Date()
+            const wkFb = Math.ceil((Number(now) - Number(new Date(now.getFullYear(), 0, 1))) / 604800000)
+            setData({
+              user: 'Utilisateur', week: wkFb, wk: wkFb,
+              budget: 400, spent: 0, rem: 400,
+              accounts: cachedAccs, txs: cachedTxs, cats: [],
+              persoAccs: cachedAccs.filter(a => !a.isPro),
+              proAccs: cachedAccs.filter(a => a.isPro),
+              persoTxs: cachedTxs.filter(tx => !tx.isPro),
+              proTxs: cachedTxs.filter(tx => tx.isPro),
+              persoBal: cachedAccs.filter(a => !a.isPro).reduce((s, a) => s + a.bal, 0),
+              proBal: cachedAccs.filter(a => a.isPro).reduce((s, a) => s + a.bal, 0),
+              proMonthSpent: 0, proMonthIncome: 0, proNet: 0,
+              monthBudget: 400, monthSpent: 0, monthIncome: 0, monthRem: 400,
+              monthLabel: now.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }),
+            })
+            setError(null)
+          } else {
+            setError('Pas de données — reconnectez-vous une fois')
+          }
+        } catch {
+          setError('Pas de données — reconnectez-vous une fois')
+        }
+      } else {
+        setError(e.message || 'Erreur')
+      }
+    }
     setLoading(false)
   }, [uid])
 
@@ -115,6 +152,51 @@ export function useData(uid: string | null) {
     amount: number | string; account_id: string
     group_id?: string | null; paid_by?: string | null
   }) => {
+    // ── Offline path ──────────────────────────────────────────
+    if (!navigator.onLine) {
+      const today = new Date().toISOString().slice(0, 10)
+      const offlineN = Math.abs(parseFloat(String(payload.amount)))
+      const pendingId = await enqueue({
+        action: 'addTx',
+        payload: {
+          uid: uid!,
+          merchant: payload.merchant,
+          category: payload.category,
+          icon: payload.icon,
+          amount: offlineN,
+          account_id: payload.account_id,
+          tx_date: today,
+          group_id: payload.group_id || null,
+          paid_by: payload.paid_by || null,
+        },
+        timestamp: Date.now(),
+        retries: 0,
+      })
+      const fakeTx: Transaction = {
+        id: `pending-${pendingId}`,
+        merchant: payload.merchant,
+        category: payload.category,
+        icon: payload.icon || '💳',
+        amount: -offlineN,
+        tx_date: today,
+        account_id: payload.account_id,
+        group_id: payload.group_id || null,
+        paid_by: payload.paid_by || null,
+        acc: payload.account_id,
+        dt: 'today',
+        m: payload.merchant,
+        cat: payload.category,
+        ico: payload.icon || '💳',
+        amt: -offlineN,
+        isTransfer: false,
+        isPro: false,
+        isProPerso: false,
+        pending: true,
+      }
+      setData(prev => applyOptimisticTx(prev, fakeTx))
+      return null
+    }
+    // ── Online path (existing code below) ─────────────────────
     const n = Math.abs(parseFloat(String(payload.amount)))
     const wk = Math.ceil((Number(new Date()) - Number(new Date(new Date().getFullYear(), 0, 1))) / 604800000)
     const { error: e } = await db.from('transactions').insert({
