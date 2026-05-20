@@ -100,6 +100,7 @@ export function useOfflineSync(
 
   useEffect(() => {
     refreshCounts()
+    if (navigator.onLine) syncQueue()
 
     const onOnline = () => { setIsOnline(true); syncQueue() }
     const onOffline = () => setIsOnline(false)
