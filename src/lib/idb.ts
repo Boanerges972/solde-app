@@ -78,13 +78,15 @@ export async function loadTransactions(): Promise<Transaction[]> {
 }
 
 export async function enqueue(entry: Omit<PendingEntry, 'id'>): Promise<number> {
-  const db = await openDB()
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction('pending_queue', 'readwrite')
-    const req = tx.objectStore('pending_queue').add(entry)
-    req.onsuccess = () => resolve(req.result as number)
-    req.onerror = () => reject(req.error)
-  })
+  try {
+    const db = await openDB()
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('pending_queue', 'readwrite')
+      const req = tx.objectStore('pending_queue').add(entry)
+      req.onsuccess = () => resolve(req.result as number)
+      req.onerror = () => reject(req.error)
+    })
+  } catch { return 0 }
 }
 
 export async function loadQueue(): Promise<PendingEntry[]> {
