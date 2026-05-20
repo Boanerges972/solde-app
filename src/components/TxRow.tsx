@@ -19,6 +19,7 @@ export const TxRow = ({ tx, t, onDelete }: Props) => {
       <div onClick={() => setExpanded(s => !s)}
         style={{ display: 'flex', alignItems: 'center', gap: 12,
           padding: '11px 0', cursor: 'pointer',
+          opacity: tx.pending ? 0.6 : 1,
           borderBottom: expanded ? 'none' : '1px solid ' + t.bo + '66' }}>
         <div style={{ width: 40, height: 40, borderRadius: 20, flexShrink: 0,
           background: isTransfer ? t.el : isIncome ? t.mD : t.el,
@@ -28,7 +29,7 @@ export const TxRow = ({ tx, t, onDelete }: Props) => {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, ...sp('o', 500), color: t.tx,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
-            {tx.m}
+            {tx.pending ? '⏳ ' : ''}{tx.m}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 1 }}>
             {tx.isPro && !isTransfer && (

@@ -5,6 +5,8 @@ import { setCurrency } from './lib/currency'
 import { useData } from './hooks/useData'
 import { useRecurring } from './hooks/useRecurring'
 import { useGroup } from './hooks/useGroup'
+import { useOfflineSync } from './hooks/useOfflineSync'
+import { OfflineBanner } from './components/OfflineBanner'
 import { Nav } from './components/Nav'
 import { BudgetAlert } from './components/BudgetAlert'
 import { RejectionAlert } from './components/RejectionAlert'
@@ -134,6 +136,10 @@ export default function App() {
   }, []);
 
   const { data, loading, error, reload: reloadData, addTx, deleteTx, addTransfer, addDeposit } = useData(session ? session.user.id : null);
+  const { isOnline, pendingCount, failedCount, isSyncing } = useOfflineSync(
+    session ? session.user.id : null,
+    reloadData
+  );
   const { recurrings, allHistory, reload: reloadRec, addRecurring, deleteRecurring, updateRecurring } = useRecurring(session ? session.user.id : null);
   const reload = () => { setAlertDismissed(false); reloadData(); };
   const { group, members, reload: reloadGroup, createGroup, joinGroup, leaveGroup } = useGroup(session ? session.user.id : null);
@@ -186,6 +192,7 @@ export default function App() {
     <div style={{ width: 375, minHeight: '100vh', position: 'relative', background: t.bg, boxShadow: '0 0 80px rgba(0,0,0,.6)', transition: 'background .3s', paddingTop: 'env(safe-area-inset-top,0px)' }}>
       <StatusBar t={t} />
       {showIOS && <IOSBanner t={t} onDismiss={() => { setShowIOS(false); localStorage.setItem('qdq-ios', '1'); }} />}
+      <OfflineBanner isOnline={isOnline} pendingCount={pendingCount} failedCount={failedCount} isSyncing={isSyncing} t={t} />
       <main style={{ height: 'calc(100vh - 64px - env(safe-area-inset-top,0px))', overflowY: 'auto', paddingBottom: 80 }}>
         {renderMain()}
       </main>
