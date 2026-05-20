@@ -25,6 +25,7 @@ export interface Transaction {
   // champs calculés
   acc: string; dt: string; m: string; cat: string; ico: string; amt: number
   isTransfer: boolean; isPro: boolean; isProPerso: boolean
+  pending?: boolean
 }
 
 export interface Cat { n: string; col: string; ico: string; amt: number; pct: number }
