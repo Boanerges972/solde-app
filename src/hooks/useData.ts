@@ -172,6 +172,7 @@ export function useData(uid: string | null) {
         timestamp: Date.now(),
         retries: 0,
       })
+      if (pendingId === null) return { error: 'Stockage hors-ligne indisponible — réessayez en ligne.' }
       const fakeTx: Transaction = {
         id: `pending-${pendingId}`,
         merchant: payload.merchant,

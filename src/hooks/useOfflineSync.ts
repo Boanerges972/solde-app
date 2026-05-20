@@ -19,6 +19,8 @@ export function applyOptimisticTx(prev: AppData | null, tx: Transaction): AppDat
     txs: [tx, ...prev.txs],
     spent: parseFloat((prev.spent + n).toFixed(2)),
     rem: parseFloat((prev.rem - n).toFixed(2)),
+    monthSpent: parseFloat((prev.monthSpent + n).toFixed(2)),
+    monthRem: parseFloat((prev.monthRem - n).toFixed(2)),
     accounts: prev.accounts.map(a =>
       a.id === tx.account_id
         ? { ...a, bal: parseFloat((a.bal - n).toFixed(2)) }
@@ -47,14 +49,18 @@ export function useOfflineSync(
 
   const syncQueue = useCallback(async () => {
     if (!uid || syncingRef.current) return
+    const queue = await loadQueue()
+    // Only replay entries belonging to this user
+    const pending = queue.filter(e => !e.failed && e.payload.uid === uid).sort((a, b) => ((a.id ?? 0) - (b.id ?? 0)))
+    if (pending.length === 0) { await refreshCounts(); return }
+
     syncingRef.current = true
     setIsSyncing(true)
     try {
-      const queue = await loadQueue()
-      const pending = queue.filter(e => !e.failed).sort((a, b) => ((a.id ?? 0) - (b.id ?? 0)))
 
       // Fetch current account balances from Supabase
-      const { data: accRows } = await db.from('accounts').select('id, balance').eq('user_id', uid)
+      const { data: accRows, error: accErr } = await db.from('accounts').select('id, balance').eq('user_id', uid)
+      if (accErr) throw accErr
       const balMap: Record<string, number> = {}
       for (const a of (accRows || [])) {
         balMap[a.id] = parseFloat(a.balance)
@@ -76,9 +82,10 @@ export function useOfflineSync(
           // Update account balance
           if (balMap[p.account_id] !== undefined) {
             const newBal = parseFloat((balMap[p.account_id] - n).toFixed(2))
-            await db.from('accounts')
+            const { error: balErr } = await db.from('accounts')
               .update({ balance: newBal, free: newBal })
               .eq('id', p.account_id).eq('user_id', uid)
+            if (balErr) throw balErr
             balMap[p.account_id] = newBal
           }
 

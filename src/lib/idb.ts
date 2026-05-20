@@ -81,7 +81,7 @@ export async function loadTransactions(): Promise<Transaction[]> {
   try { return await getAll<Transaction>('transactions') } catch (e) { console.error('[IDB] loadTransactions failed:', e); return [] }
 }
 
-export async function enqueue(entry: Omit<PendingEntry, 'id'>): Promise<number> {
+export async function enqueue(entry: Omit<PendingEntry, 'id'>): Promise<number | null> {
   try {
     const db = await openDB()
     return new Promise((resolve, reject) => {
@@ -90,7 +90,7 @@ export async function enqueue(entry: Omit<PendingEntry, 'id'>): Promise<number> 
       req.onsuccess = () => resolve(req.result as number)
       req.onerror = () => reject(req.error)
     })
-  } catch (e) { console.error('[IDB] enqueue failed:', e); return Date.now() }
+  } catch (e) { console.error('[IDB] enqueue failed:', e); return null }
 }
 
 export async function loadQueue(): Promise<PendingEntry[]> {

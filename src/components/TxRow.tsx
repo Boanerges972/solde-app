@@ -56,11 +56,18 @@ export const TxRow = ({ tx, t, onDelete }: Props) => {
       {expanded && (
         <div style={{ display: 'flex', gap: 8, padding: '8px 0 10px',
           borderBottom: '1px solid ' + t.bo + '66' }}>
-          <button onClick={async () => { setExpanded(false); await onDelete(tx.id) }}
-            style={{ flex: 1, padding: '8px', borderRadius: 10, background: t.rD,
-              border: 'none', cursor: 'pointer', ...sp('o', 600), fontSize: 12, color: t.rose }}>
-            Supprimer
-          </button>
+          {tx.pending ? (
+            <div style={{ flex: 1, padding: '8px', borderRadius: 10, background: t.el,
+              ...sp('o', 600), fontSize: 12, color: t.sub, textAlign: 'center' }}>
+              ⏳ En attente de sync
+            </div>
+          ) : (
+            <button onClick={async () => { setExpanded(false); await onDelete(tx.id) }}
+              style={{ flex: 1, padding: '8px', borderRadius: 10, background: t.rD,
+                border: 'none', cursor: 'pointer', ...sp('o', 600), fontSize: 12, color: t.rose }}>
+              Supprimer
+            </button>
+          )}
           <button onClick={() => setExpanded(false)}
             style={{ flex: 1, padding: '8px', borderRadius: 10, background: t.el,
               border: 'none', cursor: 'pointer', ...sp('o', 600), fontSize: 12, color: t.sub }}>
