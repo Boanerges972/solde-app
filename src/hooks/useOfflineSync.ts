@@ -51,8 +51,7 @@ export function useOfflineSync(
     setIsSyncing(true)
     try {
       const queue = await loadQueue()
-      const pending = queue.filter(e => !e.failed).sort((a, b) => (a.id! - b.id!))
-      if (pending.length === 0) return
+      const pending = queue.filter(e => !e.failed).sort((a, b) => ((a.id ?? 0) - (b.id ?? 0)))
 
       // Fetch current account balances from Supabase
       const { data: accRows } = await db.from('accounts').select('id, balance').eq('user_id', uid)
@@ -84,7 +83,8 @@ export function useOfflineSync(
           }
 
           await removeFromQueue(entry.id!)
-        } catch {
+        } catch (err) {
+          console.error('[syncQueue] replay failed for entry', entry.id, err)
           const updated = { ...entry, retries: entry.retries + 1 }
           if (updated.retries >= 3) updated.failed = true
           await updateQueueEntry(updated)
