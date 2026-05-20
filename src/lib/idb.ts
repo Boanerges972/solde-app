@@ -22,8 +22,11 @@ export interface PendingEntry {
   failed?: boolean
 }
 
+let dbPromise: Promise<IDBDatabase> | null = null
+
 function openDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
+  if (dbPromise) return dbPromise
+  dbPromise = new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION)
     req.onupgradeneeded = () => {
       const db = req.result
@@ -35,8 +38,9 @@ function openDB(): Promise<IDBDatabase> {
         db.createObjectStore('pending_queue', { keyPath: 'id', autoIncrement: true })
     }
     req.onsuccess = () => resolve(req.result)
-    req.onerror = () => reject(req.error)
+    req.onerror = () => { dbPromise = null; reject(req.error) }
   })
+  return dbPromise
 }
 
 async function getAll<T>(storeName: string): Promise<T[]> {
@@ -62,19 +66,19 @@ async function clearAndPut(storeName: string, items: unknown[]): Promise<void> {
 }
 
 export async function saveAccounts(accounts: Account[]): Promise<void> {
-  try { await clearAndPut('accounts', accounts) } catch { /* IDB unavailable */ }
+  try { await clearAndPut('accounts', accounts) } catch (e) { console.error('[IDB] saveAccounts failed:', e) }
 }
 
 export async function loadAccounts(): Promise<Account[]> {
-  try { return await getAll<Account>('accounts') } catch { return [] }
+  try { return await getAll<Account>('accounts') } catch (e) { console.error('[IDB] loadAccounts failed:', e); return [] }
 }
 
 export async function saveTransactions(txs: Transaction[]): Promise<void> {
-  try { await clearAndPut('transactions', txs) } catch { /* IDB unavailable */ }
+  try { await clearAndPut('transactions', txs) } catch (e) { console.error('[IDB] saveTransactions failed:', e) }
 }
 
 export async function loadTransactions(): Promise<Transaction[]> {
-  try { return await getAll<Transaction>('transactions') } catch { return [] }
+  try { return await getAll<Transaction>('transactions') } catch (e) { console.error('[IDB] loadTransactions failed:', e); return [] }
 }
 
 export async function enqueue(entry: Omit<PendingEntry, 'id'>): Promise<number> {
@@ -86,11 +90,11 @@ export async function enqueue(entry: Omit<PendingEntry, 'id'>): Promise<number> 
       req.onsuccess = () => resolve(req.result as number)
       req.onerror = () => reject(req.error)
     })
-  } catch { return 0 }
+  } catch (e) { console.error('[IDB] enqueue failed:', e); return Date.now() }
 }
 
 export async function loadQueue(): Promise<PendingEntry[]> {
-  try { return await getAll<PendingEntry>('pending_queue') } catch { return [] }
+  try { return await getAll<PendingEntry>('pending_queue') } catch (e) { console.error('[IDB] loadQueue failed:', e); return [] }
 }
 
 export async function removeFromQueue(id: number): Promise<void> {
@@ -102,7 +106,7 @@ export async function removeFromQueue(id: number): Promise<void> {
       req.onsuccess = () => resolve()
       req.onerror = () => reject(req.error)
     })
-  } catch { /* silent */ }
+  } catch (e) { console.error('[IDB] removeFromQueue failed:', e) }
 }
 
 export async function updateQueueEntry(entry: PendingEntry): Promise<void> {
@@ -114,5 +118,5 @@ export async function updateQueueEntry(entry: PendingEntry): Promise<void> {
       req.onsuccess = () => resolve()
       req.onerror = () => reject(req.error)
     })
-  } catch { /* silent */ }
+  } catch (e) { console.error('[IDB] updateQueueEntry failed:', e) }
 }
