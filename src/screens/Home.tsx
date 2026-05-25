@@ -307,7 +307,7 @@ export const Home = ({ D, t, onAcc, onAdd, onEditBudget, onDelete, rtConnected, 
               {g.date}
             </div>
             {/* Transactions du groupe */}
-            <div style={{ background: t.card, borderRadius: 18,
+            <div style={{ background: t.card, borderRadius: 18, boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
               padding: '0 14px', overflow: 'hidden',
               border: '1px solid ' + t.bo }}>
               {g.txs.map((tx, i) => (

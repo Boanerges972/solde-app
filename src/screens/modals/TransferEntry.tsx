@@ -38,7 +38,7 @@ export const TransferEntry = ({ D, t, onClose, onTransfer }: Props) => {
       animation:'fadeIn .2s ease'}} onClick={onClose}>
       <div role="dialog" aria-modal="true" aria-labelledby="te-title"
         onClick={e=>e.stopPropagation()}
-        style={{background:t.card,borderRadius:'22px 22px 0 0',
+        style={{background:t.card,borderRadius:'28px 28px 0 0',
           padding:'0 20px 36px',animation:'slideUp .28s ease',
           maxHeight:'90vh',overflowY:'auto'}}>
 
@@ -195,7 +195,7 @@ export const TransferEntry = ({ D, t, onClose, onTransfer }: Props) => {
         )}
 
         <button onClick={save} disabled={saving||!n||fromId===toId}
-          style={{width:'100%',padding:'15px',border:'none',borderRadius:16,cursor:'pointer',
+          style={{width:'100%',padding:'16px',border:'none',borderRadius:18,cursor:'pointer',
             background:saving||!n||fromId===toId?t.el:'linear-gradient(135deg,#4D96FF,#2563EB)',
             ...sp('o',700),fontSize:15,
             color:saving||!n||fromId===toId?t.sub:'#fff'}}>

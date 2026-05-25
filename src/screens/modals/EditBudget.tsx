@@ -42,7 +42,7 @@ export const EditBudget = ({ D, t, uid, onClose, onSaved, defaultPeriod = 'week'
       justifyContent:'flex-end',animation:'fadeIn .2s ease'}} onClick={onClose}>
       <div role="dialog" aria-modal={true} aria-labelledby="eb-title"
         onClick={e=>e.stopPropagation()}
-        style={{background:t.card,borderRadius:'22px 22px 0 0',padding:'0 20px 36px',
+        style={{background:t.card,borderRadius:'28px 28px 0 0',padding:'0 20px 36px',
           animation:'slideUp .28s ease'}}>
         <div style={{display:'flex',justifyContent:'center',padding:'12px 0 6px'}}>
           <div style={{width:36,height:4,borderRadius:2,background:t.bo}}/>

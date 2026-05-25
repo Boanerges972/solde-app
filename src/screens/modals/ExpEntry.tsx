@@ -101,7 +101,7 @@ export const ExpEntry = ({ D, t, onClose, onSave, group, members, uid, recurring
 
   return (
     <div style={{position:'absolute',inset:0,zIndex:100,background:'rgba(0,0,0,0.65)',backdropFilter:'blur(10px)',display:'flex',flexDirection:'column',justifyContent:'flex-end',animation:'fadeIn .2s ease'}} onClick={onClose}>
-      <div onClick={e=>e.stopPropagation()} style={{background:t.card,borderRadius:'22px 22px 0 0',padding:'0 20px 36px',animation:'slideUp .28s ease',maxHeight:'90vh',overflowY:'auto'}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:t.card,borderRadius:'28px 28px 0 0',padding:'0 20px 36px',animation:'slideUp .28s ease',maxHeight:'90vh',overflowY:'auto'}}>
         <div style={{display:'flex',justifyContent:'center',padding:'12px 0 6px'}}>
           <div style={{width:36,height:4,borderRadius:2,background:t.bo}}/>
         </div>
@@ -346,7 +346,7 @@ export const ExpEntry = ({ D, t, onClose, onSave, group, members, uid, recurring
             amount:n,account_id:selectedAccId,group_id:isGroup&&group?group.id:null,paid_by:isGroup?paidBy:null})
           setSaving(false);onClose()
         }} disabled={saving||!amount||!selectedAccId}
-          style={{width:'100%',padding:'15px',border:'none',borderRadius:16,
+          style={{width:'100%',padding:'16px',border:'none',borderRadius:18,
             cursor:saving||!amount||!selectedAccId?'default':'pointer',...sp('o',700),fontSize:15,
             background:saving||!amount||!selectedAccId?t.el:t.primary,
             color:saving||!amount||!selectedAccId?t.sub:'#0F1117'}}>

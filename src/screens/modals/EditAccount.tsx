@@ -49,7 +49,7 @@ export const EditAccount = ({ account, isNew, t, uid, onClose, onSaved }: Props)
 
   return (
     <div style={{position:'absolute',inset:0,zIndex:200,background:'rgba(0,0,0,0.65)',backdropFilter:'blur(10px)',display:'flex',flexDirection:'column',justifyContent:'flex-end',animation:'fadeIn .2s ease'}} onClick={onClose}>
-      <div role="dialog" aria-modal={true} aria-labelledby="ea-title" onClick={e=>e.stopPropagation()} style={{background:t.card,borderRadius:'22px 22px 0 0',padding:'0 20px 36px',maxHeight:'90vh',overflowY:'auto',animation:'slideUp .28s ease'}}>
+      <div role="dialog" aria-modal={true} aria-labelledby="ea-title" onClick={e=>e.stopPropagation()} style={{background:t.card,borderRadius:'28px 28px 0 0',padding:'0 20px 36px',maxHeight:'90vh',overflowY:'auto',animation:'slideUp .28s ease'}}>
         <div style={{display:'flex',justifyContent:'center',padding:'12px 0 6px'}}><div style={{width:36,height:4,borderRadius:2,background:t.bo}}/></div>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
           <button onClick={onClose} style={{padding:'6px 14px',borderRadius:10,background:t.el,border:'none',cursor:'pointer',...sp('o',600),fontSize:13,color:t.sub}}>Annuler</button>

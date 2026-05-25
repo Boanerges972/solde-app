@@ -136,7 +136,7 @@ export const RecurringManager = ({ t, accounts, recurrings, allHistory, onAdd, o
       justifyContent:'flex-end'}} onClick={onClose}>
       <div role="dialog" aria-modal="true" aria-labelledby="rm-title"
         onClick={e=>e.stopPropagation()}
-        style={{background:t.card,borderRadius:'22px 22px 0 0',
+        style={{background:t.card,borderRadius:'28px 28px 0 0',
           padding:'0 20px 40px',maxHeight:'92vh',overflowY:'auto',
           animation:'slideUp .28s ease'}}>
 
