@@ -10,6 +10,12 @@ const SLIDES = [
   { ico: '🎯', title: 'Le meilleur compte, toujours', sub: 'QDQ recommande automatiquement le compte optimal pour chaque dépense.' },
 ]
 
+const features = [
+  { ico: '🏦', txt: 'Tous vos comptes au même endroit' },
+  { ico: '📊', txt: 'Analyse en temps réel de vos finances' },
+  { ico: '🛡️', txt: 'Recommandations intelligentes pour chaque dépense' },
+]
+
 interface Props { t: Theme }
 export const AuthScreen = ({ t }: Props) => {
   const [onboarded] = useState(() => localStorage.getItem('qdq-onboarded') === '1')
@@ -47,55 +53,109 @@ export const AuthScreen = ({ t }: Props) => {
     }
     setLoading(false);
   };
+
   // Onboarding slides
   if (!showAuth) {
     const s = SLIDES[slide]
     const isLast = slide === SLIDES.length - 1
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh',
-        background: `linear-gradient(160deg, ${t.primary} 0%, #1a56c4 60%, #0a2d6e 100%)`,
-        padding: '60px 32px 48px', animation: 'fadeIn .4s ease' }}>
+      <div style={{
+        display: 'flex', flexDirection: 'column', minHeight: '100vh',
+        background: t.bg,
+        padding: '56px 28px 40px',
+        animation: 'fadeIn .4s ease',
+        boxSizing: 'border-box',
+      }}>
         {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: 48 }}>
-          <div style={{ fontSize: 36, fontWeight: 800, color: '#fff', letterSpacing: -1.5 }}>QDQ</div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>Qui Dépense Quoi</div>
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <div style={{ fontSize: 56, fontWeight: 900, color: t.primary, letterSpacing: -2, lineHeight: 1, ...sp('s', 900) }}>QDQ</div>
         </div>
+
         {/* Slide content */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-          <div style={{ fontSize: 72, marginBottom: 32, lineHeight: 1 }}>{s.ico}</div>
-          <div style={{ fontSize: 26, fontWeight: 700, color: '#fff', lineHeight: 1.2, marginBottom: 16, letterSpacing: -0.5 }}>
-            {s.title}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          {/* Slide icon */}
+          <div style={{ fontSize: 64, lineHeight: 1, marginBottom: 24, textAlign: 'center' }}>{s.ico}</div>
+
+          {/* Tagline (slide 0) or slide title */}
+          {slide === 0 ? (
+            <div style={{ textAlign: 'center', marginBottom: 12 }}>
+              <div style={{ fontSize: 22, fontWeight: 700, color: t.tx, lineHeight: 1.3, ...sp('s', 700) }}>
+                Gérez intelligemment
+              </div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: t.tx, lineHeight: 1.3, ...sp('s', 700) }}>
+                vos dépenses,
+              </div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: t.primary, lineHeight: 1.3, ...sp('s', 700) }}>
+                optimisez chaque choix.
+              </div>
+            </div>
+          ) : (
+            <div style={{ fontSize: 22, fontWeight: 700, color: t.tx, lineHeight: 1.3, textAlign: 'center', marginBottom: 12, ...sp('s', 700) }}>
+              {s.title}
+            </div>
+          )}
+
+          {/* Subtitle */}
+          <div style={{ fontSize: slide === 0 ? 13 : 14, color: t.sub, lineHeight: 1.6, textAlign: 'center', maxWidth: 280, marginBottom: 0 }}>
+            {slide === 0
+              ? 'QDQ analyse vos comptes en temps réel et vous recommande le meilleur compte pour chaque dépense.'
+              : s.sub}
           </div>
-          <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.65)', lineHeight: 1.6, maxWidth: 280 }}>
-            {s.sub}
-          </div>
+
+          {/* Feature bullets — slide 0 only */}
+          {slide === 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, margin: '24px 0', alignSelf: 'stretch' }}>
+              {features.map((f, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: 10,
+                    background: t.primary + '15',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 18, flexShrink: 0,
+                  }}>
+                    {f.ico}
+                  </div>
+                  <span style={{ fontSize: 14, color: t.tx, lineHeight: 1.4 }}>{f.txt}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
+
         {/* Dots */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 32 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 24 }}>
           {SLIDES.map((_, i) => (
             <div key={i} onClick={() => setSlide(i)} style={{
               width: i === slide ? 24 : 8, height: 8, borderRadius: 4,
-              background: i === slide ? '#fff' : 'rgba(255,255,255,0.3)',
+              background: i === slide ? t.primary : t.muted,
               transition: 'all .3s', cursor: 'pointer',
             }} />
           ))}
         </div>
-        {/* CTA */}
+
+        {/* CTA button */}
         <button onClick={() => {
           if (isLast) { localStorage.setItem('qdq-onboarded', '1'); setShowAuth(true) }
           else setSlide(s => s + 1)
         }} style={{
-          width: '100%', padding: '16px', borderRadius: 18, border: 'none',
-          background: isLast ? '#fff' : 'rgba(255,255,255,0.15)',
-          color: isLast ? t.primary : '#fff',
+          width: '100%', padding: '16px', borderRadius: 28, border: 'none',
+          background: t.primary,
+          color: '#fff',
           fontSize: 16, fontWeight: 700, cursor: 'pointer',
-          backdropFilter: 'blur(10px)', marginBottom: 16,
+          marginBottom: 12,
+          ...sp('s', 700),
         }}>
           {isLast ? 'Commencer' : 'Suivant →'}
         </button>
+
+        {/* Se connecter link */}
         <button onClick={() => { localStorage.setItem('qdq-onboarded', '1'); setShowAuth(true) }}
-          style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)',
-            fontSize: 13, cursor: 'pointer', padding: '8px' }}>
+          style={{
+            background: 'none', border: 'none', color: t.sub,
+            fontSize: 13, cursor: 'pointer', padding: '8px',
+            textAlign: 'center',
+            ...sp('o'),
+          }}>
           Se connecter
         </button>
       </div>
@@ -152,7 +212,7 @@ export const AuthScreen = ({ t }: Props) => {
         {err && <div role="alert" style={{ padding: '10px', borderRadius: 10, background: t.rD, border: '1px solid ' + t.rose + '44', marginBottom: 12, ...sp('o'), fontSize: 13, color: t.rose }}>{err}</div>}
         {ok && <div role="status" style={{ padding: '10px', borderRadius: 10, background: t.mD, border: '1px solid ' + t.mint + '44', marginBottom: 12, ...sp('o'), fontSize: 13, color: t.mint }}>{ok}</div>}
         <button onClick={submit} disabled={loading}
-          style={{ width: '100%', padding: '14px', borderRadius: 14, border: 'none', cursor: loading ? 'wait' : 'pointer', background: loading ? t.el : t.primary, ...sp('o', 700), fontSize: 15, color: loading ? t.sub : '#0F1117' }}>
+          style={{ width: '100%', padding: '14px', borderRadius: 14, border: 'none', cursor: loading ? 'wait' : 'pointer', background: loading ? t.el : t.primary, ...sp('o', 700), fontSize: 15, color: loading ? t.sub : '#fff' }}>
           {loading ? '...' : (mode === 'login' ? 'Se connecter' : mode === 'signup' ? 'Créer mon compte' : 'Envoyer')}
         </button>
         {mode === 'login' && (
