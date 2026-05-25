@@ -16,6 +16,13 @@ const features = [
   { ico: '🛡️', txt: 'Recommandations intelligentes pour chaque dépense' },
 ]
 
+const QDQLogo = () => (
+  <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+    background: '#0D1B3E', borderRadius: 20, padding: '10px 22px' }}>
+    <span style={{ fontSize: 36, fontWeight: 900, color: '#ffffff', letterSpacing: -1, fontFamily: 'Inter, sans-serif' }}>QDQ</span>
+  </div>
+)
+
 interface Props { t: Theme }
 export const AuthScreen = ({ t }: Props) => {
   const [onboarded] = useState(() => localStorage.getItem('qdq-onboarded') === '1')
@@ -68,7 +75,7 @@ export const AuthScreen = ({ t }: Props) => {
       }}>
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ fontSize: 56, fontWeight: 900, color: t.primary, letterSpacing: -2, lineHeight: 1, ...sp('s', 900) }}>QDQ</div>
+          <QDQLogo />
         </div>
 
         {/* Slide content */}
@@ -165,8 +172,7 @@ export const AuthScreen = ({ t }: Props) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: '100vh', padding: '40px 28px', animation: 'fadeIn .4s ease' }}>
       <div style={{ textAlign: 'center', marginBottom: 32 }}>
-        <div style={{ fontSize: 42, fontWeight: 800, color: t.primary, letterSpacing: -2, lineHeight: 1 }}>QDQ</div>
-        <div style={{ fontSize: 13, ...sp('o'), color: t.sub, marginTop: 6 }}>Qui Dépense Quoi</div>
+        <QDQLogo />
       </div>
       <div style={{ background: t.card, borderRadius: 20, padding: '24px 22px', border: '1px solid ' + t.bo }}>
         {mode !== 'reset' && (

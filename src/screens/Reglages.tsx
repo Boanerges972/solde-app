@@ -51,7 +51,7 @@ const NotifSettings = ({ t }: { t: Theme }) => {
 
 // ── SETTINGS PROPS ────────────────────────────────────────────
 interface SettingsProps {
-  t: Theme; dark: boolean; toggle: () => void; user: User
+  t: Theme; user: User
   onLogout: () => void; profile: Profile
   onProfile: () => void; onSecurity: () => void
   onRecurring: () => void; onReset: () => void
@@ -59,7 +59,7 @@ interface SettingsProps {
 }
 
 // ── SETTINGS ─────────────────────────────────────────────────
-export const Settings = ({ t, dark, toggle, user, onLogout, profile, onProfile, onSecurity, onRecurring, onReset, onGroupe }: SettingsProps) => (
+export const Settings = ({ t, user, onLogout, profile, onProfile, onSecurity, onRecurring, onReset, onGroupe }: SettingsProps) => (
   <div style={{ padding: '0 20px 16px' }}>
     <div style={{ padding: '8px 0 20px' }}><div style={{ fontSize: 17, ...sp('s', 700), color: t.tx }}>Réglages</div></div>
     <button onClick={onProfile} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%',
@@ -74,23 +74,11 @@ export const Settings = ({ t, dark, toggle, user, onLogout, profile, onProfile, 
       </div>
       <span style={{ color: t.muted, fontSize: 18 }}>›</span>
     </button>
-    <div style={{ padding: '14px 16px', background: t.card, borderRadius: 14, border: '1px solid ' + t.bo, marginBottom: 10 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: t.el, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>{dark ? '🌙' : '☀️'}</div>
-          <div>
-            <div style={{ fontSize: 14, ...sp('o', 500), color: t.tx }}>Thème</div>
-            <div style={{ fontSize: 12, ...sp('o'), color: t.sub }}>{dark ? 'Sombre' : 'Clair'}</div>
-          </div>
-        </div>
-        <button onClick={toggle} style={{ width: 50, height: 28, borderRadius: 14, padding: 3, background: dark ? t.el : t.mint, border: 'none', cursor: 'pointer', transition: 'background .25s', display: 'flex', alignItems: 'center' }}>
-          <div style={{ width: 22, height: 22, borderRadius: 11, background: '#fff', transform: dark ? 'translateX(0)' : 'translateX(22px)', transition: 'transform .25s' }} />
-        </button>
+    <div style={{ padding: '28px 0 16px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+      <div style={{ background: '#0D1B3E', borderRadius: 12, padding: '6px 16px', display: 'inline-block' }}>
+        <span style={{ fontSize: 22, fontWeight: 900, color: '#fff', letterSpacing: -0.5 }}>QDQ</span>
       </div>
-    </div>
-    <div style={{ padding: '28px 0 16px', textAlign: 'center' }}>
-      <div style={{ fontSize: 28, ...sp('s', 700), color: t.mint, letterSpacing: -1 }}>QDQ</div>
-      <div style={{ fontSize: 11, ...sp('o'), color: t.muted, marginTop: 4 }}>v2.0 · Qui Dépense Quoi</div>
+      <div style={{ fontSize: 11, ...sp('o'), color: t.muted }}>v2.0 · Qui Dépense Quoi</div>
     </div>
     <NotifSettings t={t} />
 

@@ -14,6 +14,7 @@ import { IOSBanner } from './components/IOSBanner'
 import { AuthScreen } from './screens/Auth'
 import { Home } from './screens/Home'
 import { Comptes } from './screens/Comptes'
+import { Depenses } from './screens/Depenses'
 import { Analyse } from './screens/Analyse'
 import { Groupe } from './screens/Groupe'
 import { Settings } from './screens/Reglages'
@@ -38,7 +39,6 @@ import type { Session } from '@supabase/supabase-js'
 const StatusBar = (_props: { t: unknown }) => null;
 
 export default function App() {
-  const [dark, setDark] = useState(false);
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [tab, setTab] = useState('accueil');
   const [showEntry, setShowEntry] = useState(false);
@@ -61,7 +61,7 @@ export default function App() {
   const [profile, setProfile] = useState<Profile>(() => {
     try { return JSON.parse(localStorage.getItem('qdq-profile') || '{}') } catch { return {} }
   });
-  const t = dark ? T.dark : T.light;
+  const t = T.light;
 
   useEffect(() => {
     db.auth.getSession().then(r => setSession(r.data.session));
@@ -174,13 +174,14 @@ export default function App() {
       <div>
         {!alertDismissed && <BudgetAlert D={data} t={t} threshold={parseInt(localStorage.getItem('qdq-alert-threshold') || '80')} onDismiss={() => setAlertDismissed(true)} />}
         <RejectionAlert t={t} accounts={data.accounts} recurrings={recurrings || []} onManage={() => setShowRecurring(true)} />
-        <Home D={data} t={t} onAcc={() => setTab('depenses')} onAdd={() => setShowEntry(true)} onEditBudget={() => setEditBudget(true)} onDelete={deleteTx} rtConnected={rtConnected} profile={profile} onSearch={() => setShowSearch(true)} recurrings={recurrings || []} onManageRecurring={() => setShowRecurring(true)} onTransfer={() => setShowTransfer(true)} />
+        <Home D={data} t={t} onAcc={() => setTab('comptes')} onAdd={() => setShowEntry(true)} onEditBudget={() => setEditBudget(true)} onDelete={deleteTx} rtConnected={rtConnected} profile={profile} onSearch={() => setShowSearch(true)} recurrings={recurrings || []} onManageRecurring={() => setShowRecurring(true)} onTransfer={() => setShowTransfer(true)} />
       </div>
     );
-    if (tab === 'depenses') return <Comptes D={data} t={t} onEdit={(a: unknown) => setEditAccount(a)} onNew={() => setEditAccount('new')} onImport={(bank: string) => { if (bank === 'pick') { setShowBankPicker(true); } else { setImportBank(bank); setShowImport(true); } }} onDeposit={(a) => setDepositAccount(a)} />;
+    if (tab === 'depenses') return <Depenses D={data} t={t} onDelete={deleteTx} onSearch={() => setShowSearch(true)} />;
+    if (tab === 'comptes') return <Comptes D={data} t={t} onEdit={(a: unknown) => setEditAccount(a)} onNew={() => setEditAccount('new')} onImport={(bank: string) => { if (bank === 'pick') { setShowBankPicker(true); } else { setImportBank(bank); setShowImport(true); } }} onDeposit={(a) => setDepositAccount(a)} />;
     if (tab === 'groupe') return <Groupe t={t} uid={session.user.id} group={group} members={members} createGroup={createGroup} joinGroup={joinGroup} leaveGroup={leaveGroup} txs={data.txs} />;
     if (tab === 'analyses') return <Analyse D={data} t={t} allTxs={data.txs} allHistory={allHistory || []} recurrings={recurrings || []} />;
-    if (tab === 'profil') return <Settings t={t} dark={dark} toggle={() => setDark(d => !d)} user={session.user} onLogout={logout} profile={profile} onProfile={() => setShowProfile(true)} onSecurity={() => setShowPinSetup(true)} onRecurring={() => setShowRecurring(true)} onReset={() => setShowReset(true)} onGroupe={() => setTab('groupe')} />;
+    if (tab === 'profil') return <Settings t={t} user={session.user} onLogout={logout} profile={profile} onProfile={() => setShowProfile(true)} onSecurity={() => setShowPinSetup(true)} onRecurring={() => setShowRecurring(true)} onReset={() => setShowReset(true)} onGroupe={() => setTab('groupe')} />;
     return null;
   };
 
