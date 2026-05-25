@@ -4,13 +4,15 @@ import { fmt, fmtS } from '../lib/currency'
 import { buildBalanceHistory } from '../lib/buildBalanceHistory'
 import { BalanceCurve } from '../components/BalanceCurve'
 import { DonutChart } from '../components/DonutChart'
-import type { Theme, AppData, Transaction } from '../types'
+import { PrevisionelView } from '../components/PrevisionelView'
+import type { Theme, AppData, Transaction, Recurring } from '../types'
 
 interface Props {
   D: AppData
   t: Theme
   allTxs: Transaction[]
   allHistory: Transaction[]
+  recurrings?: Recurring[]
 }
 
 // ── DÉTECTION AUTO DES RÉCURRENTS ────────────────────────────
@@ -87,7 +89,8 @@ function detectRecurrings(txs: Transaction[], minMonths = 2) {
 // Palette couleurs catégories
 const CAT_PAL = ['#10E8C0', '#FF6B6B', '#FFD93D', '#6BCB77', '#4D96FF', '#C77DFF', '#FF9671', '#00B4D8', '#F4A261', '#E76F51']
 
-export const Analyse = ({ D, t, allTxs, allHistory }: Props) => {
+export const Analyse = ({ D, t, allTxs, allHistory, recurrings }: Props) => {
+  const [mainView, setMainView] = useState<'analyse' | 'previsionnel'>('analyse')
   const [analyseMode, setAnalyseMode] = useState('perso')
   const [view, setView] = useState('apercu')
   const [evoPeriod, setEvoPeriod] = useState<7 | 30 | 90>(30)
@@ -193,6 +196,35 @@ export const Analyse = ({ D, t, allTxs, allHistory }: Props) => {
 
   return (
     <div style={{ paddingBottom: 16 }}>
+
+      {/* ── SUB-TABS: Analyse | Prévisionnel ─────────────────── */}
+      <div style={{ display: 'flex', gap: 6, padding: '12px 16px 0', marginBottom: 4 }}>
+        {([['analyse', 'Analyse'], ['previsionnel', 'Prévisionnel']] as [string, string][]).map(([v, lb]) => (
+          <button
+            key={v}
+            onClick={() => setMainView(v as 'analyse' | 'previsionnel')}
+            style={{
+              padding: '7px 18px', borderRadius: 20, border: 'none',
+              cursor: 'pointer', ...sp('o', 600), fontSize: 13,
+              background: mainView === v ? t.primary : t.el,
+              color: mainView === v ? '#fff' : t.sub,
+              transition: 'all .18s',
+            }}
+          >
+            {lb}
+          </button>
+        ))}
+      </div>
+
+      {/* ── PRÉVISIONNEL VIEW ─────────────────────────────────── */}
+      {mainView === 'previsionnel' && (
+        <div style={{ padding: '16px 16px 0' }}>
+          <PrevisionelView t={t} recurrings={recurrings || []} accounts={D.accounts || []} />
+        </div>
+      )}
+
+      {/* ── ANALYSE VIEW ──────────────────────────────────────── */}
+      {mainView === 'analyse' && <>
 
       {/* ── HERO CARD ─────────────────────────────────────────── */}
       <div style={{ margin: '0 16px 16px', padding: '20px', background: t.card, borderRadius: 20, border: '1px solid ' + t.bo }}>
@@ -632,6 +664,9 @@ export const Analyse = ({ D, t, allTxs, allHistory }: Props) => {
         )}
 
       </div>
+
+      </> /* end mainView === 'analyse' */}
+
     </div>
   )
 }
