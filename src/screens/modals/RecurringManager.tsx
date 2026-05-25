@@ -174,7 +174,7 @@ export const RecurringManager = ({ t, accounts, recurrings, allHistory, onAdd, o
                   display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
                 <span style={{fontSize:12,...sp('o',600),color:tab===id?t.tx:t.sub}}>{lb}</span>
                 {count>0&&<span style={{fontSize:10,...sp('o',700),
-                  background:tab===id?t.mint:t.bo,color:tab===id?t.bg:t.sub,
+                  background:tab===id?t.primary:t.bo,color:tab===id?t.bg:t.sub,
                   padding:'1px 6px',borderRadius:8}}>{count}</span>}
               </button>
             ))}
@@ -358,7 +358,7 @@ export const RecurringManager = ({ t, accounts, recurrings, allHistory, onAdd, o
                               accId:accExists?d.topAcc:accounts[0]?.id||'',
                             });
                           }}
-                            style={{padding:'10px',background:t.mint,border:'none',
+                            style={{padding:'10px',background:t.primary,border:'none',
                               borderRadius:12,cursor:'pointer',
                               ...sp('o',700),fontSize:13,color:t.bg}}>
                             Confirmer

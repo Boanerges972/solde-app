@@ -1,6 +1,21 @@
 import type { Theme, Account } from '../types'
 import type { AccountScore, ScoreStatus } from '../lib/scoreAccounts'
 
+function letterBadge(acc: Account, size: number) {
+  const letters = (acc.short || acc.name.slice(0, 2)).toUpperCase()
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: Math.round(size * 0.28),
+      background: acc.col, display: 'flex', alignItems: 'center',
+      justifyContent: 'center', flexShrink: 0,
+    }}>
+      <span style={{ fontSize: size * 0.38, fontWeight: 700, color: '#fff', letterSpacing: -0.5 }}>
+        {letters}
+      </span>
+    </div>
+  )
+}
+
 interface AccountScoreCardProps {
   acc: Account
   score: AccountScore
@@ -58,14 +73,7 @@ export const AccountScoreCard = ({ acc, score, selected, onSelect, t }: AccountS
         {/* Header: nom + badge */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{
-              width: 36, height: 36, borderRadius: 10,
-              background: cols.border + '22',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 18, flexShrink: 0,
-            }}>
-              🏦
-            </div>
+            {letterBadge(acc, 36)}
             <div>
               <div style={{ fontSize: 14, fontWeight: 600, color: t.tx }}>{acc.name}</div>
               <div style={{ fontSize: 12, color: t.sub, marginTop: 1 }}>{acc.type}</div>
@@ -126,7 +134,7 @@ export const AccountScoreCard = ({ acc, score, selected, onSelect, t }: AccountS
         boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
       }}
     >
-      <div style={{ width: 8, height: 8, borderRadius: 4, background: acc.col, flexShrink: 0 }} />
+      {letterBadge(acc, 32)}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
           <span style={{ fontSize: 13, fontWeight: 600, color: t.tx }}>{acc.name}</span>
