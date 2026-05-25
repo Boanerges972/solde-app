@@ -112,10 +112,12 @@ describe('scoreAccounts', () => {
   })
 
   it('sorts results by score descending', () => {
+    // acc1: bal=2000, amount=92 → marge=1908/2000=95.4%≥30% → 20pts marge → high score
+    // acc2: bal=100, amount=92 → soldeApres=8, marge=8%<10% → 0pts marge → lower score
     const acc1 = mkAcc({ id: 'a1', bal: 2000 })
     const acc2 = mkAcc({ id: 'a2', bal: 100 })
     const D = mkD({ accounts: [acc1, acc2], persoAccs: [acc1, acc2] })
-    const results = scoreAccounts([acc1, acc2], [], 50, D, [])
+    const results = scoreAccounts([acc1, acc2], [], 92, D, [])
     expect(results[0].score).toBeGreaterThan(results[1].score)
     expect(results[0].accountId).toBe('a1')
   })

@@ -69,8 +69,7 @@ export function scoreAccounts(
     let margePts = 0
     if (acc.bal > 0) {
       const marge = soldeApres / acc.bal
-      if (marge >= 0.70) margePts = 20
-      else if (marge >= 0.30) margePts = 15
+      if (marge >= 0.30) margePts = 20
       else if (marge >= 0.10) margePts = 10
     }
 
