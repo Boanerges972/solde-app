@@ -245,7 +245,7 @@ export const ImportCSV = ({t,uid,accounts,bank,onClose,onImported}: Props) => {
                   {tx.amount<0?'−':'+'}{fmt(Math.abs(tx.amount))}
                 </div>
                 <div style={{width:18,height:18,borderRadius:9,flexShrink:0,background:selected[i]?t.mint:t.bo,display:'flex',alignItems:'center',justifyContent:'center'}}>
-                  {selected[i]&&<span style={{fontSize:10,color:'#0F1117',fontWeight:700}}>✓</span>}
+                  {selected[i]&&<span style={{fontSize:10,color:'#fff',fontWeight:700}}>✓</span>}
                 </div>
               </div>
             ))}

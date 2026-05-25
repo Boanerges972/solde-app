@@ -105,7 +105,7 @@ export const EditBudget = ({ D, t, uid, onClose, onSaved, defaultPeriod = 'week'
           style={{width:'100%',padding:'14px',border:'none',borderRadius:14,
             cursor:saving?'wait':'pointer',...sp('o',700),fontSize:15,
             background:saving?t.el:t.primary,
-            color:saving?t.sub:'#0F1117'}}>
+            color:saving?t.sub:'#fff'}}>
           {saving?'Enregistrement…':'Enregistrer'}
         </button>
       </div>

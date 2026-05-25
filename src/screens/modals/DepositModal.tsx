@@ -114,9 +114,9 @@ export const DepositModal = ({ account, t, onClose, onSave }: Props) => {
         {err&&<div role="alert" style={{padding:'8px 12px',borderRadius:10,background:t.rD,border:'1px solid '+t.rose+'44',marginBottom:10,...sp('o'),fontSize:13,color:t.rose}}>{err}</div>}
 
         <button onClick={save} disabled={saving||!n}
-          style={{width:'100%',padding:'15px',background:(!n||saving)?t.el:t.primary+t.mint+'CC)',
+          style={{width:'100%',padding:'15px',background:(!n||saving)?t.el:t.primary,
             border:'none',borderRadius:14,cursor:(!n||saving)?'not-allowed':'pointer',
-            ...sp('o',700),fontSize:16,color:(!n||saving)?t.sub:'#0a0c12'}}>
+            ...sp('o',700),fontSize:16,color:(!n||saving)?t.sub:'#fff'}}>
           {saving?'Enregistrement…':'Confirmer le dépôt'}
         </button>
       </div>

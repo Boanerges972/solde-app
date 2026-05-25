@@ -84,7 +84,7 @@ export const Settings = ({ t, dark, toggle, user, onLogout, profile, onProfile, 
           </div>
         </div>
         <button onClick={toggle} style={{ width: 50, height: 28, borderRadius: 14, padding: 3, background: dark ? t.el : t.mint, border: 'none', cursor: 'pointer', transition: 'background .25s', display: 'flex', alignItems: 'center' }}>
-          <div style={{ width: 22, height: 22, borderRadius: 11, background: dark ? t.sub : '#0F1117', transform: dark ? 'translateX(0)' : 'translateX(22px)', transition: 'transform .25s' }} />
+          <div style={{ width: 22, height: 22, borderRadius: 11, background: '#fff', transform: dark ? 'translateX(0)' : 'translateX(22px)', transition: 'transform .25s' }} />
         </button>
       </div>
     </div>

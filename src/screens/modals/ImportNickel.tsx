@@ -257,7 +257,7 @@ export const ImportNickel = ({t,uid,accounts,onClose,onImported}: Props) => {
                 <div style={{width:18,height:18,borderRadius:9,flexShrink:0,
                   background:selected[i]?t.mint:t.bo,
                   display:'flex',alignItems:'center',justifyContent:'center'}}>
-                  {selected[i]&&<span style={{fontSize:10,color:'#0F1117',fontWeight:700}}>✓</span>}
+                  {selected[i]&&<span style={{fontSize:10,color:'#fff',fontWeight:700}}>✓</span>}
                 </div>
               </div>
             ))}
@@ -289,7 +289,7 @@ export const ImportNickel = ({t,uid,accounts,onClose,onImported}: Props) => {
               <button onClick={onClose} style={{flex:1,padding:'15px',background:'none',border:'1px solid '+t.bo,borderRadius:14,cursor:'pointer',...sp('o',600),fontSize:14,color:t.sub}}>
                 Annuler
               </button>
-              <button onClick={doImport} style={{flex:2,padding:'15px',background:t.primary,border:'none',borderRadius:14,cursor:'pointer',...sp('o',700),fontSize:14,color:'#0F1117'}}>
+              <button onClick={doImport} style={{flex:2,padding:'15px',background:t.primary,border:'none',borderRadius:14,cursor:'pointer',...sp('o',700),fontSize:14,color:'#fff'}}>
                 Importer ({Object.values(selected).filter(Boolean).length})
               </button>
             </div>
