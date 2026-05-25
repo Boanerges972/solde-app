@@ -1,7 +1,9 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { sp } from '../../lib/theme'
 import { fmt } from '../../lib/currency'
 import type { Theme, AppData, Transaction, Recurring, Group, Member } from '../../types'
+import { scoreAccounts } from '../../lib/scoreAccounts'
+import { AccountScoreCard } from '../../components/AccountScoreCard'
 
 interface Props {
   D: AppData; t: Theme; onClose: () => void
@@ -34,28 +36,6 @@ const CATS_E = [
   {n:'Autre',         ico:'📦', col:'#8B90A7'},
 ]
 
-function calcARD(accounts: any[], recurrings: any[], days = 31) {
-  const today = new Date()
-  const result: Record<string, any> = {}
-  accounts.forEach(acc => {
-    const debits = recurrings.filter(r => r.account_id === acc.id).map(r => {
-      const dayOfMonth = parseInt(r.date_label || '1', 10)
-      const next = new Date(today.getFullYear(), today.getMonth(), dayOfMonth)
-      if (next < today) next.setMonth(next.getMonth() + 1)
-      const daysUntil = Math.round((next.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-      return { ...r, next, daysUntil, amt: parseFloat(r.amount) }
-    }).filter(r => r.daysUntil <= days)
-    const committed = debits.reduce((s: number, r: any) => s + r.amt, 0)
-    const overdraft = parseFloat(acc.overdraft || 0)
-    const ard = acc.bal + overdraft - committed
-    const realAvail = acc.bal + overdraft
-    result[acc.id] = {
-      ard, committed, debits, overdraft, realAvail,
-      status: ard < 0 ? 'danger' : ard < Math.max(committed * 0.2, 50) ? 'warning' : 'ok',
-    }
-  })
-  return result
-}
 
 function buildMerchantMemory(history: Transaction[]) {
   const map: Record<string, any> = {}
@@ -87,7 +67,7 @@ function searchMerchants(query: string, memory: Record<string, any>, limit = 4) 
 
 export const ExpEntry = ({ D, t, onClose, onSave, group, members, uid, recurrings, allHistory }: Props) => {
   const [cat, setCat] = useState('Courses')
-  const [acc, setAcc] = useState(D.accounts[0] ? D.accounts[0].id : '')
+  const [selectedAccId, setSelectedAccId] = useState(D.accounts[0] ? D.accounts[0].id : '')
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
   const [isGroup, setIsGroup] = useState(false)
@@ -100,11 +80,21 @@ export const ExpEntry = ({ D, t, onClose, onSave, group, members, uid, recurring
   const memory = useMemo(() => buildMerchantMemory(allHistory || []), [allHistory])
   const suggestions = showSuggestions ? searchMerchants(note, memory, 4) : []
 
+  const scores = useMemo(() => {
+    const n = parseFloat((amount || '0').replace(',', '.'))
+    if (!n || n <= 0) return []
+    return scoreAccounts(D.accounts, recurrings, n, D, allHistory)
+  }, [amount, D, recurrings, allHistory])
+
+  useEffect(() => {
+    if (scores.length > 0) setSelectedAccId(scores[0].accountId)
+  }, [scores])
+
   const applySuggestion = (s: any) => {
     setNote(s.name)
     setCat(s.cat || 'Courses')
     const accExists = D.accounts.find(a => a.id === s.accId)
-    if (accExists) setAcc(s.accId)
+    if (accExists) setSelectedAccId(s.accId)
     setShowSuggestions(false)
   }
 
@@ -236,106 +226,56 @@ export const ExpEntry = ({ D, t, onClose, onSave, group, members, uid, recurring
             </div>
           </div>
         )}
-        {/* ASSISTANT "PAYER AVEC..." */}
-        {D.accounts.length>0&&(()=>{
-          const n=parseFloat((amount||'0').replace(',','.'))
-          const ardMap=calcARD(D.accounts,recurrings||[])
-          return(
-            <div style={{marginBottom:20}}>
-              <div style={{fontSize:11,...sp('s',700),color:t.sub,letterSpacing:1,
-                textTransform:'uppercase',marginBottom:8}}>Payer avec…</div>
-              {D.accounts.map(a=>{
-                const v=ardMap[a.id]||{ard:a.bal,committed:0,debits:[],status:'ok',overdraft:0}
-                const afterPurchase=v.ard-n
-                const selected=acc===a.id
-                const risk=n>0&&afterPurchase<0?'danger'
-                  :n>0&&afterPurchase<Math.max(50,v.overdraft*0.1)?'warning':'ok'
-                const statusCol=risk==='danger'?t.rose:risk==='warning'?t.amber:v.status==='ok'?t.mint:t.amber
-                const statusIco=risk==='danger'?'🔴':risk==='warning'?'🟡':'🟢'
-                const isRecommended=risk==='ok'&&v.status==='ok'&&!selected&&
-                  D.accounts.every((other: any)=>{
-                    if(other.id===a.id)return true
-                    const ov=ardMap[other.id]||{ard:other.bal}
-                    return v.ard>=ov.ard
-                  })
-                return(
-                  <button key={a.id} onClick={()=>setAcc(a.id)}
-                    style={{display:'flex',alignItems:'center',gap:12,width:'100%',
-                      padding:'13px 14px',borderRadius:16,marginBottom:8,
-                      background:selected?a.col+'18':t.el,cursor:'pointer',
-                      border:'1.5px solid '+(selected?a.col+'88':risk==='danger'?t.rose+'33':t.bo),
-                      textAlign:'left',transition:'all .15s'}}>
-                    <div style={{width:10,height:10,borderRadius:5,
-                      background:a.col,flexShrink:0}}/>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{display:'flex',alignItems:'center',gap:6}}>
-                        <span style={{fontSize:13,...sp('s',600),color:selected?a.col:t.tx}}>
-                          {a.name}
-                        </span>
-                        {isRecommended&&(
-                          <span style={{fontSize:9,...sp('o',700),color:t.mint,
-                            background:t.mD,padding:'1px 6px',borderRadius:5}}>
-                            RECOMMANDÉ
-                          </span>
-                        )}
-                      </div>
-                      <div style={{fontSize:11,...sp('o'),color:t.muted,marginTop:2}}>
-                        ARD&nbsp;
-                        <span style={{color:v.ard<0?t.rose:t.sub,...sp('m',600)}}>
-                          {v.ard<0?'−':''}{fmt(Math.abs(v.ard),0)}
-                        </span>
-                        {v.debits.length>0&&(
-                          <span style={{color:t.muted}}>
-                            &nbsp;· {v.debits.length} prél. à venir
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div style={{textAlign:'right',flexShrink:0}}>
-                      <div style={{fontSize:14,...sp('m',600),
-                        color:n>0?statusCol:t.tx,lineHeight:1}}>
-                        {n>0?(afterPurchase<0?'−':'')+fmt(Math.abs(afterPurchase),0):fmt(a.bal,0)}
-                      </div>
-                      <div style={{fontSize:11,marginTop:2}}>
-                        {n>0?statusIco:''}
-                        <span style={{...sp('o'),color:t.muted,marginLeft:2}}>
-                          {n>0?'après achat':'solde'}
-                        </span>
-                      </div>
-                    </div>
-                    {selected&&(
-                      <div style={{width:22,height:22,borderRadius:11,
-                        background:a.col,display:'flex',alignItems:'center',
-                        justifyContent:'center',flexShrink:0,fontSize:12}}>✓</div>
-                    )}
-                  </button>
-                )
-              })}
-              {/* Alerte rejet si risque sur le compte sélectionné */}
-              {acc&&n>0&&(()=>{
-                const v=ardMap[acc]||{ard:0}
-                const after=v.ard-n
-                if(after>=0)return null
-                const selAcc=D.accounts.find(a=>a.id===acc)
-                return(
-                  <div style={{padding:'10px 14px',borderRadius:12,
-                    background:t.rD,border:'1px solid '+t.rose+'44',marginTop:4}}>
-                    <div style={{fontSize:12,...sp('o',700),color:t.rose,marginBottom:4}}>
-                      ⚠ Risque de rejet ou découvert
-                    </div>
-                    <div style={{fontSize:11,...sp('o'),color:t.rose,opacity:.9}}>
-                      ARD insuffisant sur {selAcc?.name||'ce compte'}.
-                      Après achat&nbsp;: {fmt(after,0)} €
-                    </div>
-                  </div>
-                )
-              })()}
+        {/* SCORING — QUEL COMPTE UTILISER ? */}
+        {D.accounts.length > 0 && (
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: t.sub, letterSpacing: 1,
+              textTransform: 'uppercase', marginBottom: 8 }}>
+              {scores.length > 0 ? 'Quel compte utiliser ?' : 'Payer avec…'}
             </div>
-          )
-        })()}
+            {scores.length > 0 ? (
+              scores.map(s => {
+                const a = D.accounts.find(ac => ac.id === s.accountId)
+                if (!a) return null
+                return (
+                  <AccountScoreCard
+                    key={s.accountId}
+                    acc={a}
+                    score={s}
+                    selected={selectedAccId === s.accountId}
+                    onSelect={setSelectedAccId}
+                    t={t}
+                  />
+                )
+              })
+            ) : (
+              D.accounts.map(a => (
+                <button key={a.id} onClick={() => setSelectedAccId(a.id)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+                    padding: '13px 14px', borderRadius: 16, marginBottom: 8,
+                    background: selectedAccId === a.id ? a.col + '18' : t.el,
+                    border: '1.5px solid ' + (selectedAccId === a.id ? a.col + '88' : t.bo),
+                    cursor: 'pointer', textAlign: 'left' }}>
+                  <div style={{ width: 10, height: 10, borderRadius: 5, background: a.col, flexShrink: 0 }} />
+                  <span style={{ fontSize: 13, fontWeight: 600,
+                    color: selectedAccId === a.id ? a.col : t.tx, flex: 1 }}>
+                    {a.name}
+                  </span>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: t.sub }}>
+                    {fmt(a.bal, 0)}
+                  </span>
+                  {selectedAccId === a.id && (
+                    <div style={{ width: 22, height: 22, borderRadius: 11, background: a.col,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>✓</div>
+                  )}
+                </button>
+              ))
+            )}
+          </div>
+        )}
         {/* Toggle Pro/Perso si compte pro sélectionné */}
         {(()=>{
-          const selAcc=D.accounts.find(a=>a.id===acc)
+          const selAcc=D.accounts.find(a=>a.id===selectedAccId)
           if(!selAcc?.isPro)return null
           return(
             <div style={{padding:'12px 14px',borderRadius:14,
@@ -366,21 +306,23 @@ export const ExpEntry = ({ D, t, onClose, onSave, group, members, uid, recurring
           )
         })()}
         <button onClick={async()=>{
-          const selAcc=D.accounts.find(a=>a.id===acc)
+          const selAcc=D.accounts.find(a=>a.id===selectedAccId)
           const finalCat=selAcc?.isPro&&isProPerso?'Dépense perso':cat
           const n=parseFloat(amount.replace(',','.'))
-          if(!n||n<=0||!acc)return
+          if(!n||n<=0||!selectedAccId)return
           setSaving(true)
           const catO2=CATS_E.find(c=>c.n===finalCat)||catO
           await onSave({merchant:note||finalCat,category:finalCat,icon:catO2.ico,
-            amount:n,account_id:acc,group_id:isGroup&&group?group.id:null,paid_by:isGroup?paidBy:null})
+            amount:n,account_id:selectedAccId,group_id:isGroup&&group?group.id:null,paid_by:isGroup?paidBy:null})
           setSaving(false);onClose()
-        }} disabled={saving||!amount||!acc}
+        }} disabled={saving||!amount||!selectedAccId}
           style={{width:'100%',padding:'15px',border:'none',borderRadius:16,
-            cursor:saving||!amount||!acc?'default':'pointer',...sp('o',700),fontSize:15,
-            background:saving||!amount||!acc?t.el:'linear-gradient(135deg,'+t.mint+',#08C4A0)',
-            color:saving||!amount||!acc?t.sub:'#0F1117'}}>
-          {saving?'Enregistrement…':'Ajouter'}
+            cursor:saving||!amount||!selectedAccId?'default':'pointer',...sp('o',700),fontSize:15,
+            background:saving||!amount||!selectedAccId?t.el:'linear-gradient(135deg,'+t.mint+',#08C4A0)',
+            color:saving||!amount||!selectedAccId?t.sub:'#0F1117'}}>
+          {saving?'Enregistrement…':selectedAccId
+            ?`✓ ${D.accounts.find(a=>a.id===selectedAccId)?.name||'Enregistrer'}`
+            :'Ajouter'}
         </button>
       </div>
     </div>
