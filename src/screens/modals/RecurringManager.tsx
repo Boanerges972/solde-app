@@ -427,7 +427,7 @@ export const RecurringManager = ({ t, accounts, recurrings, allHistory, onAdd, o
             {err&&<div role="alert" style={{padding:'10px',borderRadius:10,background:t.rD,
               color:t.rose,...sp('o',600),fontSize:13}}>{err}</div>}
             <button onClick={()=>save()} disabled={saving}
-              style={{padding:'15px',background:saving?t.el:'linear-gradient(135deg,'+t.mint+',#08C4A0)',
+              style={{padding:'15px',background:saving?t.el:t.primary,
                 border:'none',borderRadius:16,cursor:saving?'wait':'pointer',
                 ...sp('o',700),fontSize:15,color:saving?t.sub:t.bg}}>
               {saving?'Enregistrement…':'Ajouter le prélèvement'}

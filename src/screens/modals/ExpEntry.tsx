@@ -318,7 +318,7 @@ export const ExpEntry = ({ D, t, onClose, onSave, group, members, uid, recurring
         }} disabled={saving||!amount||!selectedAccId}
           style={{width:'100%',padding:'15px',border:'none',borderRadius:16,
             cursor:saving||!amount||!selectedAccId?'default':'pointer',...sp('o',700),fontSize:15,
-            background:saving||!amount||!selectedAccId?t.el:'linear-gradient(135deg,'+t.mint+',#08C4A0)',
+            background:saving||!amount||!selectedAccId?t.el:t.primary,
             color:saving||!amount||!selectedAccId?t.sub:'#0F1117'}}>
           {saving?'Enregistrement…':selectedAccId
             ?`✓ ${D.accounts.find(a=>a.id===selectedAccId)?.name||'Enregistrer'}`

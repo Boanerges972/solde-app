@@ -53,7 +53,7 @@ export const ProfileScreen = ({ t, user, onClose, onSaved }: Props) => {
         <span style={{fontSize:15,...sp('s',600),color:t.tx}}>Mon profil</span>
         <button onClick={save} disabled={saving||ok}
           style={{padding:'6px 14px',borderRadius:10,border:'none',cursor:'pointer',...sp('o',700),fontSize:13,
-          background:ok?t.mD:saving?t.el:'linear-gradient(135deg,'+t.mint+',#08C4A0)',
+          background:ok?t.mD:saving?t.el:t.primary,
           color:ok?t.mint:saving?t.sub:'#0F1117'}}>
           {ok?'✓ Sauvé':saving?'…':'Sauver'}
         </button>

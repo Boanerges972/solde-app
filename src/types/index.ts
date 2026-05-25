@@ -6,6 +6,7 @@ export interface Theme {
   bo: string
   mint: string; rose: string; amber: string
   mD: string; rD: string; aD: string; rB: string
+  primary: string; secondary: string
 }
 
 export interface AccountDebit { n: string; d: string; a: number }

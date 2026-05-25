@@ -126,7 +126,7 @@ export const Groupe = ({ t, uid, group, members, createGroup, joinGroup, leaveGr
           <button onClick={() => { setMode(null); setErr('') }} style={{ flex: 1, padding: '14px', background: 'none', border: '1px solid ' + t.bo, borderRadius: 14, cursor: 'pointer', ...sp('o', 600), fontSize: 14, color: t.sub }}>
             Annuler
           </button>
-          <button onClick={submit} disabled={loading} style={{ flex: 2, padding: '14px', background: loading ? t.el : 'linear-gradient(135deg,' + t.mint + ',#08C4A0)', border: 'none', borderRadius: 14, cursor: loading ? 'wait' : 'pointer', ...sp('o', 700), fontSize: 14, color: loading ? t.sub : '#0F1117' }}>
+          <button onClick={submit} disabled={loading} style={{ flex: 2, padding: '14px', background: loading ? t.el : t.primary, border: 'none', borderRadius: 14, cursor: loading ? 'wait' : 'pointer', ...sp('o', 700), fontSize: 14, color: loading ? t.sub : '#0F1117' }}>
             {loading ? '...' : (mode === 'create' ? 'Créer' : 'Rejoindre')}
           </button>
         </div>
@@ -202,7 +202,7 @@ export const Groupe = ({ t, uid, group, members, createGroup, joinGroup, leaveGr
             <div style={{ fontSize: 11, ...sp('o'), color: t.sub, marginTop: 6 }}>Total commun : {fmtS(totalCommun)} · Part : {fmtS(myShare)}/pers</div>
             {debtor && debtor.isMe && (
               <button onClick={() => settleUp(debtor.id, creditor ? creditor.id : '', balance)}
-                style={{ marginTop: 14, padding: '10px 24px', borderRadius: 12, background: 'linear-gradient(135deg,' + t.mint + ',#08C4A0)', border: 'none', cursor: 'pointer', ...sp('o', 700), fontSize: 13, color: '#0F1117' }}>
+                style={{ marginTop: 14, padding: '10px 24px', borderRadius: 12, background: t.primary, border: 'none', cursor: 'pointer', ...sp('o', 700), fontSize: 13, color: '#0F1117' }}>
                 💸 J'ai remboursé {fmt(balance)}
               </button>
             )}
@@ -227,7 +227,7 @@ export const Groupe = ({ t, uid, group, members, createGroup, joinGroup, leaveGr
       </div>
 
       {/* Add expense button */}
-      <button onClick={() => setShowAdd(true)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '13px', borderRadius: 14, marginBottom: 14, background: 'linear-gradient(135deg,' + t.mint + ',#08C4A0)', border: 'none', cursor: 'pointer', ...sp('o', 700), fontSize: 14, color: '#0F1117' }}>
+      <button onClick={() => setShowAdd(true)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '13px', borderRadius: 14, marginBottom: 14, background: t.primary, border: 'none', cursor: 'pointer', ...sp('o', 700), fontSize: 14, color: '#0F1117' }}>
         <Icon n="plus" sz={16} c="#0F1117" />Ajouter une dépense commune
       </button>
 
@@ -310,7 +310,7 @@ export const Groupe = ({ t, uid, group, members, createGroup, joinGroup, leaveGr
                 ))}
               </div>
             </div>
-            <button onClick={saveExpense} disabled={saving || !addAmt} style={{ width: '100%', padding: '15px', background: saving || !addAmt ? t.el : 'linear-gradient(135deg,' + t.mint + ',#08C4A0)', border: 'none', borderRadius: 16, cursor: saving || !addAmt ? 'default' : 'pointer', ...sp('o', 700), fontSize: 15, color: saving || !addAmt ? t.sub : '#0F1117' }}>
+            <button onClick={saveExpense} disabled={saving || !addAmt} style={{ width: '100%', padding: '15px', background: saving || !addAmt ? t.el : t.primary, border: 'none', borderRadius: 16, cursor: saving || !addAmt ? 'default' : 'pointer', ...sp('o', 700), fontSize: 15, color: saving || !addAmt ? t.sub : '#0F1117' }}>
               {saving ? 'Enregistrement…' : 'Ajouter · ' + fmt(parseFloat(addAmt || '0') / 2) + ' /pers'}
             </button>
           </div>

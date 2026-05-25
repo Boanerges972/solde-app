@@ -248,7 +248,7 @@ export const Home = ({ D, t, onAcc, onAdd, onEditBudget, onDelete, rtConnected, 
       {/* ══ ACTIONS — icônes rondes style Revolut ══════════════ */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: 24, padding: '20px 20px 4px' }}>
         {([
-          { ico: '＋', label: 'Dépense', action: onAdd, col: t.mint },
+          { ico: '＋', label: 'Dépense', action: onAdd, col: t.primary },
           D.accounts.length >= 2 && { ico: '⇄', label: 'Virement', action: onTransfer, col: '#4D96FF' },
         ] as any[]).filter(Boolean).map((btn: any, i: number) => (
           <button key={i} onClick={btn.action}
@@ -341,7 +341,7 @@ export const Home = ({ D, t, onAcc, onAdd, onEditBudget, onDelete, rtConnected, 
               )}
               {safePage < totalPages - 1 && (
                 <button onClick={() => setPage(p => p + 1)}
-                  style={{ fontSize: 12, ...sp('o', 600), color: t.mint,
+                  style={{ fontSize: 12, ...sp('o', 600), color: t.primary,
                     background: 'none', border: 'none', cursor: 'pointer' }}>
                   Suivantes →
                 </button>

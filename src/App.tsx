@@ -38,7 +38,7 @@ import type { Session } from '@supabase/supabase-js'
 const StatusBar = (_props: { t: unknown }) => null;
 
 export default function App() {
-  const [dark, setDark] = useState(true);
+  const [dark, setDark] = useState(false);
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [tab, setTab] = useState('journal');
   const [showEntry, setShowEntry] = useState(false);
@@ -148,8 +148,8 @@ export default function App() {
 
   if (session === undefined) return (
     <div style={{ width: 375, minHeight: '100vh', background: t.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
-      <div style={{ fontSize: 28, ...sp('s', 700), color: t.mint, letterSpacing: -1 }}>QDQ</div>
-      <div style={{ width: 32, height: 32, border: '3px solid ' + t.mint + '33', borderTop: '3px solid ' + t.mint, borderRadius: '50%', animation: 'spin .8s linear infinite' }} />
+      <div style={{ fontSize: 28, ...sp('s', 700), color: t.primary, letterSpacing: -1 }}>QDQ</div>
+      <div style={{ width: 32, height: 32, border: '3px solid ' + t.primary + '33', borderTop: '3px solid ' + t.primary, borderRadius: '50%', animation: 'spin .8s linear infinite' }} />
     </div>
   );
 
@@ -158,7 +158,7 @@ export default function App() {
   const renderMain = () => {
     if (loading && !data) return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
-        <div style={{ width: 28, height: 28, border: '3px solid ' + t.mint + '33', borderTop: '3px solid ' + t.mint, borderRadius: '50%', animation: 'spin .8s linear infinite' }} />
+        <div style={{ width: 28, height: 28, border: '3px solid ' + t.primary + '33', borderTop: '3px solid ' + t.primary, borderRadius: '50%', animation: 'spin .8s linear infinite' }} />
       </div>
     );
     if (error) return (
@@ -166,7 +166,7 @@ export default function App() {
         <div style={{ fontSize: 32 }}>⚠️</div>
         <div style={{ fontSize: 15, ...sp('s', 600), color: t.tx }}>Erreur de chargement</div>
         <div style={{ fontSize: 12, ...sp('o'), color: t.sub }}>{error}</div>
-        <button onClick={reload} style={{ padding: '10px 20px', borderRadius: 12, background: t.mD, border: '1px solid ' + t.mint + '44', cursor: 'pointer', ...sp('o', 600), fontSize: 13, color: t.mint }}>Réessayer</button>
+        <button onClick={reload} style={{ padding: '10px 20px', borderRadius: 12, background: t.mD, border: '1px solid ' + t.primary + '44', cursor: 'pointer', ...sp('o', 600), fontSize: 13, color: t.primary }}>Réessayer</button>
       </div>
     );
     if (!data) return null;
