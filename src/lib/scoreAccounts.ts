@@ -44,6 +44,15 @@ export function scoreAccounts(
   // Critère budget : identique pour tous les comptes
   const budgetPts = D.monthBudget > 0 && D.monthSpent / D.monthBudget < 0.80 ? 10 : 0
 
+  // Pre-index recent income by account for O(1) lookup
+  const recentIncomeAccs = new Set<string>()
+  for (const tx of allHistory) {
+    if (tx.amt > 0 && tx.tx_date >= cutoffStr) {
+      if (tx.acc) recentIncomeAccs.add(tx.acc)
+      if (tx.account_id) recentIncomeAccs.add(tx.account_id)
+    }
+  }
+
   const results: AccountScore[] = targets.map(acc => {
     // Calcul committed : prélèvements récurrents dus dans 31j
     const committed = recurrings
@@ -53,7 +62,8 @@ export function scoreAccounts(
         const next = new Date(today.getFullYear(), today.getMonth(), dayOfMonth)
         if (next < today) next.setMonth(next.getMonth() + 1)
         const daysUntil = Math.round((next.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-        return daysUntil <= 31 ? sum + parseFloat(String(r.amount)) : sum
+        const amt = parseFloat(String(r.amount))
+        return daysUntil <= 31 && !isNaN(amt) ? sum + amt : sum
       }, 0)
 
     const soldeApres = acc.bal - amount
@@ -77,12 +87,7 @@ export function scoreAccounts(
     const prelevPts = soldeApres > committed ? 15 : 0
 
     // d) Revenus récents sur ce compte dans 60j (10 pts)
-    const hasRecentIncome = allHistory.some(tx =>
-      (tx.acc === acc.id || tx.account_id === acc.id) &&
-      tx.amt > 0 &&
-      tx.tx_date >= cutoffStr
-    )
-    const revenusPts = hasRecentIncome ? 10 : 0
+    const revenusPts = recentIncomeAccs.has(acc.id) ? 10 : 0
 
     // e) Budget mensuel (10 pts) — calculé avant la boucle
     // f) Préférence utilisateur (5 pts) — toujours 5
