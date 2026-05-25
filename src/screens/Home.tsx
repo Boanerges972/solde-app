@@ -104,72 +104,98 @@ export const Home = ({ D, t, onAcc, onAdd, onEditBudget, onDelete, rtConnected, 
         </div>
       </div>
 
-      {/* ══ HERO — chiffre dominant ════════════════════════════ */}
-      <div style={{ padding: '24px 20px 20px', textAlign: 'center' }}>
-        {/* Toggle Semaine / Mois */}
-        <div style={{ display: 'inline-flex', background: t.el, borderRadius: 20,
-          padding: 2, marginBottom: 14, gap: 2 }}>
-          {([['week', 'Semaine'], ['month', 'Mois']] as [string, string][]).map(([p, lb]) => (
-            <button key={p} onClick={() => setPeriodSaved(p)}
-              style={{ padding: '5px 14px', borderRadius: 18, border: 'none', cursor: 'pointer',
-                background: period === p ? t.card : 'transparent',
-                ...sp('o', 600), fontSize: 12,
-                color: period === p ? t.tx : t.muted, transition: 'all .2s' }}>
-              {lb}
-            </button>
-          ))}
-        </div>
-        {/* Étiquette contextuelle */}
-        <div style={{ fontSize: 11, ...sp('o', 600), color: t.muted, letterSpacing: 1.5,
-          textTransform: 'uppercase', marginBottom: 6 }}>
-          {isMonth ? 'Reste ce mois' : 'Reste cette semaine'}
-        </div>
-        {/* Chiffre principal */}
-        <div style={{ fontSize: 48, ...sp('m', 300),
-          color: rem < 0 ? t.rose : t.tx, lineHeight: 1, marginBottom: 16, letterSpacing: -1.5 }}>
-          {rem < 0 ? '−' : ''}{fmt(Math.abs(rem), 0)}
-        </div>
-        {/* Arc de progression fin */}
-        <div style={{ position: 'relative', height: 6, background: t.el + '88',
-          borderRadius: 3, overflow: 'hidden', margin: '0 auto', maxWidth: 260 }}>
-          <div style={{ position: 'absolute', left: 0, top: 0, height: '100%',
-            width: Math.min(spentPct, 100) + '%',
-            background: col, borderRadius: 3,
-            transition: 'width .8s ease' }} />
-        </div>
-        {/* Dépensé / budget — discret */}
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center',
-          gap: 6, marginTop: 8 }}>
-          <span style={{ fontSize: 12, ...sp('m', 600), color: t.rose }}>{fmt(activeSpent, 0)}</span>
-          <span style={{ fontSize: 11, ...sp('o'), color: t.muted }}>dépensé sur</span>
-          <button onClick={onEditBudget}
-            style={{ background: 'none', border: 'none', cursor: 'pointer',
-              fontSize: 12, ...sp('m', 600), color: t.sub, padding: 0,
-              display: 'flex', alignItems: 'center', gap: 3 }}>
-            {fmt(activeBudget, 0)}
-            <span style={{ fontSize: 9, color: t.muted, opacity: .7 }}>✏</span>
-          </button>
-        </div>
-        {/* Label période (mois en cours si mode mois) */}
-        {isMonth && D.monthLabel && (
-          <div style={{ fontSize: 10, ...sp('o'), color: t.muted, marginTop: 4, textAlign: 'center' }}>
-            {D.monthLabel}
+      {/* ══ SITUATION GLOBALE ══════════════════════════════════════ */}
+      <div style={{ padding: '16px 20px 0' }}>
+        <div style={{ background: t.primary, borderRadius: 24, padding: '20px 20px 18px',
+          boxShadow: '0 4px 20px rgba(10,61,145,0.25)' }}>
+          {/* Solde total */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.65)',
+              letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>
+              Solde total
+            </div>
+            <div style={{ fontSize: 36, fontWeight: 700, color: '#fff', letterSpacing: -1, lineHeight: 1 }}>
+              {D.persoBal != null ? (D.persoBal < 0 ? '−' : '') + fmt(Math.abs(D.persoBal), 2) : fmt(D.accounts.reduce((s, a) => s + a.bal, 0), 2)}
+            </div>
+            {D.proBal !== 0 && (
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 3 }}>
+                Pro : {fmt(D.proBal, 0)} €
+              </div>
+            )}
           </div>
-        )}
-        {/* ARD si prélèvements configurés */}
-        {totalCommitted > 0 && (
-          <button onClick={onManageRecurring}
-            style={{ marginTop: 10, background: 'none', border: 'none', cursor: 'pointer',
-              fontSize: 11, ...sp('o'), color: ardStatus === 'danger' ? t.rose : ardStatus === 'warning' ? t.amber : t.muted,
-              display: 'flex', alignItems: 'center', gap: 5, margin: '10px auto 0' }}>
-            <span style={{ fontSize: 12 }}>
-              {ardStatus === 'danger' ? '🔴' : ardStatus === 'warning' ? '🟡' : '🟢'}
+          {/* 3 métriques */}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ flex: 1, background: 'rgba(255,255,255,0.10)', borderRadius: 14, padding: '10px 12px' }}>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', marginBottom: 3 }}>Revenus</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#fff' }}>
+                {D.monthIncome > 0 ? fmt(D.monthIncome, 0) : '—'} €
+              </div>
+            </div>
+            <div style={{ flex: 1, background: 'rgba(255,255,255,0.10)', borderRadius: 14, padding: '10px 12px' }}>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', marginBottom: 3 }}>Dépenses</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#fff' }}>
+                {fmt(D.monthSpent || 0, 0)} €
+              </div>
+            </div>
+            <div style={{ flex: 1, background: 'rgba(255,255,255,0.10)', borderRadius: 14, padding: '10px 12px' }}>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', marginBottom: 3 }}>Budget</div>
+              <div style={{ fontSize: 15, fontWeight: 700,
+                color: pct >= 1 ? '#FF6B6B' : pct >= 0.8 ? '#FFD93D' : '#6BFF9E' }}>
+                {spentPct}%
+              </div>
+            </div>
+          </div>
+          {/* Progress bar */}
+          <div style={{ marginTop: 14, height: 4, background: 'rgba(255,255,255,0.15)', borderRadius: 2 }}>
+            <div style={{ height: '100%', borderRadius: 2, transition: 'width .8s ease',
+              width: Math.min(spentPct, 100) + '%',
+              background: pct >= 1 ? '#FF6B6B' : pct >= 0.8 ? '#FFD93D' : '#6BFF9E' }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>
+              {fmt(D.monthSpent || 0, 0)} dépensé
             </span>
-            <span>ARD {totalARD < 0 ? '−' : ''}{fmt(Math.abs(totalARD), 0)}</span>
-            <span style={{ opacity: .6 }}>· {fmt(totalCommitted, 0)} engagés</span>
-          </button>
-        )}
+            <button onClick={onEditBudget}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>
+              Budget {fmt(D.monthBudget || D.budget * 4, 0)} ✏
+            </button>
+          </div>
+        </div>
       </div>
+
+      {/* ══ MEILLEUR COMPTE ════════════════════════════════════════ */}
+      {D.accounts.length > 0 && (() => {
+        // Show the account with highest balance as current recommendation
+        const bestAcc = [...D.accounts]
+          .filter(a => !D.persoAccs || D.persoAccs.some(p => p.id === a.id))
+          .sort((a, b) => b.bal - a.bal)[0]
+        if (!bestAcc || bestAcc.bal <= 0) return null
+        return (
+          <div style={{ margin: '12px 20px 0' }}>
+            <div style={{ background: t.mD, border: '1.5px solid ' + t.mint,
+              borderRadius: 18, padding: '12px 16px',
+              display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 38, height: 38, borderRadius: 12,
+                background: bestAcc.col + '22',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 20, flexShrink: 0 }}>🏦</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: t.mint,
+                  letterSpacing: 0.5, marginBottom: 2 }}>MEILLEUR COMPTE DISPONIBLE</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: t.tx, whiteSpace: 'nowrap',
+                  overflow: 'hidden', textOverflow: 'ellipsis' }}>{bestAcc.name}</div>
+                <div style={{ fontSize: 12, color: t.sub }}>{fmt(bestAcc.bal, 2)} € disponibles</div>
+              </div>
+              <button onClick={onAdd}
+                style={{ background: t.mint, border: 'none', borderRadius: 12, cursor: 'pointer',
+                  padding: '6px 12px', fontSize: 11, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                + Dépense
+              </button>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ══ COMPTES — pills slim ═══════════════════════════════ */}
       <div style={{ overflowX: 'scroll', scrollbarWidth: 'none',
@@ -264,6 +290,24 @@ export const Home = ({ D, t, onAcc, onAdd, onEditBudget, onDelete, rtConnected, 
           </button>
         ))}
       </div>
+
+      {/* ══ ARD PRÉLÈVEMENTS ═══════════════════════════════════ */}
+      {totalCommitted > 0 && (
+        <div style={{ padding: '0 20px' }}>
+          <button onClick={onManageRecurring}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none',
+              border: 'none', cursor: 'pointer', padding: 0, marginTop: 10 }}>
+            <span style={{ fontSize: 13 }}>
+              {ardStatus === 'danger' ? '🔴' : ardStatus === 'warning' ? '🟡' : '🟢'}
+            </span>
+            <span style={{ fontSize: 12, fontWeight: 500,
+              color: ardStatus === 'danger' ? t.rose : ardStatus === 'warning' ? t.amber : t.sub }}>
+              ARD {totalARD < 0 ? '−' : ''}{fmt(Math.abs(totalARD), 0)} €
+            </span>
+            <span style={{ fontSize: 11, color: t.muted }}>· {fmt(totalCommitted, 0)} engagés</span>
+          </button>
+        </div>
+      )}
 
       {/* ══ TRANSACTIONS ═══════════════════════════════════════ */}
       <div style={{ flex: 1, padding: '12px 20px 0' }}>
