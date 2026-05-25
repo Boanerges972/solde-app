@@ -4,8 +4,17 @@ import { Icon } from '../components/Icon'
 import { sp } from '../lib/theme'
 import type { Theme } from '../types'
 
+const SLIDES = [
+  { ico: '🏦', title: 'Tous vos comptes réunis', sub: 'Visualisez tous vos comptes bancaires en temps réel, au même endroit.' },
+  { ico: '📊', title: 'Analyse intelligente', sub: 'Suivez vos dépenses, revenus et prélèvements avec des graphiques clairs.' },
+  { ico: '🎯', title: 'Le meilleur compte, toujours', sub: 'QDQ recommande automatiquement le compte optimal pour chaque dépense.' },
+]
+
 interface Props { t: Theme }
 export const AuthScreen = ({ t }: Props) => {
+  const [onboarded] = useState(() => localStorage.getItem('qdq-onboarded') === '1')
+  const [slide, setSlide] = useState(0)
+  const [showAuth, setShowAuth] = useState(onboarded)
   const [mode, setMode] = useState('login')
   const [email, setEmail] = useState('')
   const [pwd, setPwd] = useState('')
@@ -38,10 +47,65 @@ export const AuthScreen = ({ t }: Props) => {
     }
     setLoading(false);
   };
+  // Onboarding slides
+  if (!showAuth) {
+    const s = SLIDES[slide]
+    const isLast = slide === SLIDES.length - 1
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh',
+        background: `linear-gradient(160deg, ${t.primary} 0%, #1a56c4 60%, #0a2d6e 100%)`,
+        padding: '60px 32px 48px', animation: 'fadeIn .4s ease' }}>
+        {/* Logo */}
+        <div style={{ textAlign: 'center', marginBottom: 48 }}>
+          <div style={{ fontSize: 36, fontWeight: 800, color: '#fff', letterSpacing: -1.5 }}>QDQ</div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>Qui Dépense Quoi</div>
+        </div>
+        {/* Slide content */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+          <div style={{ fontSize: 72, marginBottom: 32, lineHeight: 1 }}>{s.ico}</div>
+          <div style={{ fontSize: 26, fontWeight: 700, color: '#fff', lineHeight: 1.2, marginBottom: 16, letterSpacing: -0.5 }}>
+            {s.title}
+          </div>
+          <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.65)', lineHeight: 1.6, maxWidth: 280 }}>
+            {s.sub}
+          </div>
+        </div>
+        {/* Dots */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 32 }}>
+          {SLIDES.map((_, i) => (
+            <div key={i} onClick={() => setSlide(i)} style={{
+              width: i === slide ? 24 : 8, height: 8, borderRadius: 4,
+              background: i === slide ? '#fff' : 'rgba(255,255,255,0.3)',
+              transition: 'all .3s', cursor: 'pointer',
+            }} />
+          ))}
+        </div>
+        {/* CTA */}
+        <button onClick={() => {
+          if (isLast) { localStorage.setItem('qdq-onboarded', '1'); setShowAuth(true) }
+          else setSlide(s => s + 1)
+        }} style={{
+          width: '100%', padding: '16px', borderRadius: 18, border: 'none',
+          background: isLast ? '#fff' : 'rgba(255,255,255,0.15)',
+          color: isLast ? t.primary : '#fff',
+          fontSize: 16, fontWeight: 700, cursor: 'pointer',
+          backdropFilter: 'blur(10px)', marginBottom: 16,
+        }}>
+          {isLast ? 'Commencer' : 'Suivant →'}
+        </button>
+        <button onClick={() => { localStorage.setItem('qdq-onboarded', '1'); setShowAuth(true) }}
+          style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)',
+            fontSize: 13, cursor: 'pointer', padding: '8px' }}>
+          Se connecter
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: '100vh', padding: '40px 28px', animation: 'fadeIn .4s ease' }}>
       <div style={{ textAlign: 'center', marginBottom: 32 }}>
-        <div style={{ fontSize: 42, ...sp('s', 700), color: t.mint, letterSpacing: -2, lineHeight: 1 }}>QDQ</div>
+        <div style={{ fontSize: 42, fontWeight: 800, color: t.primary, letterSpacing: -2, lineHeight: 1 }}>QDQ</div>
         <div style={{ fontSize: 13, ...sp('o'), color: t.sub, marginTop: 6 }}>Qui Dépense Quoi</div>
       </div>
       <div style={{ background: t.card, borderRadius: 20, padding: '24px 22px', border: '1px solid ' + t.bo }}>
