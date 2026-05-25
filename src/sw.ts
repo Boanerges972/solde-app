@@ -18,5 +18,15 @@ self.addEventListener('fetch', (event) => {
 })
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim())
+  event.waitUntil(
+    Promise.all([
+      self.clients.claim(),
+      // Delete all old caches (breaks the qdq-v4 legacy cache cycle)
+      caches.keys().then(keys =>
+        Promise.all(
+          keys.filter(k => !k.startsWith('workbox-')).map(k => caches.delete(k))
+        )
+      ),
+    ])
+  )
 })
