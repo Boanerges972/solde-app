@@ -40,7 +40,7 @@ const StatusBar = (_props: { t: unknown }) => null;
 export default function App() {
   const [dark, setDark] = useState(false);
   const [session, setSession] = useState<Session | null | undefined>(undefined);
-  const [tab, setTab] = useState('journal');
+  const [tab, setTab] = useState('accueil');
   const [showEntry, setShowEntry] = useState(false);
   const [editBudget, setEditBudget] = useState(false);
   const [editAccount, setEditAccount] = useState<unknown>(null);
@@ -144,7 +144,7 @@ export default function App() {
   const reload = () => { setAlertDismissed(false); reloadData(); };
   const { group, members, reload: reloadGroup, createGroup, joinGroup, leaveGroup } = useGroup(session ? session.user.id : null);
 
-  const logout = async () => { await db.auth.signOut(); setTab('journal'); };
+  const logout = async () => { await db.auth.signOut(); setTab('accueil'); };
 
   if (session === undefined) return (
     <div style={{ width: 375, minHeight: '100vh', background: t.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
@@ -170,17 +170,17 @@ export default function App() {
       </div>
     );
     if (!data) return null;
-    if (tab === 'journal') return (
+    if (tab === 'accueil') return (
       <div>
         {!alertDismissed && <BudgetAlert D={data} t={t} threshold={parseInt(localStorage.getItem('qdq-alert-threshold') || '80')} onDismiss={() => setAlertDismissed(true)} />}
         <RejectionAlert t={t} accounts={data.accounts} recurrings={recurrings || []} onManage={() => setShowRecurring(true)} />
-        <Home D={data} t={t} onAcc={() => setTab('comptes')} onAdd={() => setShowEntry(true)} onEditBudget={() => setEditBudget(true)} onDelete={deleteTx} rtConnected={rtConnected} profile={profile} onSearch={() => setShowSearch(true)} recurrings={recurrings || []} onManageRecurring={() => setShowRecurring(true)} onTransfer={() => setShowTransfer(true)} />
+        <Home D={data} t={t} onAcc={() => setTab('depenses')} onAdd={() => setShowEntry(true)} onEditBudget={() => setEditBudget(true)} onDelete={deleteTx} rtConnected={rtConnected} profile={profile} onSearch={() => setShowSearch(true)} recurrings={recurrings || []} onManageRecurring={() => setShowRecurring(true)} onTransfer={() => setShowTransfer(true)} />
       </div>
     );
-    if (tab === 'comptes') return <Comptes D={data} t={t} onEdit={(a: unknown) => setEditAccount(a)} onNew={() => setEditAccount('new')} onImport={(bank: string) => { if (bank === 'pick') { setShowBankPicker(true); } else { setImportBank(bank); setShowImport(true); } }} onDeposit={(a) => setDepositAccount(a)} />;
+    if (tab === 'depenses') return <Comptes D={data} t={t} onEdit={(a: unknown) => setEditAccount(a)} onNew={() => setEditAccount('new')} onImport={(bank: string) => { if (bank === 'pick') { setShowBankPicker(true); } else { setImportBank(bank); setShowImport(true); } }} onDeposit={(a) => setDepositAccount(a)} />;
     if (tab === 'groupe') return <Groupe t={t} uid={session.user.id} group={group} members={members} createGroup={createGroup} joinGroup={joinGroup} leaveGroup={leaveGroup} txs={data.txs} />;
-    if (tab === 'reglages') return <Settings t={t} dark={dark} toggle={() => setDark(d => !d)} user={session.user} onLogout={logout} profile={profile} onProfile={() => setShowProfile(true)} onSecurity={() => setShowPinSetup(true)} onRecurring={() => setShowRecurring(true)} onReset={() => setShowReset(true)} />;
-    if (tab === 'analyse') return <Analyse D={data} t={t} allTxs={data.txs} allHistory={allHistory || []} recurrings={recurrings || []} />;
+    if (tab === 'analyses') return <Analyse D={data} t={t} allTxs={data.txs} allHistory={allHistory || []} recurrings={recurrings || []} />;
+    if (tab === 'profil') return <Settings t={t} dark={dark} toggle={() => setDark(d => !d)} user={session.user} onLogout={logout} profile={profile} onProfile={() => setShowProfile(true)} onSecurity={() => setShowPinSetup(true)} onRecurring={() => setShowRecurring(true)} onReset={() => setShowReset(true)} onGroupe={() => setTab('groupe')} />;
     return null;
   };
 
@@ -196,7 +196,7 @@ export default function App() {
       <main style={{ height: 'calc(100vh - 64px - env(safe-area-inset-top,0px))', overflowY: 'auto', paddingBottom: 80 }}>
         {renderMain()}
       </main>
-      <Nav tab={tab} onTab={id => setTab(id)} t={t} />
+      <Nav tab={tab} onTab={id => setTab(id)} onAdd={() => setShowEntry(true)} t={t} />
       {showEntry && data && <ExpEntry D={data} t={t} onClose={() => setShowEntry(false)} onSave={addTx} group={group} members={members} uid={session.user.id} recurrings={recurrings || []} allHistory={allHistory || []} />}
       {editBudget && data && <EditBudget D={data} t={t} uid={session.user.id} onClose={() => setEditBudget(false)} onSaved={reload} defaultPeriod={localStorage.getItem('qdq-period') || 'week'} />}
       {showProfile && <ProfileScreen t={t} user={session?.user} onClose={() => setShowProfile(false)} onSaved={(p: Profile) => { setProfile(p); setShowProfile(false); }} />}

@@ -55,10 +55,11 @@ interface SettingsProps {
   onLogout: () => void; profile: Profile
   onProfile: () => void; onSecurity: () => void
   onRecurring: () => void; onReset: () => void
+  onGroupe?: () => void
 }
 
 // ── SETTINGS ─────────────────────────────────────────────────
-export const Settings = ({ t, dark, toggle, user, onLogout, profile, onProfile, onSecurity, onRecurring, onReset }: SettingsProps) => (
+export const Settings = ({ t, dark, toggle, user, onLogout, profile, onProfile, onSecurity, onRecurring, onReset, onGroupe }: SettingsProps) => (
   <div style={{ padding: '0 20px 16px' }}>
     <div style={{ padding: '8px 0 20px' }}><div style={{ fontSize: 17, ...sp('s', 700), color: t.tx }}>Réglages</div></div>
     <button onClick={onProfile} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%',
@@ -93,14 +94,14 @@ export const Settings = ({ t, dark, toggle, user, onLogout, profile, onProfile, 
     </div>
     <NotifSettings t={t} />
 
-    {/* ── PRÉLÈVEMENTS ── */}
+    {/* ── PRÉLÈVEMENTS + GROUPE ── */}
     <div style={{ marginBottom: 10 }}>
       <div style={{ fontSize: 11, ...sp('s', 700), color: t.sub, letterSpacing: 1,
         textTransform: 'uppercase', padding: '0 4px', marginBottom: 8 }}>Finances</div>
       <div style={{ background: t.card, borderRadius: 16, border: '1px solid ' + t.bo, overflow: 'hidden' }}>
         <button onClick={onRecurring}
           style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%',
-            padding: '14px 16px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
+            padding: '14px 16px', background: 'none', border: 'none', borderBottom: '1px solid ' + t.bo, cursor: 'pointer', textAlign: 'left' }}>
           <div style={{ width: 36, height: 36, borderRadius: 11, background: t.aD,
             display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>📅</div>
           <div style={{ flex: 1 }}>
@@ -111,6 +112,21 @@ export const Settings = ({ t, dark, toggle, user, onLogout, profile, onProfile, 
           </div>
           <span style={{ color: t.muted, fontSize: 16 }}>›</span>
         </button>
+        {onGroupe && (
+          <button onClick={onGroupe}
+            style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+              padding: '14px 16px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
+            <div style={{ width: 36, height: 36, borderRadius: 11, background: t.el,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>👥</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, ...sp('o', 500), color: t.tx }}>Groupe</div>
+              <div style={{ fontSize: 11, ...sp('o'), color: t.sub, marginTop: 1 }}>
+                Dépenses partagées
+              </div>
+            </div>
+            <span style={{ color: t.muted, fontSize: 16 }}>›</span>
+          </button>
+        )}
       </div>
     </div>
 
