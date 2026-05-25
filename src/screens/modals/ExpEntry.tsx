@@ -105,155 +105,175 @@ export const ExpEntry = ({ D, t, onClose, onSave, group, members, uid, recurring
     const selAcc = D.accounts.find(a => a.id === selectedAccId)
     const n = parseFloat(amount.replace(',', '.'))
     const selectedScore = scores.find(s => s.accountId === selectedAccId)
+    const otherScores = scores.filter(s => s.accountId !== selectedAccId)
     const finalCat = selAcc?.isPro && isProPerso ? 'Dépense perso' : cat
     const catO2 = CATS_E.find(c => c.n === finalCat) || catO
+    const now = new Date()
+
+    const letterBadge = (acc: typeof D.accounts[0], size: number) => {
+      const letters = (acc.short || acc.name.slice(0, 2)).toUpperCase()
+      return (
+        <div style={{ width: size, height: size, borderRadius: Math.round(size * 0.28),
+          background: acc.col, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <span style={{ fontSize: size * 0.38, fontWeight: 700, color: '#fff', letterSpacing: -0.5 }}>
+            {letters}
+          </span>
+        </div>
+      )
+    }
+
+    const fmtBal = (v: number) => v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
 
     return (
       <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end', zIndex: 200 }}
         onClick={onClose}>
         <div onClick={e => e.stopPropagation()}
-          style={{ background: t.bg, borderRadius: '28px 28px 0 0', padding: '0 20px 40px',
-            animation: 'slideUp .28s ease', maxHeight: '90vh', overflowY: 'auto', width: '100%' }}>
-          {/* Handle */}
-          <div style={{ padding: '12px 0 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          style={{ background: t.bg, borderRadius: '28px 28px 0 0', padding: '0 0 40px',
+            animation: 'slideUp .28s ease', maxHeight: '92vh', overflowY: 'auto', width: '100%' }}>
+
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', background: t.card, borderRadius: '28px 28px 0 0', borderBottom: '1px solid ' + t.bo }}>
             <button onClick={() => setStep('entry')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer',
-                fontSize: 13, fontWeight: 600, color: t.sub, display: 'flex', alignItems: 'center', gap: 4 }}>
-              ← Retour
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: t.sub, padding: 0, lineHeight: 1 }}>
+              ‹
             </button>
-            <div style={{ fontSize: 15, fontWeight: 700, color: t.tx }}>Détail de la dépense</div>
+            <span style={{ fontSize: 15, fontWeight: 700, color: t.tx }}>Détail de l'opération</span>
             <button onClick={onClose}
-              style={{ background: t.el, border: 'none', borderRadius: 20, width: 28, height: 28,
-                cursor: 'pointer', fontSize: 13, color: t.sub }}>✕</button>
+              style={{ background: t.el, border: 'none', borderRadius: 20, width: 28, height: 28, cursor: 'pointer', fontSize: 13, color: t.sub, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              ✕
+            </button>
           </div>
 
-          {/* Account card */}
-          {selAcc && (
-            <div style={{ background: t.card, borderRadius: 18, padding: '14px 16px',
-              border: '1px solid ' + t.bo, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: 14 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 44, height: 44, borderRadius: 14, background: selAcc.col + '22',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>🏦</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: t.tx }}>{selAcc.name}</div>
-                  <div style={{ fontSize: 12, color: t.sub }}>{selAcc.type}</div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: t.tx }}>
-                    {selAcc.bal.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
+          <div style={{ padding: '0 20px' }}>
+            {/* Amount */}
+            <div style={{ textAlign: 'center', padding: '24px 0 16px' }}>
+              <div style={{ fontSize: 40, fontWeight: 700, color: t.tx, fontFamily: 'IBM Plex Mono, monospace', letterSpacing: -1 }}>
+                {n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+              </div>
+            </div>
+
+            {/* Category + date row */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: t.card, borderRadius: 14, padding: '12px 16px', marginBottom: 20, border: '1px solid ' + t.bo }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 20 }}>{catO2.ico}</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: t.tx }}>{finalCat}</span>
+              </div>
+              <span style={{ fontSize: 12, color: t.sub }}>
+                {now.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })} · {now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
+
+            {/* Meilleur choix section */}
+            {selAcc && (
+              <>
+                <div style={{ fontSize: 13, fontWeight: 700, color: t.tx, marginBottom: 10 }}>Meilleur choix</div>
+                <div style={{ background: t.card, borderRadius: 16, padding: '14px 16px', marginBottom: 8,
+                  border: '1.5px solid ' + t.mint, boxShadow: '0 0 0 3px ' + t.mD }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: selectedScore ? 10 : 0 }}>
+                    {letterBadge(selAcc, 40)}
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: t.tx }}>{selAcc.name}</div>
+                      <div style={{ fontSize: 12, color: t.sub }}>{selAcc.type}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: t.tx, fontFamily: 'IBM Plex Mono, monospace' }}>
+                        {selectedScore ? fmtBal(selectedScore.soldeApres) : fmtBal(selAcc.bal - n)}
+                      </div>
+                      <div style={{ fontSize: 10, color: t.sub }}>Disponibles après opération</div>
+                    </div>
                   </div>
-                  <div style={{ fontSize: 10, color: t.sub }}>solde actuel</div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Dépense details */}
-          <div style={{ background: t.card, borderRadius: 18, padding: '16px',
-            border: '1px solid ' + t.bo, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: t.sub, letterSpacing: 1,
-              textTransform: 'uppercase', marginBottom: 12 }}>Dépense</div>
-            {[
-              ['Montant', n.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + ' €'],
-              ['Catégorie', `${catO2.ico} ${finalCat}`],
-              ['Date', new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })],
-            ].map(([label, value]) => (
-              <div key={label} style={{ display: 'flex', justifyContent: 'space-between',
-                alignItems: 'center', paddingBottom: 10, marginBottom: 10,
-                borderBottom: '1px solid ' + t.bo }}>
-                <span style={{ fontSize: 13, color: t.sub }}>{label}</span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: t.tx }}>{value}</span>
-              </div>
-            ))}
-            {selectedScore && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: 13, color: t.sub }}>Statut</span>
-                <div style={{ background: t.mD, color: t.mint,
-                  fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20 }}>
-                  {selectedScore.status === 'recommended' ? '✓ Recommandé' :
-                   selectedScore.status === 'acceptable' ? 'Correct' : 'Risqué'}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Impact budget */}
-          {selectedScore && (
-            <div style={{ background: t.card, borderRadius: 18, padding: '16px',
-              border: '1px solid ' + t.bo, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: 14 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: t.sub, letterSpacing: 1,
-                textTransform: 'uppercase', marginBottom: 12 }}>Impact sur votre budget</div>
-              {[
-                ['Solde après dépense', selectedScore.soldeApres.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + ' €', selectedScore.soldeApres >= 0 ? t.tx : t.rose],
-                ['Prélèvements restants', selectedScore.committed > 0 ? '−' + selectedScore.committed.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + ' €' : '— €', t.amber],
-                ['Solde fin de mois', selectedScore.finDeMois.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + ' €', selectedScore.finDeMois >= 0 ? t.mint : t.rose],
-              ].map(([label, value, color]) => (
-                <div key={label} style={{ display: 'flex', justifyContent: 'space-between',
-                  alignItems: 'center', marginBottom: 10 }}>
-                  <span style={{ fontSize: 13, color: t.sub }}>{label as string}</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: color as string }}>{value as string}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Prélèvements restants pour ce compte */}
-          {recurrings && recurrings.filter(r => r.account_id === selectedAccId).length > 0 && (
-            <div style={{ background: t.card, borderRadius: 18, padding: '16px',
-              border: '1px solid ' + t.bo, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: 20 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: t.sub, letterSpacing: 1,
-                  textTransform: 'uppercase' }}>Prélèvements restants</div>
-              </div>
-              {recurrings.filter(r => r.account_id === selectedAccId).slice(0, 4).map(r => {
-                const day = parseInt(String(r.date_label || '1'), 10)
-                const today = new Date()
-                const next = new Date(today.getFullYear(), today.getMonth(), day)
-                if (next < today) next.setMonth(next.getMonth() + 1)
-                const daysUntil = Math.round((next.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-                return (
-                  <div key={r.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    paddingBottom: 10, marginBottom: 10, borderBottom: '1px solid ' + t.bo + '88' }}>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 500, color: t.tx }}>{r.name}</div>
-                      <div style={{ fontSize: 11, color: t.sub }}>
-                        le {r.date_label} · Dans {daysUntil} jour{daysUntil > 1 ? 's' : ''}
+                  {selectedScore && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: 12, color: t.sub, flex: 1, lineHeight: 1.4 }}>
+                        C'est l'option qui optimise le mieux vos finances ce mois-ci.
+                      </span>
+                      <div style={{ background: t.mD, color: t.mint, fontSize: 10, fontWeight: 700,
+                        padding: '3px 10px', borderRadius: 20, marginLeft: 10, whiteSpace: 'nowrap' }}>
+                        Recommandé
                       </div>
                     </div>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: t.amber }}>
-                      −{parseFloat(String(r.amount)).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-          )}
+                  )}
+                </div>
+              </>
+            )}
 
-          {/* Confirm button */}
-          <button onClick={async () => {
-            const selAccFinal = D.accounts.find(a => a.id === selectedAccId)
-            const finalCatFinal = selAccFinal?.isPro && isProPerso ? 'Dépense perso' : cat
-            const nFinal = parseFloat(amount.replace(',', '.'))
-            if (!nFinal || nFinal <= 0 || !selectedAccId) return
-            setSaving(true)
-            const catO2Final = CATS_E.find(c => c.n === finalCatFinal) || catO
-            await onSave({
-              merchant: note || finalCatFinal,
-              category: finalCatFinal,
-              icon: catO2Final.ico,
-              amount: nFinal,
-              account_id: selectedAccId,
-              group_id: isGroup && group ? group.id : null,
-              paid_by: isGroup ? paidBy : null,
-            })
-            setSaving(false)
-            onClose()
-          }} disabled={saving}
-            style={{ width: '100%', padding: '16px', border: 'none', borderRadius: 18,
-              cursor: saving ? 'default' : 'pointer', fontWeight: 700, fontSize: 15,
-              background: saving ? t.el : t.primary, color: saving ? t.sub : '#fff' }}>
-            {saving ? 'Enregistrement…' : `✓ Confirmer cette dépense`}
-          </button>
+            {/* Autres comptes */}
+            {otherScores.length > 0 && (
+              <>
+                <div style={{ fontSize: 13, fontWeight: 700, color: t.tx, marginBottom: 10, marginTop: 16 }}>Autres comptes</div>
+                {otherScores.map(s => {
+                  const a = D.accounts.find(ac => ac.id === s.accountId)
+                  if (!a) return null
+                  return (
+                    <button key={a.id} onClick={() => { setSelectedAccId(a.id); setStep('entry') }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+                        background: t.card, borderRadius: 14, padding: '12px 16px', marginBottom: 8,
+                        border: '1px solid ' + t.bo, cursor: 'pointer', textAlign: 'left' }}>
+                      {letterBadge(a, 36)}
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: t.tx }}>{a.name}</div>
+                        <div style={{ fontSize: 11, color: t.sub }}>{a.type}</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: t.tx, fontFamily: 'IBM Plex Mono, monospace' }}>
+                          {fmtBal(s.soldeApres)}
+                        </div>
+                        <div style={{ fontSize: 10, color: t.sub }}>Disponibles après opération</div>
+                      </div>
+                    </button>
+                  )
+                })}
+              </>
+            )}
+
+            {/* Impact sur votre budget */}
+            {selectedScore && (
+              <>
+                <div style={{ fontSize: 13, fontWeight: 700, color: t.tx, marginBottom: 12, marginTop: 16 }}>Impact sur votre budget</div>
+                <div style={{ background: t.card, borderRadius: 16, padding: '14px 16px', marginBottom: 20, border: '1px solid ' + t.bo }}>
+                  {[
+                    { label: 'Solde après opération', value: fmtBal(selectedScore.soldeApres), color: selectedScore.soldeApres >= 0 ? t.tx : t.rose },
+                    { label: 'Prélèvements restants du mois', value: selectedScore.committed > 0 ? '−' + fmtBal(selectedScore.committed) : '—', color: t.amber },
+                    { label: 'Solde prévisionnel fin de mois', value: fmtBal(selectedScore.finDeMois), color: selectedScore.finDeMois >= 0 ? t.mint : t.rose },
+                  ].map(({ label, value, color }, i, arr) => (
+                    <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      paddingBottom: i < arr.length - 1 ? 10 : 0, marginBottom: i < arr.length - 1 ? 10 : 0,
+                      borderBottom: i < arr.length - 1 ? '1px solid ' + t.bo + '66' : 'none' }}>
+                      <span style={{ fontSize: 13, color: t.sub }}>{label}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color, fontFamily: 'IBM Plex Mono, monospace' }}>{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* Confirm button */}
+            <button onClick={async () => {
+              const selAccFinal = D.accounts.find(a => a.id === selectedAccId)
+              const finalCatFinal = selAccFinal?.isPro && isProPerso ? 'Dépense perso' : cat
+              const nFinal = parseFloat(amount.replace(',', '.'))
+              if (!nFinal || nFinal <= 0 || !selectedAccId) return
+              setSaving(true)
+              const catO2Final = CATS_E.find(c => c.n === finalCatFinal) || catO
+              await onSave({
+                merchant: note || finalCatFinal,
+                category: finalCatFinal,
+                icon: catO2Final.ico,
+                amount: nFinal,
+                account_id: selectedAccId,
+                group_id: isGroup && group ? group.id : null,
+                paid_by: isGroup ? paidBy : null,
+              })
+              setSaving(false)
+              onClose()
+            }} disabled={saving}
+              style={{ width: '100%', padding: '17px', border: 'none', borderRadius: 28,
+                cursor: saving ? 'default' : 'pointer', fontWeight: 700, fontSize: 16,
+                background: saving ? t.el : '#0A3D91', color: saving ? t.sub : '#fff',
+                fontFamily: 'Inter, sans-serif', letterSpacing: 0.2 }}>
+              {saving ? 'Enregistrement…' : 'Confirmer cette dépense'}
+            </button>
+          </div>
         </div>
       </div>
     )
