@@ -112,23 +112,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').then(reg => {
-        reg.update();
-        reg.addEventListener('updatefound', () => {
-          const newWorker = reg.installing;
-          if (!newWorker) return;
-          newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
-              window.location.reload();
-            }
-          });
-        });
-      }).catch(() => {});
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        window.location.reload();
-      });
-    }
     const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
     if (isIOS && !(window.navigator as Navigator & { standalone?: boolean }).standalone && !localStorage.getItem('qdq-ios')) {
       setTimeout(() => setShowIOS(true), 3000);
