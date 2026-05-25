@@ -1,32 +1,43 @@
 /// <reference lib="webworker" />
-import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching'
+import { PrecacheController, cleanupOutdatedCaches } from 'workbox-precaching'
 
-declare const self: ServiceWorkerGlobalScope
+declare const self: ServiceWorkerGlobalScope & typeof globalThis
 
-self.skipWaiting()
+// Registers activate handler to remove stale precaches
 cleanupOutdatedCaches()
 
-// Filter out unsupported URL schemes (chrome-extension, moz-extension, etc.)
-const manifest = (self as unknown as { __WB_MANIFEST: { url: string; revision: string | null }[] }).__WB_MANIFEST
-const filteredManifest = manifest.filter(({ url }) => url.startsWith('/') || url.startsWith('https://') || url.startsWith('http://'))
-precacheAndRoute(filteredManifest)
+const controller = new PrecacheController()
+controller.addToCacheList(self.__WB_MANIFEST)
 
-self.addEventListener('fetch', (event) => {
-  // Skip non-http(s) schemes
-  if (!event.request.url.startsWith('http')) return
-  // Let workbox handle the rest via precacheAndRoute
+self.addEventListener('install', (event) => {
+  // Activate immediately, don't wait for old SW to finish
+  self.skipWaiting()
+  event.waitUntil(controller.install(event))
 })
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     Promise.all([
+      controller.activate(event),
       self.clients.claim(),
-      // Delete all old caches (breaks the qdq-v4 legacy cache cycle)
+      // Wipe all legacy caches (qdq-v4, etc.)
       caches.keys().then(keys =>
         Promise.all(
           keys.filter(k => !k.startsWith('workbox-')).map(k => caches.delete(k))
         )
       ),
     ])
+  )
+})
+
+self.addEventListener('fetch', (event) => {
+  // Hard stop: never touch non-http schemes (chrome-extension://, etc.)
+  if (!event.request.url.startsWith('http')) return
+
+  // Serve from precache if available, else network
+  event.respondWith(
+    controller.matchPrecache(event.request).then(
+      cached => cached ?? fetch(event.request)
+    )
   )
 })
