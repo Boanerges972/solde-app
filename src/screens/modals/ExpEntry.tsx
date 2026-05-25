@@ -68,6 +68,7 @@ function searchMerchants(query: string, memory: Record<string, any>, limit = 4) 
 export const ExpEntry = ({ D, t, onClose, onSave, group, members, uid, recurrings, allHistory }: Props) => {
   const [cat, setCat] = useState('Courses')
   const [selectedAccId, setSelectedAccId] = useState(D.accounts[0] ? D.accounts[0].id : '')
+  const [showDebits, setShowDebits] = useState(false)
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
   const [isGroup, setIsGroup] = useState(false)
@@ -273,6 +274,35 @@ export const ExpEntry = ({ D, t, onClose, onSave, group, members, uid, recurring
             )}
           </div>
         )}
+        {/* Lien prélèvements */}
+        {scores.length > 0 && recurrings && recurrings.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <button
+              onClick={() => setShowDebits(d => !d)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer',
+                fontSize: 13, fontWeight: 500, color: t.primary, padding: 0 }}>
+              {showDebits ? '▲ Masquer les prélèvements' : '▼ Voir le détail des prélèvements'}
+            </button>
+            {showDebits && (
+              <div style={{ marginTop: 10, borderRadius: 14, border: '1px solid ' + t.bo,
+                background: t.card, overflow: 'hidden' }}>
+                {recurrings.slice(0, 6).map((r, i) => (
+                  <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between',
+                    alignItems: 'center', padding: '10px 14px',
+                    borderBottom: i < recurrings.slice(0, 6).length - 1 ? '1px solid ' + t.bo : 'none' }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: t.tx }}>{r.name}</div>
+                      <div style={{ fontSize: 11, color: t.sub }}>le {r.date_label} du mois</div>
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: t.amber }}>
+                      −{parseFloat(String(r.amount)).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         {/* Toggle Pro/Perso si compte pro sélectionné */}
         {(()=>{
           const selAcc=D.accounts.find(a=>a.id===selectedAccId)
@@ -320,9 +350,9 @@ export const ExpEntry = ({ D, t, onClose, onSave, group, members, uid, recurring
             cursor:saving||!amount||!selectedAccId?'default':'pointer',...sp('o',700),fontSize:15,
             background:saving||!amount||!selectedAccId?t.el:t.primary,
             color:saving||!amount||!selectedAccId?t.sub:'#0F1117'}}>
-          {saving?'Enregistrement…':selectedAccId
-            ?`✓ ${D.accounts.find(a=>a.id===selectedAccId)?.name||'Enregistrer'}`
-            :'Ajouter'}
+          {saving ? 'Enregistrement…' : selectedAccId
+            ? `Confirmer avec ${D.accounts.find(a => a.id === selectedAccId)?.name || 'ce compte'}`
+            : 'Choisir un compte'}
         </button>
       </div>
     </div>

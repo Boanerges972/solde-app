@@ -1,4 +1,3 @@
-import { fmt } from '../lib/currency'
 import type { Theme, Account } from '../types'
 import type { AccountScore, ScoreStatus } from '../lib/scoreAccounts'
 
@@ -11,10 +10,24 @@ interface AccountScoreCardProps {
 }
 
 const STATUS_LABEL: Record<ScoreStatus, string> = {
-  recommended: 'RECOMMANDÉ',
-  acceptable: 'ACCEPTABLE',
-  risky: 'RISQUÉ',
-  discouraged: 'DÉCONSEILLÉ',
+  recommended: 'Meilleur choix',
+  acceptable: 'Correct',
+  risky: 'Risqué',
+  discouraged: 'Déconseillé',
+}
+
+function getDescription(score: AccountScore): string {
+  const solde = score.soldeApres
+  if (score.status === 'recommended') {
+    return `Après cette dépense, il vous restera ${Math.round(solde).toLocaleString('fr-FR')} € et vos prélèvements seront couverts.`
+  }
+  if (score.status === 'acceptable') {
+    return `Marge correcte. Fin de mois estimée : ${Math.round(score.finDeMois).toLocaleString('fr-FR')} €.`
+  }
+  if (score.status === 'risky') {
+    return score.committed > 0 ? 'Risque : solde juste après prélèvements.' : 'Solde faible après cette dépense.'
+  }
+  return 'Solde insuffisant — utilisation du découvert.'
 }
 
 function statusColors(status: ScoreStatus, t: Theme) {
@@ -29,66 +42,73 @@ function statusColors(status: ScoreStatus, t: Theme) {
 
 export const AccountScoreCard = ({ acc, score, selected, onSelect, t }: AccountScoreCardProps) => {
   const cols = statusColors(score.status, t)
-  const barPct = `${score.score}%`
 
   if (selected) {
+    const desc = getDescription(score)
     return (
       <button
         onClick={() => onSelect(acc.id)}
         style={{
-          display: 'block', width: '100%', padding: '12px 14px',
-          borderRadius: 14, background: cols.bg,
+          display: 'block', width: '100%', padding: '14px 16px',
+          borderRadius: 20, background: cols.bg,
           border: `1.5px solid ${cols.border}`,
-          cursor: 'pointer', textAlign: 'left', marginBottom: 8,
+          cursor: 'pointer', textAlign: 'left', marginBottom: 10,
         }}
       >
         {/* Header: nom + badge */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 10, height: 10, borderRadius: 5, background: acc.col, flexShrink: 0 }} />
-            <span style={{ fontSize: 13, fontWeight: 600, color: cols.border }}>{acc.name}</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 10,
+              background: cols.border + '22',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 18, flexShrink: 0,
+            }}>
+              🏦
+            </div>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: t.tx }}>{acc.name}</div>
+              <div style={{ fontSize: 12, color: t.sub, marginTop: 1 }}>{acc.type}</div>
+            </div>
           </div>
           <div style={{
-            background: cols.badgeBg, color: cols.text,
-            fontSize: 8, fontWeight: 700, padding: '2px 7px', borderRadius: 5,
+            background: cols.border, color: '#fff',
+            fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 20,
+            letterSpacing: 0.3,
           }}>
             {STATUS_LABEL[score.status]}
           </div>
         </div>
 
-        {/* Barre score */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-          <div style={{ flex: 1, height: 5, background: t.el, borderRadius: 3 }}>
-            <div style={{
-              width: barPct, height: '100%', background: cols.barColor,
-              borderRadius: 3, transition: 'width .3s ease',
-            }} />
-          </div>
-          <span style={{ fontSize: 10, fontWeight: 700, color: cols.text, minWidth: 38 }}>
-            {score.score}/100
+        {/* Balance */}
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 8 }}>
+          <span style={{ fontSize: 22, fontWeight: 700, color: t.tx }}>
+            {score.soldeApres < 0 ? '−' : ''}{Math.abs(score.soldeApres).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
           </span>
+          <span style={{ fontSize: 12, color: t.sub }}>après dépense</span>
         </div>
 
-        {/* 3 mini-cartes : Solde après / Prélèvements / Fin mois */}
-        <div style={{ display: 'flex', gap: 6 }}>
-          <div style={{ flex: 1, background: t.card, borderRadius: 8, padding: '5px 7px' }}>
-            <div style={{ fontSize: 9, color: t.muted, marginBottom: 2 }}>Solde après</div>
-            <div style={{ fontSize: 11, fontWeight: 600, color: score.soldeApres >= 0 ? t.tx : t.rose }}>
-              {score.soldeApres < 0 ? '−' : ''}{fmt(Math.abs(score.soldeApres), 0)}
-            </div>
+        {/* Description */}
+        <div style={{
+          fontSize: 13, color: t.sub, lineHeight: 1.5,
+          padding: '8px 10px', borderRadius: 10,
+          background: cols.border + '12',
+          marginBottom: 8,
+        }}>
+          {desc}
+        </div>
+
+        {/* Score bar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ flex: 1, height: 4, background: t.el, borderRadius: 2 }}>
+            <div style={{
+              width: `${score.score}%`, height: '100%', background: cols.barColor,
+              borderRadius: 2, transition: 'width .3s ease',
+            }} />
           </div>
-          <div style={{ flex: 1, background: t.card, borderRadius: 8, padding: '5px 7px' }}>
-            <div style={{ fontSize: 9, color: t.muted, marginBottom: 2 }}>Prélèvements</div>
-            <div style={{ fontSize: 11, fontWeight: 600, color: score.committed > 0 ? t.amber : t.muted }}>
-              {score.committed > 0 ? `−${fmt(score.committed, 0)}` : '— €'}
-            </div>
-          </div>
-          <div style={{ flex: 1, background: t.card, borderRadius: 8, padding: '5px 7px' }}>
-            <div style={{ fontSize: 9, color: t.muted, marginBottom: 2 }}>Fin mois</div>
-            <div style={{ fontSize: 11, fontWeight: 600, color: score.finDeMois >= 0 ? t.tx : t.rose }}>
-              {score.finDeMois < 0 ? '−' : ''}{fmt(Math.abs(score.finDeMois), 0)}
-            </div>
-          </div>
+          <span style={{ fontSize: 10, fontWeight: 600, color: cols.text, minWidth: 42, textAlign: 'right' }}>
+            Score {score.score}/100
+          </span>
         </div>
       </button>
     )
@@ -99,29 +119,24 @@ export const AccountScoreCard = ({ acc, score, selected, onSelect, t }: AccountS
     <button
       onClick={() => onSelect(acc.id)}
       style={{
-        display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-        padding: '10px 12px', borderRadius: 12,
-        background: t.el, border: `1px solid ${t.bo}`,
-        cursor: 'pointer', textAlign: 'left', marginBottom: 6,
+        display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+        padding: '12px 14px', borderRadius: 16,
+        background: t.card, border: `1px solid ${t.bo}`,
+        cursor: 'pointer', textAlign: 'left', marginBottom: 8,
+        boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
       }}
     >
       <div style={{ width: 8, height: 8, borderRadius: 4, background: acc.col, flexShrink: 0 }} />
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 12, fontWeight: 500, color: t.sub }}>{acc.name}</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3 }}>
-          <div style={{ flex: 1, height: 3, background: t.bo, borderRadius: 2 }}>
-            <div style={{ width: barPct, height: '100%', background: cols.barColor, borderRadius: 2 }} />
-          </div>
-          <span style={{ fontSize: 9, fontWeight: 600, color: cols.text, minWidth: 30 }}>
-            {score.score}/100
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: t.tx }}>{acc.name}</span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: t.tx }}>
+            {score.soldeApres.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
           </span>
         </div>
-      </div>
-      <div style={{
-        background: cols.badgeBg, color: cols.text,
-        fontSize: 8, fontWeight: 700, padding: '2px 6px', borderRadius: 5, flexShrink: 0,
-      }}>
-        {STATUS_LABEL[score.status]}
+        <div style={{ fontSize: 11, color: score.status === 'risky' || score.status === 'discouraged' ? cols.text : t.sub }}>
+          {getDescription(score)}
+        </div>
       </div>
     </button>
   )
