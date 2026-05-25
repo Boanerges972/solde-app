@@ -19,10 +19,10 @@ const STATUS_LABEL: Record<ScoreStatus, string> = {
 
 function statusColors(status: ScoreStatus, t: Theme) {
   switch (status) {
-    case 'recommended': return { border: t.mint, bg: t.mD, badgeBg: t.mD, text: t.mint }
-    case 'acceptable':  return { border: t.amber, bg: t.aD, badgeBg: t.aD, text: t.amber }
-    case 'risky':       return { border: t.rose + '88', bg: t.rD + '88', badgeBg: t.rD + '88', text: t.rose }
-    case 'discouraged': return { border: t.rose, bg: t.rD, badgeBg: t.rD, text: t.rose }
+    case 'recommended': return { border: t.mint, bg: t.mD, badgeBg: t.mD, text: t.mint, barColor: t.mint }
+    case 'acceptable':  return { border: t.amber, bg: t.aD, badgeBg: t.aD, text: t.amber, barColor: t.amber }
+    case 'risky':       return { border: t.rose, bg: t.rD + '88', badgeBg: t.rD + '88', text: t.rose, barColor: t.rose }
+    case 'discouraged': return { border: t.rose, bg: t.rD, badgeBg: t.rD, text: t.rose, barColor: t.rose }
   }
 }
 
@@ -59,7 +59,7 @@ export const AccountScoreCard = ({ acc, score, selected, onSelect, t }: AccountS
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
           <div style={{ flex: 1, height: 5, background: t.el, borderRadius: 3 }}>
             <div style={{
-              width: barPct, height: '100%', background: cols.border,
+              width: barPct, height: '100%', background: cols.barColor,
               borderRadius: 3, transition: 'width .3s ease',
             }} />
           </div>
@@ -109,7 +109,7 @@ export const AccountScoreCard = ({ acc, score, selected, onSelect, t }: AccountS
         <div style={{ fontSize: 12, fontWeight: 500, color: t.sub }}>{acc.name}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3 }}>
           <div style={{ flex: 1, height: 3, background: t.bo, borderRadius: 2 }}>
-            <div style={{ width: barPct, height: '100%', background: cols.border, borderRadius: 2 }} />
+            <div style={{ width: barPct, height: '100%', background: cols.barColor, borderRadius: 2 }} />
           </div>
           <span style={{ fontSize: 9, fontWeight: 600, color: cols.text, minWidth: 30 }}>
             {score.score}/100
