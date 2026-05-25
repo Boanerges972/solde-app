@@ -3,6 +3,7 @@ import { sp } from '../lib/theme'
 import { fmt, fmtS } from '../lib/currency'
 import { buildBalanceHistory } from '../lib/buildBalanceHistory'
 import { BalanceCurve } from '../components/BalanceCurve'
+import { DonutChart } from '../components/DonutChart'
 import type { Theme, AppData, Transaction } from '../types'
 
 interface Props {
@@ -85,32 +86,6 @@ function detectRecurrings(txs: Transaction[], minMonths = 2) {
 
 // Palette couleurs catégories
 const CAT_PAL = ['#10E8C0', '#FF6B6B', '#FFD93D', '#6BCB77', '#4D96FF', '#C77DFF', '#FF9671', '#00B4D8', '#F4A261', '#E76F51']
-
-// Donut multi-segments SVG (style Bankin)
-const DonutCats = ({ cats, total, sz = 180, sw = 20, t }: { cats: { total: number }[]; total: number; sz?: number; sw?: number; t: Theme }) => {
-  const r = (sz - sw * 2) / 2, cx = sz / 2, cy = sz / 2
-  const circ = 2 * Math.PI * r
-  let offset = 0
-  return (
-    <svg width={sz} height={sz} style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke={t.el} strokeWidth={sw} />
-      {cats.map((c, i) => {
-        const ratio = total > 0 ? c.total / total : 0
-        const gap = 0.008
-        const segLen = Math.max(0, (ratio - gap) * circ)
-        const dashArr = segLen + ' ' + (circ - segLen)
-        const dashOff = -offset * circ
-        offset += ratio
-        return segLen > 1 ? (
-          <circle key={i} cx={cx} cy={cy} r={r} fill="none"
-            stroke={CAT_PAL[i % CAT_PAL.length]} strokeWidth={sw}
-            strokeDasharray={dashArr} strokeDashoffset={dashOff} strokeLinecap="butt"
-            style={{ transition: 'stroke-dasharray .8s ease' }} />
-        ) : null
-      })}
-    </svg>
-  )
-}
 
 export const Analyse = ({ D, t, allTxs, allHistory }: Props) => {
   const [analyseMode, setAnalyseMode] = useState('perso')
@@ -298,12 +273,18 @@ export const Analyse = ({ D, t, allTxs, allHistory }: Props) => {
                   <div style={{ fontSize: 11, ...sp('s', 600), color: t.sub, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 16 }}>Répartition des dépenses</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                     {/* Donut */}
-                    <div style={{ position: 'relative', flexShrink: 0 }}>
-                      <DonutCats cats={catList} total={catTotal} sz={160} sw={18} t={t} />
-                      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', textAlign: 'center', pointerEvents: 'none' }}>
-                        <div style={{ fontSize: 17, ...sp('m', 600), color: t.tx, lineHeight: 1 }}>{fmt(catTotal, 0)}</div>
-                        <div style={{ fontSize: 10, ...sp('o'), color: t.sub, marginTop: 2 }}>total</div>
-                      </div>
+                    <div style={{ color: t.tx, flexShrink: 0 }}>
+                      <DonutChart
+                        segments={catList.map((c, i) => ({
+                          label: c.name,
+                          value: c.total,
+                          color: CAT_PAL[i % CAT_PAL.length],
+                        }))}
+                        size={160}
+                        thickness={22}
+                        centerLabel={fmt(catTotal, 0)}
+                        centerSub="total"
+                      />
                     </div>
                     {/* Top 4 légende */}
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
