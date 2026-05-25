@@ -36,28 +36,6 @@ const CATS_E = [
   {n:'Autre',         ico:'📦', col:'#8B90A7'},
 ]
 
-function calcARD(accounts: any[], recurrings: any[], days = 31) {
-  const today = new Date()
-  const result: Record<string, any> = {}
-  accounts.forEach(acc => {
-    const debits = recurrings.filter(r => r.account_id === acc.id).map(r => {
-      const dayOfMonth = parseInt(r.date_label || '1', 10)
-      const next = new Date(today.getFullYear(), today.getMonth(), dayOfMonth)
-      if (next < today) next.setMonth(next.getMonth() + 1)
-      const daysUntil = Math.round((next.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-      return { ...r, next, daysUntil, amt: parseFloat(r.amount) }
-    }).filter(r => r.daysUntil <= days)
-    const committed = debits.reduce((s: number, r: any) => s + r.amt, 0)
-    const overdraft = parseFloat(acc.overdraft || 0)
-    const ard = acc.bal + overdraft - committed
-    const realAvail = acc.bal + overdraft
-    result[acc.id] = {
-      ard, committed, debits, overdraft, realAvail,
-      status: ard < 0 ? 'danger' : ard < Math.max(committed * 0.2, 50) ? 'warning' : 'ok',
-    }
-  })
-  return result
-}
 
 function buildMerchantMemory(history: Transaction[]) {
   const map: Record<string, any> = {}
@@ -104,7 +82,7 @@ export const ExpEntry = ({ D, t, onClose, onSave, group, members, uid, recurring
 
   const scores = useMemo(() => {
     const n = parseFloat((amount || '0').replace(',', '.'))
-    if (n <= 0) return []
+    if (!n || n <= 0) return []
     return scoreAccounts(D.accounts, recurrings, n, D, allHistory)
   }, [amount, D, recurrings, allHistory])
 

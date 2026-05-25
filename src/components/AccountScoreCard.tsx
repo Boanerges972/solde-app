@@ -23,6 +23,7 @@ function statusColors(status: ScoreStatus, t: Theme) {
     case 'acceptable':  return { border: t.amber, bg: t.aD, badgeBg: t.aD, text: t.amber, barColor: t.amber }
     case 'risky':       return { border: t.rose, bg: t.rD + '88', badgeBg: t.rD + '88', text: t.rose, barColor: t.rose }
     case 'discouraged': return { border: t.rose, bg: t.rD, badgeBg: t.rD, text: t.rose, barColor: t.rose }
+    default: return { border: t.bo, bg: t.el, badgeBg: t.el, text: t.sub, barColor: t.bo }
   }
 }
 
