@@ -14,9 +14,10 @@ interface Props {
   bank: string          // bank ID from SUPPORTED_BANKS
   onClose: () => void
   onImported: () => void
+  onCreateAccount?: () => void
 }
 
-export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported }: Props) => {
+export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, onCreateAccount }: Props) => {
   const [step, setStep] = useState<'upload' | 'preview' | 'done'>('upload')
   const [txs, setTxs] = useState<ParsedTx[]>([])
   const [selected, setSelected] = useState<Record<number, boolean>>({})
@@ -125,15 +126,23 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported }:
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
         {/* UPLOAD */}
-        {step === 'upload' && (
+        {step === 'upload' && accounts.length === 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20, paddingTop: 40 }}>
+            <div style={{ fontSize: 48 }}>🏦</div>
+            <div style={{ fontSize: 15, ...sp('s', 600), color: t.tx, textAlign: 'center' }}>Aucun compte trouvé</div>
+            <div style={{ fontSize: 13, ...sp('o'), color: t.sub, textAlign: 'center', lineHeight: 1.6 }}>
+              Aucun compte bancaire n'est configuré.<br />Voulez-vous en créer un maintenant ?
+            </div>
+            <div style={{ display: 'flex', gap: 10, width: '100%', maxWidth: 280 }}>
+              <button onClick={onClose} style={{ flex: 1, padding: '13px', background: 'none', border: '1px solid ' + t.bo, borderRadius: 14, cursor: 'pointer', ...sp('o', 600), fontSize: 14, color: t.sub }}>Non</button>
+              <button onClick={() => { onCreateAccount?.(); onClose(); }} style={{ flex: 1, padding: '13px', background: t.primary, border: 'none', borderRadius: 14, cursor: 'pointer', ...sp('o', 700), fontSize: 14, color: '#fff' }}>Oui</button>
+            </div>
+          </div>
+        )}
+        {step === 'upload' && accounts.length > 0 && (
           <div>
-            {accounts.length === 0 && (
-              <div style={{ padding: '14px', borderRadius: 14, background: t.rD, border: '1px solid ' + t.rose + '44', fontSize: 13, ...sp('o'), color: t.rose, marginBottom: 16, textAlign: 'center' }}>
-                ⚠️ Aucun compte bancaire configuré.<br />Crée un compte dans Comptes avant d'importer.
-              </div>
-            )}
-            <label style={{ display: 'block', padding: '32px 20px', borderRadius: 16, border: `2px dashed ${accounts.length === 0 ? t.bo : bankDef.color + '55'}`, textAlign: 'center', cursor: accounts.length === 0 ? 'not-allowed' : 'pointer', background: accounts.length === 0 ? t.el : bankDef.color + '11', marginBottom: 20, opacity: accounts.length === 0 ? .5 : 1 }}>
-              <input type="file" accept={bankDef.accept} disabled={accounts.length === 0} style={{ display: 'none' }} onChange={e => handleFile(e.target.files?.[0])} />
+            <label style={{ display: 'block', padding: '32px 20px', borderRadius: 16, border: `2px dashed ${bankDef.color}55`, textAlign: 'center', cursor: 'pointer', background: bankDef.color + '11', marginBottom: 20 }}>
+              <input type="file" accept={bankDef.accept} style={{ display: 'none' }} onChange={e => handleFile(e.target.files?.[0])} />
               <div style={{ fontSize: 40, marginBottom: 12 }}>{loading ? '⏳' : '📊'}</div>
               <div style={{ fontSize: 15, ...sp('s', 600), color: t.tx, marginBottom: 6 }}>
                 {loading ? 'Lecture en cours…' : 'Sélectionner le fichier'}

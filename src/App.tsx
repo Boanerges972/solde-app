@@ -193,10 +193,10 @@ export default function App() {
       {showReset && session && <ResetModal t={t} uid={session.user.id} onClose={() => setShowReset(false)} onDone={() => { reload(); setShowReset(false); }} />}
       {locked && <LockScreen t={t} onUnlock={() => setLocked(false)} />}
       {showPinSetup && <PinSetup t={t} user={session?.user} onClose={() => setShowPinSetup(false)} />}
-      {showImport && data && importBank === 'nickel' && <ImportNickel t={t} uid={session.user.id} accounts={data.accounts} onClose={() => setShowImport(false)} onImported={reload} />}
-      {showImport && data && (importBank === 'cm' || importBank === 'qonto') && <ImportCSV t={t} uid={session.user.id} accounts={data.accounts} bank={importBank} onClose={() => setShowImport(false)} onImported={reload} />}
+      {showImport && data && importBank === 'nickel' && <ImportNickel t={t} uid={session.user.id} accounts={data.accounts} onClose={() => setShowImport(false)} onImported={reload} onCreateAccount={() => { setShowImport(false); setEditAccount('new'); }} />}
+      {showImport && data && (importBank === 'cm' || importBank === 'qonto') && <ImportCSV t={t} uid={session.user.id} accounts={data.accounts} bank={importBank} onClose={() => setShowImport(false)} onImported={reload} onCreateAccount={() => { setShowImport(false); setEditAccount('new'); }} />}
       {showImport && data && importBank != null && SUPPORTED_BANKS.some(b => b.id === importBank) && (
-        <ImportUniversal t={t} uid={session.user.id} accounts={data.accounts} bank={importBank} onClose={() => setShowImport(false)} onImported={reload} />
+        <ImportUniversal t={t} uid={session.user.id} accounts={data.accounts} bank={importBank} onClose={() => setShowImport(false)} onImported={reload} onCreateAccount={() => { setShowImport(false); setEditAccount('new'); }} />
       )}
       {editAccount && data && <EditAccount account={editAccount === 'new' ? null : editAccount as import('./types').Account} isNew={editAccount === 'new'} t={t} uid={session.user.id} onClose={() => setEditAccount(null)} onSaved={reload} />}
       {depositAccount && <DepositModal account={depositAccount} t={t} onClose={() => setDepositAccount(null)} onSave={addDeposit} />}
