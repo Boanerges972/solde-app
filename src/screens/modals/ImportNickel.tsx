@@ -99,6 +99,10 @@ export const ImportNickel = ({t,uid,accounts,onClose,onImported,onCreateAccount}
   const[skipped,setSkipped]=useState(0);
   const[dupFileNames,setDupFileNames]=useState<string[]>([]);
   const[pendingHashes,setPendingHashes]=useState<{hash:string;name:string}[]>([]);
+  const[newAccName,setNewAccName]=useState('');
+  const[newAccType,setNewAccType]=useState('Courant');
+  const[newAccColor,setNewAccColor]=useState('#10E8C0');
+  const[createErr,setCreateErr]=useState('');
 
   const lsKey=`qdq_nickel_${uid}`;
 
@@ -223,6 +227,30 @@ export const ImportNickel = ({t,uid,accounts,onClose,onImported,onCreateAccount}
     setTimeout(()=>{onImported();onClose();},1500);
   };
 
+  const doCreateAndImport=async()=>{
+    if(!newAccName.trim()){setCreateErr('Nom requis');return;}
+    setCreateErr('');setLoading(true);setProgress(0);
+    const toImport=txs.filter((_,i)=>selected[i]);
+    const bal=parseFloat(toImport.reduce((s,tx)=>s+tx.amount,0).toFixed(2));
+    const newId=newAccName.trim().toLowerCase().replace(/\s+/g,'_')+'_'+uid.slice(0,6)+'_'+Math.random().toString(36).slice(2,6);
+    const{error}=await db.from('accounts').insert({
+      id:newId,name:newAccName.trim(),short_name:newAccName.trim().slice(0,4),
+      balance:bal,free:bal,type:newAccType,color:newAccColor,user_id:uid,reserved:0,
+    });
+    if(error){setCreateErr(error.message);setLoading(false);return;}
+    let done=0;
+    for(const tx of toImport){
+      await db.from('transactions').insert({
+        user_id:uid,merchant:tx.merchant,category:tx.category,
+        icon:tx.icon,amount:tx.amount,account_id:newId,
+        tx_date:tx.dt,group_id:null,paid_by:null,
+      });
+      done++;setProgress(Math.round(done/toImport.length*100));
+    }
+    setLoading(false);setStep('done');
+    setTimeout(()=>{onImported();onClose();},1500);
+  };
+
   const incomeCount=txs.filter((_,i)=>selected[i]&&txs[i].amount>0).length;
   const expCount=txs.filter((_,i)=>selected[i]&&txs[i].amount<0).length;
   const totalDebits=txs.filter((_,i)=>selected[i]&&txs[i].amount<0).reduce((s,tx)=>s+Math.abs(tx.amount),0);
@@ -244,20 +272,7 @@ export const ImportNickel = ({t,uid,accounts,onClose,onImported,onCreateAccount}
 
       <div style={{flex:1,overflowY:'auto',padding:'20px'}}>
         {/* STEP: UPLOAD */}
-        {step==='upload'&&accounts.length===0&&(
-          <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:20,paddingTop:40}}>
-            <div style={{fontSize:48}}>🏦</div>
-            <div style={{fontSize:15,...sp('s',600),color:t.tx,textAlign:'center'}}>Aucun compte trouvé</div>
-            <div style={{fontSize:13,...sp('o'),color:t.sub,textAlign:'center',lineHeight:1.6}}>
-              Aucun compte bancaire n'est configuré.<br/>Voulez-vous en créer un maintenant ?
-            </div>
-            <div style={{display:'flex',gap:10,width:'100%',maxWidth:280}}>
-              <button onClick={onClose} style={{flex:1,padding:'13px',background:'none',border:'1px solid '+t.bo,borderRadius:14,cursor:'pointer',...sp('o',600),fontSize:14,color:t.sub}}>Non</button>
-              <button onClick={()=>{onCreateAccount?.();onClose();}} style={{flex:1,padding:'13px',background:t.primary,border:'none',borderRadius:14,cursor:'pointer',...sp('o',700),fontSize:14,color:'#fff'}}>Oui</button>
-            </div>
-          </div>
-        )}
-        {step==='upload'&&accounts.length>0&&(
+        {step==='upload'&&(
           <div>
             <label style={{display:'block',padding:'32px 20px',borderRadius:16,border:'2px dashed '+t.mint+'55',textAlign:'center',cursor:'pointer',background:t.mD,marginBottom:20}}>
               <input type="file" accept=".pdf" multiple style={{display:'none'}} onChange={e=>handleFiles(e.target.files)}/>
@@ -305,16 +320,41 @@ export const ImportNickel = ({t,uid,accounts,onClose,onImported,onCreateAccount}
               ))}
             </div>
             {/* Account selector */}
-            <div style={{marginBottom:14}}>
-              <div style={{fontSize:11,...sp('s',600),color:t.sub,letterSpacing:.6,textTransform:'uppercase',marginBottom:8}}>Importer dans le compte</div>
-              <div style={{display:'flex',gap:6}}>
-                {accounts.map(a=>(
-                  <button key={a.id} onClick={()=>setAccId(a.id)} style={{flex:1,padding:'9px 6px',borderRadius:10,border:'none',cursor:'pointer',background:accId===a.id?a.col+'22':t.el,outline:accId===a.id?'1.5px solid '+a.col+'55':'none'}}>
-                    <div style={{fontSize:12,...sp('o',600),color:accId===a.id?a.col:t.tx}}>{a.short}</div>
-                  </button>
-                ))}
+            {accounts.length>0?(
+              <div style={{marginBottom:14}}>
+                <div style={{fontSize:11,...sp('s',600),color:t.sub,letterSpacing:.6,textTransform:'uppercase',marginBottom:8}}>Importer dans le compte</div>
+                <div style={{display:'flex',gap:6}}>
+                  {accounts.map(a=>(
+                    <button key={a.id} onClick={()=>setAccId(a.id)} style={{flex:1,padding:'9px 6px',borderRadius:10,border:'none',cursor:'pointer',background:accId===a.id?a.col+'22':t.el,outline:accId===a.id?'1.5px solid '+a.col+'55':'none'}}>
+                      <div style={{fontSize:12,...sp('o',600),color:accId===a.id?a.col:t.tx}}>{a.short}</div>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            ):(
+              <div style={{marginBottom:14,padding:'16px',background:t.card,borderRadius:14,border:'1px solid '+t.bo}}>
+                <div style={{fontSize:11,...sp('s',600),color:t.sub,letterSpacing:.6,textTransform:'uppercase',marginBottom:10}}>Créer le compte</div>
+                <input type="text" value={newAccName} onChange={e=>setNewAccName(e.target.value)} placeholder="Nom du compte (ex: Compte Nickel)"
+                  style={{width:'100%',padding:'11px 14px',background:t.el,border:'1.5px solid '+(createErr?t.rose:t.bo),borderRadius:12,...sp('o'),fontSize:14,color:t.tx,outline:'none',marginBottom:10,boxSizing:'border-box'}}/>
+                {createErr&&<div style={{fontSize:12,...sp('o'),color:t.rose,marginBottom:8}}>{createErr}</div>}
+                <div style={{display:'flex',gap:8,marginBottom:10}}>
+                  {['Courant','Épargne','Pro'].map(tp=>(
+                    <button key={tp} onClick={()=>setNewAccType(tp)} style={{padding:'7px 12px',borderRadius:10,border:'none',cursor:'pointer',...sp('o',600),fontSize:12,background:newAccType===tp?newAccColor+'33':t.el,color:newAccType===tp?newAccColor:t.sub}}>
+                      {tp}
+                    </button>
+                  ))}
+                </div>
+                <div style={{display:'flex',gap:8,marginBottom:10}}>
+                  {['#10E8C0','#FF6584','#F5A623','#6B7FD7','#50C8A0','#E87040','#C084FC','#60A5FA'].map(c=>(
+                    <button key={c} onClick={()=>setNewAccColor(c)} style={{width:28,height:28,borderRadius:14,background:c,border:'none',cursor:'pointer',outline:newAccColor===c?'3px solid '+t.tx:'3px solid transparent',outlineOffset:2}}/>
+                  ))}
+                </div>
+                <div style={{padding:'10px 12px',background:t.mD,borderRadius:10,fontSize:12,...sp('o'),color:t.mint}}>
+                  💰 Solde calculé : <b>{fmt(Math.abs(txs.filter((_,i)=>selected[i]).reduce((s,tx)=>s+tx.amount,0)))}</b>
+                  {txs.filter((_,i)=>selected[i]).reduce((s,tx)=>s+tx.amount,0)<0?' (débiteur)':' (créditeur)'}
+                </div>
+              </div>
+            )}
             {/* Select all */}
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
               <span style={{fontSize:12,...sp('o'),color:t.sub}}>{Object.values(selected).filter(Boolean).length} sélectionnées</span>
@@ -376,9 +416,15 @@ export const ImportNickel = ({t,uid,accounts,onClose,onImported,onCreateAccount}
               <button onClick={onClose} style={{flex:1,padding:'15px',background:'none',border:'1px solid '+t.bo,borderRadius:14,cursor:'pointer',...sp('o',600),fontSize:14,color:t.sub}}>
                 Annuler
               </button>
-              <button onClick={doImport} style={{flex:2,padding:'15px',background:t.primary,border:'none',borderRadius:14,cursor:'pointer',...sp('o',700),fontSize:14,color:'#fff'}}>
-                Importer ({Object.values(selected).filter(Boolean).length})
-              </button>
+              {accounts.length===0?(
+                <button onClick={doCreateAndImport} style={{flex:2,padding:'15px',background:t.primary,border:'none',borderRadius:14,cursor:'pointer',...sp('o',700),fontSize:14,color:'#fff'}}>
+                  Créer & importer ({Object.values(selected).filter(Boolean).length})
+                </button>
+              ):(
+                <button onClick={doImport} style={{flex:2,padding:'15px',background:t.primary,border:'none',borderRadius:14,cursor:'pointer',...sp('o',700),fontSize:14,color:'#fff'}}>
+                  Importer ({Object.values(selected).filter(Boolean).length})
+                </button>
+              )}
             </div>
           )}
         </div>

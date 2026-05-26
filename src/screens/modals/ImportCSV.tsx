@@ -158,6 +158,10 @@ export const ImportCSV = ({t,uid,accounts,bank,onClose,onImported,onCreateAccoun
   const[loading,setLoading]=useState(false);
   const[progress,setProgress]=useState(0);
   const[err,setErr]=useState('');
+  const[newAccName,setNewAccName]=useState('');
+  const[newAccType,setNewAccType]=useState('Courant');
+  const[newAccColor,setNewAccColor]=useState('#10E8C0');
+  const[createErr,setCreateErr]=useState('');
 
   const isCM=bank==='cm';
   const bankName=isCM?'Crédit Mutuel':'Qonto';
@@ -206,6 +210,30 @@ export const ImportCSV = ({t,uid,accounts,bank,onClose,onImported,onCreateAccoun
     setTimeout(()=>{onImported();onClose();},1500);
   };
 
+  const doCreateAndImport=async()=>{
+    if(!newAccName.trim()){setCreateErr('Nom requis');return;}
+    setCreateErr('');setLoading(true);setProgress(0);
+    const toImport=txs.filter((_,i)=>selected[i]);
+    const bal=parseFloat(toImport.reduce((s,tx)=>s+tx.amount,0).toFixed(2));
+    const newId=newAccName.trim().toLowerCase().replace(/\s+/g,'_')+'_'+uid.slice(0,6)+'_'+Math.random().toString(36).slice(2,6);
+    const{error}=await db.from('accounts').insert({
+      id:newId,name:newAccName.trim(),short_name:newAccName.trim().slice(0,4),
+      balance:bal,free:bal,type:newAccType,color:newAccColor,user_id:uid,reserved:0,
+    });
+    if(error){setCreateErr(error.message);setLoading(false);return;}
+    let done=0;
+    for(const tx of toImport){
+      await db.from('transactions').insert({
+        user_id:uid,merchant:tx.merchant,category:tx.category,
+        icon:tx.icon,amount:tx.amount,account_id:newId,
+        tx_date:tx.dt,group_id:null,paid_by:null,
+      });
+      done++;setProgress(Math.round(done/toImport.length*100));
+    }
+    setLoading(false);setStep('done');
+    setTimeout(()=>{onImported();onClose();},1500);
+  };
+
   const expCount=txs.filter((_,i)=>selected[i]&&txs[i].amount<0).length;
   const totalDebits=txs.filter((_,i)=>selected[i]&&txs[i].amount<0).reduce((s,tx)=>s+Math.abs(tx.amount),0);
 
@@ -223,20 +251,7 @@ export const ImportCSV = ({t,uid,accounts,bank,onClose,onImported,onCreateAccoun
         </div>
       </div>
       <div style={{flex:1,overflowY:'auto',padding:'20px'}}>
-        {step==='upload'&&accounts.length===0&&(
-          <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:20,paddingTop:40}}>
-            <div style={{fontSize:48}}>🏦</div>
-            <div style={{fontSize:15,...sp('s',600),color:t.tx,textAlign:'center'}}>Aucun compte trouvé</div>
-            <div style={{fontSize:13,...sp('o'),color:t.sub,textAlign:'center',lineHeight:1.6}}>
-              Aucun compte bancaire n'est configuré.<br/>Voulez-vous en créer un maintenant ?
-            </div>
-            <div style={{display:'flex',gap:10,width:'100%',maxWidth:280}}>
-              <button onClick={onClose} style={{flex:1,padding:'13px',background:'none',border:'1px solid '+t.bo,borderRadius:14,cursor:'pointer',...sp('o',600),fontSize:14,color:t.sub}}>Non</button>
-              <button onClick={()=>{onCreateAccount?.();onClose();}} style={{flex:1,padding:'13px',background:t.primary,border:'none',borderRadius:14,cursor:'pointer',...sp('o',700),fontSize:14,color:'#fff'}}>Oui</button>
-            </div>
-          </div>
-        )}
-        {step==='upload'&&accounts.length>0&&(
+        {step==='upload'&&(
           <div>
             <label style={{display:'block',padding:'32px 20px',borderRadius:16,border:'2px dashed '+bankColor+'55',textAlign:'center',cursor:'pointer',background:bankColor+'11',marginBottom:20}}>
               <input type="file" accept=".csv,.txt" style={{display:'none'}} onChange={e=>handleFile(e.target.files?.[0])}/>
@@ -282,16 +297,41 @@ export const ImportCSV = ({t,uid,accounts,bank,onClose,onImported,onCreateAccoun
                 <div style={{fontSize:16,...sp('m',600),color:t.tx,marginTop:2}}>{Object.values(selected).filter(Boolean).length}</div>
               </div>
             </div>
-            <div style={{marginBottom:14}}>
-              <div style={{fontSize:11,...sp('s',600),color:t.sub,letterSpacing:.6,textTransform:'uppercase',marginBottom:8}}>Importer dans</div>
-              <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-                {accounts.map(a=>(
-                  <button key={a.id} onClick={()=>setAccId(a.id)} style={{padding:'8px 13px',borderRadius:10,border:'none',cursor:'pointer',background:accId===a.id?a.col+'22':t.el,outline:accId===a.id?'1.5px solid '+a.col+'55':'none'}}>
-                    <span style={{fontSize:12,...sp('o',600),color:accId===a.id?a.col:t.tx}}>{a.short}</span>
-                  </button>
-                ))}
+            {accounts.length>0?(
+              <div style={{marginBottom:14}}>
+                <div style={{fontSize:11,...sp('s',600),color:t.sub,letterSpacing:.6,textTransform:'uppercase',marginBottom:8}}>Importer dans</div>
+                <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                  {accounts.map(a=>(
+                    <button key={a.id} onClick={()=>setAccId(a.id)} style={{padding:'8px 13px',borderRadius:10,border:'none',cursor:'pointer',background:accId===a.id?a.col+'22':t.el,outline:accId===a.id?'1.5px solid '+a.col+'55':'none'}}>
+                      <span style={{fontSize:12,...sp('o',600),color:accId===a.id?a.col:t.tx}}>{a.short}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            ):(
+              <div style={{marginBottom:14,padding:'16px',background:t.card,borderRadius:14,border:'1px solid '+t.bo}}>
+                <div style={{fontSize:11,...sp('s',600),color:t.sub,letterSpacing:.6,textTransform:'uppercase',marginBottom:10}}>Créer le compte</div>
+                <input type="text" value={newAccName} onChange={e=>setNewAccName(e.target.value)} placeholder="Nom du compte (ex: Compte courant CM)"
+                  style={{width:'100%',padding:'11px 14px',background:t.el,border:'1.5px solid '+(createErr?t.rose:t.bo),borderRadius:12,...sp('o'),fontSize:14,color:t.tx,outline:'none',marginBottom:10,boxSizing:'border-box'}}/>
+                {createErr&&<div style={{fontSize:12,...sp('o'),color:t.rose,marginBottom:8}}>{createErr}</div>}
+                <div style={{display:'flex',gap:8,marginBottom:10}}>
+                  {['Courant','Épargne','Pro'].map(tp=>(
+                    <button key={tp} onClick={()=>setNewAccType(tp)} style={{padding:'7px 12px',borderRadius:10,border:'none',cursor:'pointer',...sp('o',600),fontSize:12,background:newAccType===tp?newAccColor+'33':t.el,color:newAccType===tp?newAccColor:t.sub}}>
+                      {tp}
+                    </button>
+                  ))}
+                </div>
+                <div style={{display:'flex',gap:8,marginBottom:10}}>
+                  {['#10E8C0','#FF6584','#F5A623','#6B7FD7','#50C8A0','#E87040','#C084FC','#60A5FA'].map(c=>(
+                    <button key={c} onClick={()=>setNewAccColor(c)} style={{width:28,height:28,borderRadius:14,background:c,border:'none',cursor:'pointer',outline:newAccColor===c?'3px solid '+t.tx:'3px solid transparent',outlineOffset:2}}/>
+                  ))}
+                </div>
+                <div style={{padding:'10px 12px',background:t.mD,borderRadius:10,fontSize:12,...sp('o'),color:t.mint}}>
+                  💰 Solde calculé : <b>{fmt(Math.abs(txs.filter((_,i)=>selected[i]).reduce((s,tx)=>s+tx.amount,0)))}</b>
+                  {txs.filter((_,i)=>selected[i]).reduce((s,tx)=>s+tx.amount,0)<0?' (débiteur)':' (créditeur)'}
+                </div>
+              </div>
+            )}
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
               <span style={{fontSize:12,...sp('o'),color:t.sub}}>{Object.values(selected).filter(Boolean).length} / {txs.length}</span>
               <button onClick={()=>{const all=Object.values(selected).every(Boolean);const ns: Record<number,boolean>={};txs.forEach((_,i)=>ns[i]=!all);setSelected(ns);}} style={{background:'none',border:'none',cursor:'pointer',fontSize:12,...sp('o',600),color:t.mint}}>
@@ -338,8 +378,8 @@ export const ImportCSV = ({t,uid,accounts,bank,onClose,onImported,onCreateAccoun
               <button onClick={onClose} style={{flex:1,padding:'15px',background:'none',border:'1px solid '+t.bo,borderRadius:14,cursor:'pointer',...sp('o',600),fontSize:14,color:t.sub}}>
                 Annuler
               </button>
-              <button onClick={doImport} style={{flex:2,padding:'15px',background:'linear-gradient(135deg,'+bankColor+','+bankColor+'CC)',border:'none',borderRadius:14,cursor:'pointer',...sp('o',700),fontSize:14,color:'#fff'}}>
-                Importer ({Object.values(selected).filter(Boolean).length})
+              <button onClick={accounts.length===0?doCreateAndImport:doImport} style={{flex:2,padding:'15px',background:'linear-gradient(135deg,'+bankColor+','+bankColor+'CC)',border:'none',borderRadius:14,cursor:'pointer',...sp('o',700),fontSize:14,color:'#fff'}}>
+                {accounts.length===0?'Créer & importer':'Importer'} ({Object.values(selected).filter(Boolean).length})
               </button>
             </div>
           )}
