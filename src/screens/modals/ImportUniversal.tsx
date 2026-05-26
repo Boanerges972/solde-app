@@ -78,7 +78,7 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported }:
 
   const doImport = async () => {
     const toImport = txs.filter((_, i) => selected[i])
-    if (!toImport.length) return
+    if (!toImport.length || !accId) return
     setLoading(true); setProgress(0)
     let done = 0
     for (const tx of toImport) {
@@ -127,8 +127,13 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported }:
         {/* UPLOAD */}
         {step === 'upload' && (
           <div>
-            <label style={{ display: 'block', padding: '32px 20px', borderRadius: 16, border: `2px dashed ${bankDef.color}55`, textAlign: 'center', cursor: 'pointer', background: bankDef.color + '11', marginBottom: 20 }}>
-              <input type="file" accept={bankDef.accept} style={{ display: 'none' }} onChange={e => handleFile(e.target.files?.[0])} />
+            {accounts.length === 0 && (
+              <div style={{ padding: '14px', borderRadius: 14, background: t.rD, border: '1px solid ' + t.rose + '44', fontSize: 13, ...sp('o'), color: t.rose, marginBottom: 16, textAlign: 'center' }}>
+                ⚠️ Aucun compte bancaire configuré.<br />Crée un compte dans Comptes avant d'importer.
+              </div>
+            )}
+            <label style={{ display: 'block', padding: '32px 20px', borderRadius: 16, border: `2px dashed ${accounts.length === 0 ? t.bo : bankDef.color + '55'}`, textAlign: 'center', cursor: accounts.length === 0 ? 'not-allowed' : 'pointer', background: accounts.length === 0 ? t.el : bankDef.color + '11', marginBottom: 20, opacity: accounts.length === 0 ? .5 : 1 }}>
+              <input type="file" accept={bankDef.accept} disabled={accounts.length === 0} style={{ display: 'none' }} onChange={e => handleFile(e.target.files?.[0])} />
               <div style={{ fontSize: 40, marginBottom: 12 }}>{loading ? '⏳' : '📊'}</div>
               <div style={{ fontSize: 15, ...sp('s', 600), color: t.tx, marginBottom: 6 }}>
                 {loading ? 'Lecture en cours…' : 'Sélectionner le fichier'}
