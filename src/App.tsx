@@ -30,6 +30,8 @@ import { PinSetup } from './screens/modals/PinSetup'
 import { ImportNickel } from './screens/modals/ImportNickel'
 import { ImportCSV } from './screens/modals/ImportCSV'
 import { BankPicker } from './screens/modals/BankPicker'
+import { ImportUniversal } from './screens/modals/ImportUniversal'
+import { SUPPORTED_BANKS } from './lib/parsers/index'
 import { ProfileScreen } from './screens/modals/ProfileScreen'
 import { DepositModal } from './screens/modals/DepositModal'
 import type { Profile } from './types'
@@ -193,6 +195,9 @@ export default function App() {
       {showPinSetup && <PinSetup t={t} user={session?.user} onClose={() => setShowPinSetup(false)} />}
       {showImport && data && importBank === 'nickel' && <ImportNickel t={t} uid={session.user.id} accounts={data.accounts} onClose={() => setShowImport(false)} onImported={reload} />}
       {showImport && data && (importBank === 'cm' || importBank === 'qonto') && <ImportCSV t={t} uid={session.user.id} accounts={data.accounts} bank={importBank} onClose={() => setShowImport(false)} onImported={reload} />}
+      {showImport && data && importBank != null && SUPPORTED_BANKS.some(b => b.id === importBank) && (
+        <ImportUniversal t={t} uid={session.user.id} accounts={data.accounts} bank={importBank} onClose={() => setShowImport(false)} onImported={reload} />
+      )}
       {editAccount && data && <EditAccount account={editAccount === 'new' ? null : editAccount as import('./types').Account} isNew={editAccount === 'new'} t={t} uid={session.user.id} onClose={() => setEditAccount(null)} onSaved={reload} />}
       {depositAccount && <DepositModal account={depositAccount} t={t} onClose={() => setDepositAccount(null)} onSave={addDeposit} />}
     </div>
