@@ -95,10 +95,28 @@ export const ImportNickel = ({t,uid,accounts,onClose,onImported}: Props) => {
   const[loading,setLoading]=useState(false);
   const[progress,setProgress]=useState(0);
   const[err,setErr]=useState('');
+  const[fileCount,setFileCount]=useState(0);
+  const[skipped,setSkipped]=useState(0);
 
-  const handleFile=async(file: File|null|undefined)=>{
-    if(!file)return;
-    setErr('');setLoading(true);
+  const parsePDF=async(file: File): Promise<NickelTx[]>=>{
+    const ab=await file.arrayBuffer();
+    const pdf=await (window as any).pdfjsLib.getDocument({data:ab}).promise;
+    let fullText='';
+    for(let p=1;p<=pdf.numPages;p++){
+      const page=await pdf.getPage(p);
+      const tc=await page.getTextContent();
+      const items=(tc.items as any[]).sort((a,b)=>{
+        const yDiff=Math.round(b.transform[5]/3)*3-Math.round(a.transform[5]/3)*3;
+        return yDiff!==0?yDiff:a.transform[4]-b.transform[4];
+      });
+      fullText+=items.map((i:any)=>i.str).join('\n')+'\n';
+    }
+    return parseNickelPDF(fullText);
+  };
+
+  const handleFiles=async(files: FileList|null)=>{
+    if(!files||files.length===0)return;
+    setErr('');setLoading(true);setFileCount(files.length);
     try{
       if(!(window as any).pdfjsLib){
         await new Promise<void>((res,rej)=>{
@@ -109,26 +127,42 @@ export const ImportNickel = ({t,uid,accounts,onClose,onImported}: Props) => {
         });
         (window as any).pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
       }
-      const ab=await file.arrayBuffer();
-      const pdf=await (window as any).pdfjsLib.getDocument({data:ab}).promise;
-      let fullText='';
-      for(let p=1;p<=pdf.numPages;p++){
-        const page=await pdf.getPage(p);
-        const tc=await page.getTextContent();
-        const items=(tc.items as any[]).sort((a,b)=>{
-          const yDiff=Math.round(b.transform[5]/3)*3-Math.round(a.transform[5]/3)*3;
-          return yDiff!==0?yDiff:a.transform[4]-b.transform[4];
-        });
-        fullText+=items.map((i:any)=>i.str).join('\n')+'\n';
+
+      // Parse all PDFs and merge
+      let allParsed: NickelTx[]=[];
+      for(let f=0;f<files.length;f++){
+        const parsed=await parsePDF(files[f]);
+        allParsed=[...allParsed,...parsed];
       }
-      const parsed=parseNickelPDF(fullText);
-      if(parsed.length===0){
-        setErr('Aucune transaction trouvée. Vérifiez que c\'est bien un relevé Nickel.');
+
+      if(allParsed.length===0){
+        setErr('Aucune transaction trouvée. Vérifiez que ce sont bien des relevés Nickel.');
         setLoading(false);return;
       }
+
+      // Dedup between PDFs (same date+amount+merchant)
+      const seen=new Set<string>();
+      allParsed=allParsed.filter(tx=>{
+        const key=`${tx.dt}|${tx.amount.toFixed(2)}|${tx.merchant}`;
+        if(seen.has(key))return false;
+        seen.add(key);return true;
+      });
+
+      // Dedup vs existing DB transactions
+      const{data:existing}=await db.from('transactions')
+        .select('tx_date,amount,merchant')
+        .eq('account_id',accId).eq('user_id',uid);
+      const existingHashes=new Set(
+        (existing??[]).map((tx: {tx_date:string;amount:string|number;merchant:string})=>
+          `${tx.tx_date}|${parseFloat(String(tx.amount)).toFixed(2)}|${tx.merchant}`
+        )
+      );
+      const fresh=allParsed.filter(tx=>!existingHashes.has(`${tx.dt}|${tx.amount.toFixed(2)}|${tx.merchant}`));
+      setSkipped(allParsed.length-fresh.length);
+
       const sel: Record<number,boolean>={};
-      parsed.forEach((_,i)=>sel[i]=true);
-      setTxs(parsed);setSelected(sel);setStep('preview');
+      fresh.forEach((_,i)=>sel[i]=true);
+      setTxs(fresh);setSelected(sel);setStep('preview');
     }catch(e: any){
       setErr('Erreur lecture PDF: '+e.message);
     }
@@ -173,7 +207,7 @@ export const ImportNickel = ({t,uid,accounts,onClose,onImported}: Props) => {
         <div>
           <div style={{fontSize:15,...sp('s',600),color:t.tx}}>Import Nickel</div>
           <div style={{fontSize:11,...sp('o'),color:t.sub}}>
-            {step==='upload'?'Sélectionne ton relevé PDF':step==='preview'?txs.length+' transactions trouvées':'Import terminé !'}
+            {step==='upload'?'Un ou plusieurs relevés PDF':step==='preview'?`${txs.length} nouvelles transactions${fileCount>1?' · '+fileCount+' fichiers':''}` :'Import terminé !'}
           </div>
         </div>
       </div>
@@ -183,12 +217,12 @@ export const ImportNickel = ({t,uid,accounts,onClose,onImported}: Props) => {
         {step==='upload'&&(
           <div>
             <label style={{display:'block',padding:'32px 20px',borderRadius:16,border:'2px dashed '+t.mint+'55',textAlign:'center',cursor:'pointer',background:t.mD,marginBottom:20}}>
-              <input type="file" accept=".pdf" style={{display:'none'}} onChange={e=>handleFile(e.target.files?.[0])}/>
+              <input type="file" accept=".pdf" multiple style={{display:'none'}} onChange={e=>handleFiles(e.target.files)}/>
               <div style={{fontSize:40,marginBottom:12}}>{loading?'⏳':'📄'}</div>
               <div style={{fontSize:15,...sp('s',600),color:t.tx,marginBottom:6}}>
-                {loading?'Lecture en cours…':'Glisser ou sélectionner le PDF'}
+                {loading?`Lecture de ${fileCount} fichier${fileCount>1?'s':''}…`:'Sélectionner un ou plusieurs PDF'}
               </div>
-              <div style={{fontSize:12,...sp('o'),color:t.sub}}>Relevé de compte Nickel · PDF uniquement</div>
+              <div style={{fontSize:12,...sp('o'),color:t.sub}}>Relevés Nickel · plusieurs mois OK</div>
             </label>
             {err&&<div style={{padding:'12px',borderRadius:12,background:t.rD,border:'1px solid '+t.rose+'44',...sp('o'),fontSize:13,color:t.rose,marginBottom:12}}>{err}</div>}
             <div style={{padding:'16px',background:t.card,borderRadius:14,border:'1px solid '+t.bo}}>
@@ -208,6 +242,11 @@ export const ImportNickel = ({t,uid,accounts,onClose,onImported}: Props) => {
         {/* STEP: PREVIEW */}
         {step==='preview'&&(
           <div>
+            {skipped>0&&(
+              <div style={{padding:'10px 14px',background:t.aD,borderRadius:10,fontSize:12,...sp('o'),color:t.amber,marginBottom:12}}>
+                ⚠️ {skipped} transaction{skipped>1?'s':''} déjà importée{skipped>1?'s':''} — ignorée{skipped>1?'s':''}
+              </div>
+            )}
             {/* Summary */}
             <div style={{display:'flex',gap:8,marginBottom:16}}>
               {[[expCount+' dépenses',fmt(totalDebits),t.rose,t.rD],[incomeCount+' entrées','',t.mint,t.mD]].map(([lb,val,col,bg],i)=>(
