@@ -40,38 +40,90 @@ interface CsvTx {
   dt: string; merchant: string; category: string; icon: string; amount: number;
 }
 
+const CM_ICONS: Record<string,string>={'Courses':'🛒','Loyer':'🏠','Santé':'💊','Assurance':'🛡️','Abonnement':'📱','Transport':'🚗','Banque':'🏦','Restaurant':'🍽️','Sport':'💪','Virement':'💸','Prélèvement':'🏦','Salaire':'💰','Autre':'📦'};
+
+function stripQuotes(s: string): string { return s.trim().replace(/^["']|["']$/g,''); }
+
+function parseCMDate(raw: string): string|null {
+  // DD/MM/YYYY or YYYY-MM-DD
+  const s=raw.trim();
+  if(/^\d{2}\/\d{2}\/\d{4}$/.test(s)){const[d,m,y]=s.split('/');return `${y}-${m}-${d}`;}
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;
+  return null;
+}
+
 function parseCM(text: string): CsvTx[] {
-  const lines=text.split('\n').filter(Boolean);
-  const sep=';';
+  // Strip BOM
+  const clean=text.replace(/^﻿/,'');
+  const lines=clean.split('\n').map(l=>l.trimEnd()).filter(Boolean);
   const txs: CsvTx[]=[];
+
+  // Detect format from header row
+  const header=lines[0]?lines[0].split(';').map(stripQuotes).map(h=>h.toLowerCase()):[];
+  // Format A: Date;Valeur;Montant;Libellé;Solde (5 cols, signed amount at col 2)
+  // Format B: Date;DateValeur;Débit;Crédit;Libellé;Solde (6 cols, separate debit/credit)
+  // Format C: Date;DateValeur;Montant;Libellé;Référence;IBAN;Solde;Catégorie (8 cols)
+  // Auto-detect: look for header keywords or fall back to column count heuristic
+
+  const hasDebitCredit=header.some(h=>h.includes('débit')||h.includes('debit'));
+  const amtIdx=header.findIndex(h=>h.includes('montant'));
+  const libIdx=header.findIndex(h=>h.includes('libel')||h.includes('opération')||h.includes('operation'));
+  const debitIdx=header.findIndex(h=>h.includes('débit')||h.includes('debit'));
+  const creditIdx=header.findIndex(h=>h.includes('crédit')||h.includes('credit'));
+  const catIdx=header.findIndex(h=>h.includes('catégor')||h.includes('categor'));
+
   for(let i=1;i<lines.length;i++){
-    const cols=lines[i].split(sep);
-    if(cols.length<7)continue;
-    const dateRaw=cols[0].trim();
-    const libelle=cols[3].trim();
-    const debit=cols[5].trim().replace(',','.');
-    const credit=cols[6].trim().replace(',','.');
-    const catCM=cols[7]?cols[7].trim():'';
-    if(!dateRaw||!libelle)continue;
-    const [d,m,y]=dateRaw.split('/');
-    if(!d||!m||!y)continue;
-    let amount=0;
-    if(debit)amount=-Math.abs(parseFloat(debit));
-    else if(credit)amount=Math.abs(parseFloat(credit));
-    if(isNaN(amount))continue;
+    const cols=lines[i].split(';').map(stripQuotes);
+    if(cols.length<3)continue;
+
+    const dateRaw=cols[0];
+    const dt=parseCMDate(dateRaw);
+    if(!dt)continue;
+
+    let libelle='';
+    let amount=NaN;
+
+    if(header.length>=3){
+      // Use header-detected indices
+      libelle=libIdx>=0&&cols[libIdx]?cols[libIdx]:'';
+      if(hasDebitCredit&&debitIdx>=0&&creditIdx>=0){
+        const d=cols[debitIdx]?.replace(',','.').replace('+','');
+        const c=cols[creditIdx]?.replace(',','.').replace('+','');
+        if(d&&parseFloat(d))amount=-Math.abs(parseFloat(d));
+        else if(c&&parseFloat(c))amount=Math.abs(parseFloat(c));
+      }else if(amtIdx>=0&&cols[amtIdx]){
+        amount=parseFloat(cols[amtIdx].replace(',','.').replace('+',''));
+      }
+      // fallback if indices not found
+      if(!libelle)libelle=cols[3]||cols[2]||'';
+      if(isNaN(amount)&&cols[2])amount=parseFloat(cols[2].replace(',','.').replace('+',''));
+    }else{
+      // No header — column count heuristic
+      if(cols.length>=5){libelle=cols[3];amount=parseFloat(cols[2].replace(',','.').replace('+',''));}
+      else if(cols.length>=4){libelle=cols[2];amount=parseFloat(cols[1].replace(',','.').replace('+',''));}
+    }
+
+    libelle=libelle.trim();
+    if(!libelle||isNaN(amount)||amount===0)continue;
+
+    const cmCat=catIdx>=0&&cols[catIdx]?cols[catIdx]:'';
     let cat='Autre';
-    if(catCM&&catCM!=='A catégoriser'&&catCM!=='Hors budget'){
-      if(catCM.includes('Santé'))cat='Santé';
-      else if(catCM.includes('Virement'))cat='Virement';
-      else if(catCM.includes('Frais'))cat='Banque';
-      else if(catCM.includes('Logement'))cat='Loyer';
-      else if(catCM.includes('Assurance'))cat='Assurance';
+    if(cmCat&&!['A catégoriser','Hors budget',''].includes(cmCat)){
+      if(cmCat.includes('Santé'))cat='Santé';
+      else if(cmCat.includes('Virement'))cat='Virement';
+      else if(cmCat.includes('Frais'))cat='Banque';
+      else if(cmCat.includes('Logement'))cat='Loyer';
+      else if(cmCat.includes('Assurance'))cat='Assurance';
       else cat=catFromKeywords(libelle,CM_CATS);
     }else{
       cat=catFromKeywords(libelle,CM_CATS);
+      if(cat==='Autre'){
+        if(libelle.toUpperCase().includes('VIREMENT')||libelle.toUpperCase().includes('VIR SEPA'))cat='Virement';
+        else if(libelle.toUpperCase().includes('PRELEVEMENT')||libelle.toUpperCase().includes('PRLV'))cat='Prélèvement';
+        else if(libelle.toUpperCase().includes('SALAIRE'))cat='Salaire';
+      }
     }
-    const icons: Record<string,string>={'Courses':'🛒','Loyer':'🏠','Santé':'💊','Assurance':'🛡️','Abonnement':'📱','Transport':'🚗','Banque':'🏦','Restaurant':'🍽️','Sport':'💪','Virement':'💸','Salaire':'💰','Autre':'📦'};
-    txs.push({dt:y+'-'+m+'-'+d,merchant:libelle,category:cat,icon:icons[cat]||'📦',amount});
+    txs.push({dt,merchant:libelle.slice(0,80),category:cat,icon:CM_ICONS[cat]||'📦',amount});
   }
   return txs;
 }
