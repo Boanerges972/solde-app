@@ -97,10 +97,23 @@ export const ImportNickel = ({t,uid,accounts,onClose,onImported}: Props) => {
   const[err,setErr]=useState('');
   const[fileCount,setFileCount]=useState(0);
   const[skipped,setSkipped]=useState(0);
+  const[dupFileNames,setDupFileNames]=useState<string[]>([]);
+  const[pendingHashes,setPendingHashes]=useState<{hash:string;name:string}[]>([]);
 
-  const parsePDF=async(file: File): Promise<NickelTx[]>=>{
-    const ab=await file.arrayBuffer();
-    const pdf=await (window as any).pdfjsLib.getDocument({data:ab}).promise;
+  const lsKey=`qdq_nickel_${uid}`;
+
+  const getStoredHashes=(): Record<string,string>=>{
+    try{ return JSON.parse(localStorage.getItem(lsKey)||'{}'); }
+    catch{ return {}; }
+  };
+
+  const hashAB=async(ab: ArrayBuffer): Promise<string>=>{
+    const buf=await crypto.subtle.digest('SHA-256',ab);
+    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  };
+
+  const parsePDF=async(ab: ArrayBuffer): Promise<NickelTx[]>=>{
+    const pdf=await (window as any).pdfjsLib.getDocument({data:new Uint8Array(ab)}).promise;
     let fullText='';
     for(let p=1;p<=pdf.numPages;p++){
       const page=await pdf.getPage(p);
@@ -116,7 +129,7 @@ export const ImportNickel = ({t,uid,accounts,onClose,onImported}: Props) => {
 
   const handleFiles=async(files: FileList|null)=>{
     if(!files||files.length===0)return;
-    setErr('');setLoading(true);setFileCount(files.length);
+    setErr('');setLoading(true);setFileCount(files.length);setDupFileNames([]);
     try{
       if(!(window as any).pdfjsLib){
         await new Promise<void>((res,rej)=>{
@@ -128,12 +141,25 @@ export const ImportNickel = ({t,uid,accounts,onClose,onImported}: Props) => {
         (window as any).pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
       }
 
-      // Parse all PDFs and merge
+      const storedHashes=getStoredHashes();
+      const dups: string[]=[];
+      const batch: {hash:string;name:string}[]=[];
+
+      // Parse all PDFs, hash each, detect duplicates
       let allParsed: NickelTx[]=[];
       for(let f=0;f<files.length;f++){
-        const parsed=await parsePDF(files[f]);
+        const file=files[f];
+        const ab=await file.arrayBuffer();
+        const hash=await hashAB(ab);
+        if(storedHashes[hash]){
+          dups.push(file.name);
+        }
+        batch.push({hash,name:file.name});
+        const parsed=await parsePDF(ab);
         allParsed=[...allParsed,...parsed];
       }
+      setDupFileNames(dups);
+      setPendingHashes(batch);
 
       if(allParsed.length===0){
         setErr('Aucune transaction trouvée. Vérifiez que ce sont bien des relevés Nickel.');
@@ -189,6 +215,10 @@ export const ImportNickel = ({t,uid,accounts,onClose,onImported}: Props) => {
       await db.from('accounts').update({balance:parseFloat(newBal.toFixed(2)),free:parseFloat(newBal.toFixed(2))})
         .eq('id',accId).eq('user_id',uid);
     }
+    // Mark files as imported in localStorage
+    const stored=getStoredHashes();
+    pendingHashes.forEach(({hash,name})=>{ stored[hash]=name; });
+    localStorage.setItem(lsKey,JSON.stringify(stored));
     setLoading(false);setStep('done');
     setTimeout(()=>{onImported();onClose();},1500);
   };
@@ -225,6 +255,11 @@ export const ImportNickel = ({t,uid,accounts,onClose,onImported}: Props) => {
               <div style={{fontSize:12,...sp('o'),color:t.sub}}>Relevés Nickel · plusieurs mois OK</div>
             </label>
             {err&&<div style={{padding:'12px',borderRadius:12,background:t.rD,border:'1px solid '+t.rose+'44',...sp('o'),fontSize:13,color:t.rose,marginBottom:12}}>{err}</div>}
+            {dupFileNames.length>0&&(
+              <div style={{padding:'12px 14px',background:t.aD,borderRadius:12,border:'1px solid '+t.amber+'44',fontSize:13,...sp('o'),color:t.amber,marginBottom:12}}>
+                ⚠️ {dupFileNames.length===1?`"${dupFileNames[0]}" a déjà été importé.`:`${dupFileNames.length} fichiers déjà importés : ${dupFileNames.join(', ')}.`} Les doublons seront filtrés.
+              </div>
+            )}
             <div style={{padding:'16px',background:t.card,borderRadius:14,border:'1px solid '+t.bo}}>
               <div style={{fontSize:12,...sp('s',600),color:t.sub,marginBottom:10}}>Comment exporter depuis Nickel ?</div>
               {['Ouvre l\'app Nickel ou espace.nickel.eu','Va dans Mon compte → Relevés','Télécharge le relevé du mois voulu','Importe-le ici'].map((s,i)=>(
