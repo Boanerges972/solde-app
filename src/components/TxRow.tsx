@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { sp } from '../lib/theme'
 import { fmt } from '../lib/currency'
+import { useSwipe } from '../hooks/useSwipe'
 import type { Theme, Transaction } from '../types'
 
 interface Props {
@@ -11,12 +12,23 @@ interface Props {
 
 export const TxRow = ({ tx, t, onDelete }: Props) => {
   const [expanded, setExpanded] = useState(false)
+  const { offset, handlers, reset, open } = useSwipe()
   const isIncome = tx.amt >= 0
   const isTransfer = tx.isTransfer
   const amtCol = isTransfer ? t.sub : isIncome ? t.mint : t.tx
   return (
-    <div style={{ overflow: 'hidden' }}>
-      <div onClick={() => setExpanded(s => !s)}
+    <div style={{ position: 'relative', overflow: 'hidden' }}>
+      <button onClick={() => { reset(); setExpanded(true) }}
+        aria-label="Supprimer la transaction" tabIndex={open ? 0 : -1}
+        style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 88,
+          background: t.rose, color: '#fff', border: 'none', cursor: 'pointer', fontSize: 13 }}>
+        Supprimer
+      </button>
+      <div {...handlers}
+        style={{ background: t.bg,
+          transform: `translateX(${offset}px)`,
+          transition: offset === 0 || offset === -88 ? 'transform .18s ease' : 'none' }}>
+      <div onClick={() => { if (offset !== 0) { reset(); return } setExpanded(s => !s) }}
         style={{ display: 'flex', alignItems: 'center', gap: 12,
           padding: '11px 0', cursor: 'pointer',
           opacity: tx.pending ? 0.6 : 1,
@@ -75,6 +87,7 @@ export const TxRow = ({ tx, t, onDelete }: Props) => {
           </button>
         </div>
       )}
+      </div>
     </div>
   )
 }
