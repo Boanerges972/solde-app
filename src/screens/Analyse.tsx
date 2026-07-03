@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts'
 import { DonutChart } from '../components/DonutChart'
+import { ProjectionChart } from '../components/ProjectionChart'
 import { fmt } from '../lib/currency'
 import type { Theme, AppData, Transaction, Recurring } from '../types'
 
@@ -215,6 +216,9 @@ export const Analyse = ({ D, t, allTxs, allHistory, recurrings }: Props) => {
         )}
 
         {/* ── PRÉLÈVEMENTS TAB ── */}
+        {activeTab === 'prel' && (
+          <ProjectionChart t={t} accounts={D.accounts} recurrings={recurrings || []} txs={allHistory || allTxs} />
+        )}
         {activeTab === 'prel' && (
           <div style={{ background: t.card, borderRadius: 20, padding: '18px', marginBottom: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid ' + t.bo }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: t.tx, marginBottom: 16 }}>Prélèvements récurrents</div>
