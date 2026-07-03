@@ -3,6 +3,7 @@ import { TxRow } from '../../components/TxRow'
 import { sp } from '../../lib/theme'
 import { fmt } from '../../lib/currency'
 import { CATS_E } from '../../lib/expenseCategories'
+import { downloadCsv, downloadXlsx } from '../../lib/exportTxs'
 import type { Theme, Transaction, Account } from '../../types'
 
 interface Props {
@@ -295,9 +296,19 @@ export const SearchScreen = ({ t, allTxs, accounts, onClose, onDelete }: Props) 
       {/* ── LISTE RÉSULTATS ── */}
       <div style={{flex:1,overflowY:'auto',padding:'0 16px',WebkitOverflowScrolling:'touch'}}>
         {hasActiveSearch && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0 10px', fontSize: 12, ...sp('o'), color: t.sub }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0 10px', fontSize: 12, ...sp('o'), color: t.sub }}>
             <span>{results.length} opération{results.length > 1 ? 's' : ''}</span>
-            <span style={{ ...sp('m', 600), color: total < 0 ? t.rose : t.mint }}>{fmt(total)}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {results.length > 0 && (
+                <>
+                  <button onClick={() => downloadCsv(results)} aria-label="Exporter en CSV"
+                    style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid ' + t.bo, background: t.el, color: t.sub, fontSize: 10.5, ...sp('o', 600), cursor: 'pointer' }}>CSV</button>
+                  <button onClick={() => downloadXlsx(results)} aria-label="Exporter en Excel"
+                    style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid ' + t.bo, background: t.el, color: t.sub, fontSize: 10.5, ...sp('o', 600), cursor: 'pointer' }}>Excel</button>
+                </>
+              )}
+              <span style={{ ...sp('m', 600), color: total < 0 ? t.rose : t.mint }}>{fmt(total)}</span>
+            </div>
           </div>
         )}
         {results.length===0?(
