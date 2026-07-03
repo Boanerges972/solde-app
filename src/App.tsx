@@ -34,6 +34,7 @@ import { RecurringManager } from './screens/modals/RecurringManager'
 import { BudgetsScreen } from './screens/modals/BudgetsScreen'
 import { GoalsScreen } from './screens/modals/GoalsScreen'
 import { RulesScreen } from './screens/modals/RulesScreen'
+import { MonthlyReport } from './screens/modals/MonthlyReport'
 import { SearchScreen } from './screens/modals/SearchScreen'
 import { ResetModal } from './screens/modals/ResetModal'
 import { LockScreen } from './screens/modals/LockScreen'
@@ -70,6 +71,7 @@ export default function App() {
   const [showBudgets, setShowBudgets] = useState(false);
   const [showGoals, setShowGoals] = useState(false);
   const [showRules, setShowRules] = useState(false);
+  const [showReport, setShowReport] = useState(false);
   const [depositAccount, setDepositAccount] = useState<import('./types').Account | null>(null);
   const [locked, setLocked] = useState(() => localStorage.getItem('qdq-pin-enabled') === '1');
   const [profile, setProfile] = useState<Profile>(() => {
@@ -184,7 +186,7 @@ export default function App() {
     if (tab === 'comptes') return <Comptes D={data} t={t} onEdit={(a: unknown) => setEditAccount(a)} onNew={() => setEditAccount('new')} onImport={(bank: string) => { if (bank === 'pick') { setShowBankPicker(true); } else { setImportBank(bank); setShowImport(true); } }} onDeposit={(a) => setDepositAccount(a)} />;
     if (tab === 'groupe') return <Groupe t={t} uid={session.user.id} group={group} members={members} createGroup={createGroup} joinGroup={joinGroup} leaveGroup={leaveGroup} txs={data.txs} />;
     if (tab === 'analyses') return <Analyse D={data} t={t} allTxs={data.txs} allHistory={allHistory || []} recurrings={recurrings || []} />;
-    if (tab === 'profil') return <Settings t={t} user={session.user} onLogout={logout} profile={profile} onProfile={() => setShowProfile(true)} onSecurity={() => setShowPinSetup(true)} onRecurring={() => setShowRecurring(true)} onReset={() => setShowReset(true)} onGroupe={() => setTab('groupe')} themeMode={themeMode} onThemeMode={setThemeMode} onBudgets={() => setShowBudgets(true)} onGoals={() => setShowGoals(true)} onRules={() => setShowRules(true)} />;
+    if (tab === 'profil') return <Settings t={t} user={session.user} onLogout={logout} profile={profile} onProfile={() => setShowProfile(true)} onSecurity={() => setShowPinSetup(true)} onRecurring={() => setShowRecurring(true)} onReset={() => setShowReset(true)} onGroupe={() => setTab('groupe')} themeMode={themeMode} onThemeMode={setThemeMode} onBudgets={() => setShowBudgets(true)} onGoals={() => setShowGoals(true)} onRules={() => setShowRules(true)} onReport={() => setShowReport(true)} />;
     return null;
   };
 
@@ -218,6 +220,7 @@ export default function App() {
         {showBudgets && data && <BudgetsScreen t={t} txs={data.txs} budgets={budgets} onSave={saveBudget} onDelete={deleteBudget} onClose={() => setShowBudgets(false)} />}
         {showGoals && <GoalsScreen t={t} goals={goals} onAdd={addGoal} onDeposit={depositGoal} onDelete={deleteGoal} onClose={() => setShowGoals(false)} />}
         {showRules && <RulesScreen t={t} rules={merchantRules} onDelete={deleteRule} onClose={() => setShowRules(false)} />}
+        {showReport && data && <MonthlyReport t={t} txs={data.txs} onClose={() => setShowReport(false)} />}
         {showSearch && data && <SearchScreen t={t} allTxs={data.txs} accounts={data.accounts} onClose={() => setShowSearch(false)} onDelete={deleteTx} />}
         {showReset && session && <ResetModal t={t} uid={session.user.id} onClose={() => setShowReset(false)} onDone={() => { reload(); setShowReset(false); }} />}
         {locked && <LockScreen t={t} onUnlock={() => setLocked(false)} />}
