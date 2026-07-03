@@ -59,10 +59,11 @@ interface SettingsProps {
   onGroupe?: () => void
   themeMode: ThemeMode
   onThemeMode: (m: ThemeMode) => void
+  onBudgets?: () => void
 }
 
 // ── SETTINGS ─────────────────────────────────────────────────
-export const Settings = ({ t, user, onLogout, profile, onProfile, onSecurity, onRecurring, onReset, onGroupe, themeMode, onThemeMode }: SettingsProps) => (
+export const Settings = ({ t, user, onLogout, profile, onProfile, onSecurity, onRecurring, onReset, onGroupe, themeMode, onThemeMode, onBudgets }: SettingsProps) => (
   <div style={{ padding: '0 20px 16px' }}>
     <div style={{ padding: '8px 0 20px' }}><div style={{ fontSize: 17, ...sp('s', 700), color: t.tx }}>Réglages</div></div>
     <button onClick={onProfile} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%',
@@ -107,6 +108,21 @@ export const Settings = ({ t, user, onLogout, profile, onProfile, onSecurity, on
       <div style={{ fontSize: 11, ...sp('s', 700), color: t.sub, letterSpacing: 1,
         textTransform: 'uppercase', padding: '0 4px', marginBottom: 8 }}>Finances</div>
       <div style={{ background: t.card, borderRadius: 16, border: '1px solid ' + t.bo, overflow: 'hidden' }}>
+        {onBudgets && (
+          <button onClick={onBudgets}
+            style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+              padding: '14px 16px', background: 'none', border: 'none', borderBottom: '1px solid ' + t.bo, cursor: 'pointer', textAlign: 'left' }}>
+            <div style={{ width: 36, height: 36, borderRadius: 11, background: t.mD,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🎯</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, ...sp('o', 500), color: t.tx }}>Budgets par catégorie</div>
+              <div style={{ fontSize: 11, ...sp('o'), color: t.sub, marginTop: 1 }}>
+                Enveloppes mensuelles, jauges, report
+              </div>
+            </div>
+            <span style={{ color: t.muted, fontSize: 16 }}>›</span>
+          </button>
+        )}
         <button onClick={onRecurring}
           style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%',
             padding: '14px 16px', background: 'none', border: 'none', borderBottom: '1px solid ' + t.bo, cursor: 'pointer', textAlign: 'left' }}>
