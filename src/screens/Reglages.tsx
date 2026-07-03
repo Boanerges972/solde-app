@@ -1,9 +1,65 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Icon } from '../components/Icon'
 import { sp } from '../lib/theme'
+import { pushSupported, subscribePush, unsubscribePush, isPushSubscribed, updatePushPrefs, type PushPrefs } from '../lib/push'
 import type { Theme, Profile } from '../types'
 import type { User } from '@supabase/supabase-js'
 import type { ThemeMode } from '../hooks/useTheme'
+
+// ── PUSH SETTINGS ────────────────────────────────────────────
+const PushSettings = ({ t, uid }: { t: Theme; uid: string }) => {
+  const [subscribed, setSubscribed] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [prefs, setPrefs] = useState<PushPrefs>(() => {
+    try { return JSON.parse(localStorage.getItem('qdq-push-prefs') || '') } catch { return { recurring: true, budget: true, weekly: true } }
+  })
+
+  useEffect(() => { isPushSubscribed().then(setSubscribed) }, [])
+
+  if (!pushSupported()) return null
+
+  const toggle = async () => {
+    setBusy(true)
+    if (subscribed) { await unsubscribePush(); setSubscribed(false) }
+    else { const r = await subscribePush(uid, prefs); setSubscribed(r === 'ok') }
+    setBusy(false)
+  }
+
+  const togglePref = async (k: keyof PushPrefs) => {
+    const next = { ...prefs, [k]: !prefs[k] }
+    setPrefs(next)
+    localStorage.setItem('qdq-push-prefs', JSON.stringify(next))
+    if (subscribed) await updatePushPrefs(next)
+  }
+
+  const PREF_LABELS: [keyof PushPrefs, string][] = [
+    ['recurring', 'Rappel prélèvement (J-2)'],
+    ['budget', 'Dépassement de budget'],
+    ['weekly', 'Résumé hebdomadaire'],
+  ]
+
+  return (
+    <div style={{ padding: '14px 16px', background: t.card, borderRadius: 14, border: '1px solid ' + t.bo, marginBottom: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: subscribed ? 12 : 0 }}>
+        <div style={{ width: 36, height: 36, borderRadius: 10, background: t.mD, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>📲</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 14, ...sp('o', 500), color: t.tx }}>Notifications push</div>
+          <div style={{ fontSize: 12, ...sp('o'), color: subscribed ? t.mint : t.sub }}>{subscribed ? 'Activées sur cet appareil' : 'Désactivées'}</div>
+        </div>
+        <button onClick={toggle} disabled={busy}
+          style={{ padding: '7px 12px', borderRadius: 10, background: subscribed ? t.rD : t.mD, border: '1px solid ' + (subscribed ? t.rose : t.mint) + '44', cursor: 'pointer', ...sp('o', 600), fontSize: 12, color: subscribed ? t.rose : t.mint, opacity: busy ? 0.5 : 1 }}>
+          {busy ? '…' : subscribed ? 'Désactiver' : 'Activer'}
+        </button>
+      </div>
+      {subscribed && PREF_LABELS.map(([k, lb]) => (
+        <label key={k} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, ...sp('o'), color: t.tx, cursor: 'pointer', padding: '5px 0' }}>
+          <input type="checkbox" checked={prefs[k]} onChange={() => togglePref(k)} />
+          {lb}
+        </label>
+      ))}
+    </div>
+  )
+}
 
 // ── NOTIF SETTINGS ───────────────────────────────────────────
 const NotifSettings = ({ t }: { t: Theme }) => {
@@ -105,6 +161,7 @@ export const Settings = ({ t, user, onLogout, profile, onProfile, onSecurity, on
     </div>
 
     <NotifSettings t={t} />
+    <PushSettings t={t} uid={user.id} />
 
     {/* ── PRÉLÈVEMENTS + GROUPE ── */}
     <div style={{ marginBottom: 10 }}>
