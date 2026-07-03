@@ -4,65 +4,14 @@ import { fmt } from '../../lib/currency'
 import type { Theme, AppData, Transaction, Recurring, Group, Member } from '../../types'
 import { scoreAccounts } from '../../lib/scoreAccounts'
 import { AccountScoreCard } from '../../components/AccountScoreCard'
+import { CATS_E } from '../../lib/expenseCategories'
+import { buildMerchantMemory, searchMerchants } from '../../lib/merchantMemory'
 
 interface Props {
   D: AppData; t: Theme; onClose: () => void
   onSave: (payload: any) => Promise<any>
   group: Group | null; members: Member[]; uid: string
   recurrings: Recurring[]; allHistory: Transaction[]
-}
-
-const CATS_E = [
-  {n:'Courses',       ico:'🛒', col:'#10E8C0'},
-  {n:'Restaurant',    ico:'🍽️', col:'#F5A623'},
-  {n:'Transport',     ico:'🚗', col:'#6B7FD7'},
-  {n:'Loisirs',       ico:'🎮', col:'#EC4899'},
-  {n:'Santé',         ico:'💊', col:'#EF4444'},
-  {n:'Maison',        ico:'🏠', col:'#8B5CF6'},
-  {n:'Vêtements',     ico:'👗', col:'#F472B6'},
-  {n:'Épargne',       ico:'🏦', col:'#14B8A6'},
-  {n:'Abonnements',   ico:'📱', col:'#3B82F6'},
-  {n:'Énergie',       ico:'⚡', col:'#F59E0B'},
-  {n:'Banque',        ico:'🏛️', col:'#64748B'},
-  {n:'Voyage',        ico:'✈️', col:'#06B6D4'},
-  {n:'Sport',         ico:'🏋️', col:'#84CC16'},
-  {n:'Education',     ico:'📚', col:'#A78BFA'},
-  {n:'Animaux',       ico:'🐾', col:'#F97316'},
-  {n:'Cadeaux',       ico:'🎁', col:'#EC4899'},
-  {n:'Médias',        ico:'📰', col:'#8B5CF6'},
-  {n:'Impôts',        ico:'🏛️', col:'#94A3B8'},
-  {n:'Remboursement', ico:'💸', col:'#06B6D4'},
-  {n:'Salaire',       ico:'💰', col:'#84CC16'},
-  {n:'Autre',         ico:'📦', col:'#8B90A7'},
-]
-
-
-function buildMerchantMemory(history: Transaction[]) {
-  const map: Record<string, any> = {}
-  ;(history || []).filter(tx => tx.amt < 0 && tx.m && tx.cat !== 'Virement interne').forEach(tx => {
-    const key = tx.m.trim().toLowerCase()
-    if (!map[key]) map[key] = { name: tx.m, catFreq: {}, accFreq: {}, ico: tx.ico || '📦', count: 0 }
-    map[key].count++
-    map[key].catFreq[tx.cat || 'Autre'] = (map[key].catFreq[tx.cat || 'Autre'] || 0) + 1
-    map[key].accFreq[tx.acc || ''] = (map[key].accFreq[tx.acc || ''] || 0) + 1
-    if (tx.ico) map[key].ico = tx.ico
-  })
-  const result: Record<string, any> = {}
-  Object.entries(map).forEach(([key, v]: [string, any]) => {
-    const cat = Object.entries(v.catFreq).sort(([, a]: any, [, b]: any) => b - a)[0]?.[0] || 'Autre'
-    const accId = Object.entries(v.accFreq).sort(([, a]: any, [, b]: any) => b - a)[0]?.[0] || ''
-    result[key] = { name: v.name, cat, accId, ico: v.ico, count: v.count }
-  })
-  return result
-}
-
-function searchMerchants(query: string, memory: Record<string, any>, limit = 4) {
-  if (!query || query.length < 2) return []
-  const q = query.trim().toLowerCase()
-  return Object.values(memory)
-    .filter(m => m.name.toLowerCase().includes(q))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, limit)
 }
 
 export const ExpEntry = ({ D, t, onClose, onSave, group, members, uid, recurrings, allHistory }: Props) => {
