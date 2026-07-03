@@ -5,6 +5,7 @@ import { DonutChart } from '../components/DonutChart'
 import { scoreAccounts } from '../lib/scoreAccounts'
 import { buildInsights } from '../lib/insights'
 import { InsightsCarousel } from '../components/InsightsCarousel'
+import { useBreakpoint } from '../hooks/useBreakpoint'
 import type { Theme, AppData, Recurring, Account } from '../types'
 
 interface Props {
@@ -35,6 +36,7 @@ export const Home = ({
   D, t, onAcc, onAdd, onEditBudget, onDelete, rtConnected, profile,
   onSearch, recurrings, onManageRecurring, onTransfer,
 }: Props) => {
+  const { isDesktop } = useBreakpoint()
   const [apercuTab, setApercuTab] = useState<'dep' | 'rev' | 'prel'>('dep')
 
   const insights = useMemo(() => buildInsights(D.txs || []), [D.txs])
@@ -114,6 +116,8 @@ export const Home = ({
 
       {/* ══ SCROLLABLE CONTENT (overlaps header by 40px) ═══════════ */}
       <div style={{ flex: 1, marginTop: -40, padding: '0 16px', paddingBottom: 32 }}>
+      <div style={isDesktop ? { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' } : undefined}>
+      <div>
 
         {/* ── Card: Situation globale ─────────────────────────────── */}
         <div style={{
@@ -339,6 +343,10 @@ export const Home = ({
           )}
         </div>
 
+      </div>
+
+      <div>
+
         {/* ── Section: Comptes ─────────────────────────────────────── */}
         <div>
           {/* Section header */}
@@ -390,6 +398,8 @@ export const Home = ({
           )}
         </div>
 
+      </div>
+      </div>
       </div>
     </div>
   )
