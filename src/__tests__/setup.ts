@@ -1,3 +1,4 @@
+import 'fake-indexeddb/auto'
 import { beforeAll, afterAll, afterEach } from 'vitest'
 import { server } from './mocks/handlers'
 
