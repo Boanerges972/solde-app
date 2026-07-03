@@ -3,6 +3,7 @@ import { Icon } from '../components/Icon'
 import { sp } from '../lib/theme'
 import type { Theme, Profile } from '../types'
 import type { User } from '@supabase/supabase-js'
+import type { ThemeMode } from '../hooks/useTheme'
 
 // ── NOTIF SETTINGS ───────────────────────────────────────────
 const NotifSettings = ({ t }: { t: Theme }) => {
@@ -56,10 +57,12 @@ interface SettingsProps {
   onProfile: () => void; onSecurity: () => void
   onRecurring: () => void; onReset: () => void
   onGroupe?: () => void
+  themeMode: ThemeMode
+  onThemeMode: (m: ThemeMode) => void
 }
 
 // ── SETTINGS ─────────────────────────────────────────────────
-export const Settings = ({ t, user, onLogout, profile, onProfile, onSecurity, onRecurring, onReset, onGroupe }: SettingsProps) => (
+export const Settings = ({ t, user, onLogout, profile, onProfile, onSecurity, onRecurring, onReset, onGroupe, themeMode, onThemeMode }: SettingsProps) => (
   <div style={{ padding: '0 20px 16px' }}>
     <div style={{ padding: '8px 0 20px' }}><div style={{ fontSize: 17, ...sp('s', 700), color: t.tx }}>Réglages</div></div>
     <button onClick={onProfile} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%',
@@ -80,6 +83,23 @@ export const Settings = ({ t, user, onLogout, profile, onProfile, onSecurity, on
       </div>
       <div style={{ fontSize: 11, ...sp('o'), color: t.muted }}>v2.0 · Qui Dépense Quoi</div>
     </div>
+    {/* ── APPARENCE ── */}
+    <div style={{ padding: '14px 16px', background: t.card, borderRadius: 14, border: '1px solid ' + t.bo, marginBottom: 10 }}>
+      <div style={{ fontSize: 14, ...sp('o', 500), color: t.tx, marginBottom: 10 }}>🎨 Apparence</div>
+      <div role="group" aria-label="Thème" style={{ display: 'flex', gap: 8 }}>
+        {([['auto', 'Auto'], ['light', 'Clair'], ['dark', 'Sombre']] as const).map(([m, lb]) => (
+          <button key={m} onClick={() => onThemeMode(m)} aria-pressed={themeMode === m}
+            style={{
+              flex: 1, padding: '9px 0', borderRadius: 10, cursor: 'pointer', fontSize: 12,
+              ...sp('o', themeMode === m ? 600 : 400),
+              background: themeMode === m ? t.primary : t.el,
+              color: themeMode === m ? '#fff' : t.sub,
+              border: '1px solid ' + (themeMode === m ? t.primary : t.bo),
+            }}>{lb}</button>
+        ))}
+      </div>
+    </div>
+
     <NotifSettings t={t} />
 
     {/* ── PRÉLÈVEMENTS + GROUPE ── */}

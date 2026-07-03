@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { db } from './lib/supabase'
-import { T, sp } from './lib/theme'
+import { sp } from './lib/theme'
 import { setCurrency } from './lib/currency'
 import { useData } from './hooks/useData'
 import { useRecurring } from './hooks/useRecurring'
 import { useGroup } from './hooks/useGroup'
 import { useOfflineSync } from './hooks/useOfflineSync'
+import { useTheme } from './hooks/useTheme'
 import { OfflineBanner } from './components/OfflineBanner'
 import { Nav } from './components/Nav'
 import { BudgetAlert } from './components/BudgetAlert'
@@ -63,7 +64,7 @@ export default function App() {
   const [profile, setProfile] = useState<Profile>(() => {
     try { return JSON.parse(localStorage.getItem('qdq-profile') || '{}') } catch { return {} }
   });
-  const t = T.light;
+  const { t, mode: themeMode, setMode: setThemeMode } = useTheme();
 
   useEffect(() => {
     db.auth.getSession().then(r => setSession(r.data.session));
@@ -166,7 +167,7 @@ export default function App() {
     if (tab === 'comptes') return <Comptes D={data} t={t} onEdit={(a: unknown) => setEditAccount(a)} onNew={() => setEditAccount('new')} onImport={(bank: string) => { if (bank === 'pick') { setShowBankPicker(true); } else { setImportBank(bank); setShowImport(true); } }} onDeposit={(a) => setDepositAccount(a)} />;
     if (tab === 'groupe') return <Groupe t={t} uid={session.user.id} group={group} members={members} createGroup={createGroup} joinGroup={joinGroup} leaveGroup={leaveGroup} txs={data.txs} />;
     if (tab === 'analyses') return <Analyse D={data} t={t} allTxs={data.txs} allHistory={allHistory || []} recurrings={recurrings || []} />;
-    if (tab === 'profil') return <Settings t={t} user={session.user} onLogout={logout} profile={profile} onProfile={() => setShowProfile(true)} onSecurity={() => setShowPinSetup(true)} onRecurring={() => setShowRecurring(true)} onReset={() => setShowReset(true)} onGroupe={() => setTab('groupe')} />;
+    if (tab === 'profil') return <Settings t={t} user={session.user} onLogout={logout} profile={profile} onProfile={() => setShowProfile(true)} onSecurity={() => setShowPinSetup(true)} onRecurring={() => setShowRecurring(true)} onReset={() => setShowReset(true)} onGroupe={() => setTab('groupe')} themeMode={themeMode} onThemeMode={setThemeMode} />;
     return null;
   };
 
