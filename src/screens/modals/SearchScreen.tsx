@@ -2,31 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { TxRow } from '../../components/TxRow'
 import { sp } from '../../lib/theme'
 import { fmt } from '../../lib/currency'
+import { CATS_E } from '../../lib/expenseCategories'
 import type { Theme, Transaction, Account } from '../../types'
-
-const CATS_E = [
-  {n:'Courses',       ico:'🛒', col:'#10E8C0'},
-  {n:'Restaurant',    ico:'🍽️', col:'#F5A623'},
-  {n:'Transport',     ico:'🚗', col:'#6B7FD7'},
-  {n:'Loisirs',       ico:'🎮', col:'#EC4899'},
-  {n:'Santé',         ico:'💊', col:'#EF4444'},
-  {n:'Maison',        ico:'🏠', col:'#8B5CF6'},
-  {n:'Vêtements',     ico:'👗', col:'#F472B6'},
-  {n:'Épargne',       ico:'🏦', col:'#14B8A6'},
-  {n:'Abonnements',   ico:'📱', col:'#3B82F6'},
-  {n:'Énergie',       ico:'⚡', col:'#F59E0B'},
-  {n:'Banque',        ico:'🏛️', col:'#64748B'},
-  {n:'Voyage',        ico:'✈️', col:'#06B6D4'},
-  {n:'Sport',         ico:'🏋️', col:'#84CC16'},
-  {n:'Education',     ico:'📚', col:'#A78BFA'},
-  {n:'Animaux',       ico:'🐾', col:'#F97316'},
-  {n:'Cadeaux',       ico:'🎁', col:'#EC4899'},
-  {n:'Médias',        ico:'📰', col:'#8B5CF6'},
-  {n:'Impôts',        ico:'🏛️', col:'#94A3B8'},
-  {n:'Remboursement', ico:'💸', col:'#06B6D4'},
-  {n:'Salaire',       ico:'💰', col:'#84CC16'},
-  {n:'Autre',         ico:'📦', col:'#8B90A7'},
-]
 
 interface Props {
   t: Theme
@@ -38,11 +15,13 @@ interface Props {
 
 export const SearchScreen = ({ t, allTxs, accounts, onClose, onDelete }: Props) => {
   const [q, setQ] = useState('')
-  const [filterCat, setFilterCat] = useState('')
-  const [filterAcc, setFilterAcc] = useState('')
+  const [filterCats, setFilterCats] = useState<string[]>([])
+  const [filterAccs, setFilterAccs] = useState<string[]>([])
   const [filterType, setFilterType] = useState('') // '' | 'debit' | 'credit'
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+  const [amtMin, setAmtMin] = useState('')
+  const [amtMax, setAmtMax] = useState('')
   const [page, setPage] = useState(0)
   const [showFilters, setShowFilters] = useState(false)
   const PAGE_SIZE = 15
@@ -56,6 +35,18 @@ export const SearchScreen = ({ t, allTxs, accounts, onClose, onDelete }: Props) 
   // Catégories présentes dans les transactions
   const cats = [...new Set(allTxs.map(tx => tx.cat).filter(Boolean))].sort()
 
+  const toggleCat = (c: string) => {
+    setFilterCats(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c])
+    resetPage()
+  }
+  const toggleAcc = (id: string) => {
+    setFilterAccs(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+    resetPage()
+  }
+
+  const min = parseFloat(amtMin.replace(',', '.'))
+  const max = parseFloat(amtMax.replace(',', '.'))
+
   // Filtrage
   const results = allTxs.filter(tx => {
     if (q) {
@@ -64,12 +55,14 @@ export const SearchScreen = ({ t, allTxs, accounts, onClose, onDelete }: Props) 
       const inCat = (tx.cat || '').toLowerCase().includes(lq)
       if (!inMerchant && !inCat) return false
     }
-    if (filterCat && tx.cat !== filterCat) return false
-    if (filterAcc && (tx.acc || '') !== filterAcc) return false
+    if (filterCats.length > 0 && !filterCats.includes(tx.cat)) return false
+    if (filterAccs.length > 0 && !filterAccs.includes(tx.acc || '')) return false
     if (filterType === 'debit' && tx.amt >= 0) return false
     if (filterType === 'credit' && tx.amt < 0) return false
     if (dateFrom && (tx.tx_date || tx.dt) < dateFrom) return false
     if (dateTo && (tx.tx_date || tx.dt) > dateTo) return false
+    if (!isNaN(min) && Math.abs(tx.amt) < min) return false
+    if (!isNaN(max) && Math.abs(tx.amt) > max) return false
     return true
   })
 
@@ -78,13 +71,38 @@ export const SearchScreen = ({ t, allTxs, accounts, onClose, onDelete }: Props) 
   const pageTxs = results.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE)
 
   // Compte les filtres actifs
-  const activeFilters = [filterCat, filterAcc, filterType, dateFrom, dateTo].filter(Boolean).length
+  const activeFilters = filterCats.length + filterAccs.length +
+    [filterType, dateFrom, dateTo, amtMin, amtMax].filter(Boolean).length
 
   // Sommes
   const totalDebit = results.filter(tx => tx.amt < 0).reduce((s, tx) => s + tx.amt, 0)
   const totalCredit = results.filter(tx => tx.amt > 0).reduce((s, tx) => s + tx.amt, 0)
+  const total = results.reduce((s, tx) => s + tx.amt, 0)
+  const hasActiveSearch = Boolean(q) || activeFilters > 0
 
-  const clearAll = () => { setQ(''); setFilterCat(''); setFilterAcc(''); setFilterType(''); setDateFrom(''); setDateTo(''); resetPage() }
+  const clearAll = () => {
+    setQ(''); setFilterCats([]); setFilterAccs([]); setFilterType('')
+    setDateFrom(''); setDateTo(''); setAmtMin(''); setAmtMax(''); resetPage()
+  }
+
+  const fmtDate = (d: string) => {
+    const parts = d.split('-')
+    return parts.length === 3 ? `${parts[2]}/${parts[1]}` : d
+  }
+
+  const activeChips: { key: string; label: string; clear: () => void }[] = [
+    ...filterCats.map(c => ({ key: 'cat-' + c, label: c, clear: () => toggleCat(c) })),
+    ...filterAccs.map(id => ({
+      key: 'acc-' + id,
+      label: accounts.find(a => a.id === id)?.name || id,
+      clear: () => toggleAcc(id),
+    })),
+    ...(amtMin ? [{ key: 'min', label: `≥ ${amtMin} €`, clear: () => { setAmtMin(''); resetPage() } }] : []),
+    ...(amtMax ? [{ key: 'max', label: `≤ ${amtMax} €`, clear: () => { setAmtMax(''); resetPage() } }] : []),
+    ...(dateFrom ? [{ key: 'from', label: `Depuis ${fmtDate(dateFrom)}`, clear: () => { setDateFrom(''); resetPage() } }] : []),
+    ...(dateTo ? [{ key: 'to', label: `Jusqu'au ${fmtDate(dateTo)}`, clear: () => { setDateTo(''); resetPage() } }] : []),
+    ...(filterType ? [{ key: 'type', label: filterType === 'debit' ? 'Débits' : 'Crédits', clear: () => { setFilterType(''); resetPage() } }] : []),
+  ]
 
   return (
     <div style={{position:'fixed',inset:0,zIndex:400,background:t.bg,
@@ -117,6 +135,18 @@ export const SearchScreen = ({ t, allTxs, accounts, onClose, onDelete }: Props) 
             Fermer
           </button>
         </div>
+
+        {/* ── CHIPS FILTRES ACTIFS ── */}
+        {activeChips.length > 0 && (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '0 0 10px' }}>
+            {activeChips.map(c => (
+              <button key={c.key} onClick={c.clear}
+                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 999, background: t.mD, border: '1px solid ' + t.primary + '44', color: t.primary, fontSize: 11, ...sp('o', 600), cursor: 'pointer' }}>
+                {c.label} ✕
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Bouton filtres + badge */}
         <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
@@ -172,24 +202,21 @@ export const SearchScreen = ({ t, allTxs, accounts, onClose, onDelete }: Props) 
               <div style={{fontSize:10,...sp('s',700),color:t.muted,letterSpacing:1,
                 textTransform:'uppercase',marginBottom:8}}>Compte</div>
               <div style={{display:'flex',gap:6,overflowX:'auto',scrollbarWidth:'none'}}>
-                <button onClick={()=>{setFilterAcc('');resetPage();}}
-                  style={{flex:'0 0 auto',padding:'7px 14px',borderRadius:20,border:'none',
-                    cursor:'pointer',background:!filterAcc?t.mint:t.el,
-                    ...sp('o',600),fontSize:12,color:!filterAcc?t.bg:t.sub}}>
-                  Tous
-                </button>
-                {accounts.map(a=>(
-                  <button key={a.id} onClick={()=>{setFilterAcc(a.id);resetPage();}}
+                {accounts.map(a=>{
+                  const active=filterAccs.includes(a.id);
+                  return(
+                  <button key={a.id} onClick={()=>toggleAcc(a.id)}
                     style={{flex:'0 0 auto',display:'flex',alignItems:'center',gap:5,
                       padding:'7px 12px',borderRadius:20,border:'none',cursor:'pointer',
-                      background:filterAcc===a.id?a.col:t.el,transition:'all .15s'}}>
+                      background:active?a.col:t.el,transition:'all .15s'}}>
                     <div style={{width:6,height:6,borderRadius:3,
-                      background:filterAcc===a.id?'rgba(255,255,255,0.7)':a.col,flexShrink:0}}/>
+                      background:active?'rgba(255,255,255,0.7)':a.col,flexShrink:0}}/>
                     <span style={{fontSize:12,...sp('o',600),
-                      color:filterAcc===a.id?'rgba(255,255,255,.95)':t.sub,
+                      color:active?'rgba(255,255,255,.95)':t.sub,
                       whiteSpace:'nowrap'}}>{a.name}</span>
                   </button>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -197,21 +224,31 @@ export const SearchScreen = ({ t, allTxs, accounts, onClose, onDelete }: Props) 
             <div>
               <div style={{fontSize:10,...sp('s',700),color:t.muted,letterSpacing:1,
                 textTransform:'uppercase',marginBottom:8}}>Catégorie</div>
-              <div style={{position:'relative'}}>
-                <select value={filterCat}
-                  onChange={e=>{setFilterCat(e.target.value);resetPage();}}
-                  style={{width:'100%',padding:'10px 14px',
-                    background:t.el,border:'1px solid '+t.bo,borderRadius:12,
-                    color:filterCat?t.tx:t.sub,...sp('o',500),fontSize:13,
-                    cursor:'pointer',appearance:'none',WebkitAppearance:'none'}}>
-                  <option value="">Toutes les catégories</option>
-                  {cats.map(c=>{
-                    const meta=CATS_E.find(x=>x.n===c);
-                    return<option key={c} value={c}>{meta?meta.ico+' ':''}{c}</option>;
-                  })}
-                </select>
-                <span style={{position:'absolute',right:12,top:'50%',
-                  transform:'translateY(-50%)',color:t.muted,pointerEvents:'none'}}>▾</span>
+              <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                {cats.map(c=>{
+                  const meta=CATS_E.find(x=>x.n===c);
+                  const active=filterCats.includes(c);
+                  return(
+                    <button key={c} onClick={()=>toggleCat(c)}
+                      style={{flex:'0 0 auto',padding:'7px 12px',borderRadius:20,border:'none',
+                        cursor:'pointer',background:active?t.mint:t.el,
+                        ...sp('o',600),fontSize:12,color:active?t.bg:t.sub}}>
+                      {meta?meta.ico+' ':''}{c}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Montant */}
+            <div>
+              <div style={{fontSize:10,...sp('s',700),color:t.muted,letterSpacing:1,
+                textTransform:'uppercase',marginBottom:8}}>Montant</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input value={amtMin} onChange={e => { setAmtMin(e.target.value); resetPage() }} placeholder="Min €" inputMode="decimal"
+                  style={{ flex: 1, padding: '9px 12px', borderRadius: 10, border: '1px solid ' + t.bo, background: t.el, color: t.tx, fontSize: 13, ...sp('o') }} />
+                <input value={amtMax} onChange={e => { setAmtMax(e.target.value); resetPage() }} placeholder="Max €" inputMode="decimal"
+                  style={{ flex: 1, padding: '9px 12px', borderRadius: 10, border: '1px solid ' + t.bo, background: t.el, color: t.tx, fontSize: 13, ...sp('o') }} />
               </div>
             </div>
 
@@ -257,6 +294,12 @@ export const SearchScreen = ({ t, allTxs, accounts, onClose, onDelete }: Props) 
 
       {/* ── LISTE RÉSULTATS ── */}
       <div style={{flex:1,overflowY:'auto',padding:'0 16px',WebkitOverflowScrolling:'touch'}}>
+        {hasActiveSearch && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0 10px', fontSize: 12, ...sp('o'), color: t.sub }}>
+            <span>{results.length} opération{results.length > 1 ? 's' : ''}</span>
+            <span style={{ ...sp('m', 600), color: total < 0 ? t.rose : t.mint }}>{fmt(total)}</span>
+          </div>
+        )}
         {results.length===0?(
           <div style={{padding:'60px 0',textAlign:'center'}}>
             <div style={{fontSize:40,marginBottom:12}}>🔍</div>
