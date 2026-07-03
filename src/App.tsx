@@ -14,6 +14,7 @@ import { Sidebar } from './components/Sidebar'
 import { BudgetAlert } from './components/BudgetAlert'
 import { RejectionAlert } from './components/RejectionAlert'
 import { IOSBanner } from './components/IOSBanner'
+import { HomeSkeleton } from './components/Skeleton'
 import { AuthScreen } from './screens/Auth'
 import { Home } from './screens/Home'
 import { Comptes } from './screens/Comptes'
@@ -143,11 +144,7 @@ export default function App() {
   if (!session) return (<div style={{ width: isDesktop ? '100%' : 375, minHeight: '100vh', background: t.bg, display: 'flex', justifyContent: 'center' }}><div style={{ width: 375 }}><AuthScreen t={t} /></div></div>);
 
   const renderMain = () => {
-    if (loading && !data) return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
-        <div style={{ width: 28, height: 28, border: '3px solid ' + t.primary + '33', borderTop: '3px solid ' + t.primary, borderRadius: '50%', animation: 'spin .8s linear infinite' }} />
-      </div>
-    );
+    if (loading && !data) return <HomeSkeleton t={t} />;
     if (error) return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', gap: 16, padding: 32, textAlign: 'center' }}>
         <div style={{ fontSize: 32 }}>⚠️</div>
