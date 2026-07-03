@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { sp } from '../lib/theme'
 import { fmt } from '../lib/currency'
 import { DonutChart } from '../components/DonutChart'
 import { scoreAccounts } from '../lib/scoreAccounts'
+import { buildInsights } from '../lib/insights'
+import { InsightsCarousel } from '../components/InsightsCarousel'
 import type { Theme, AppData, Recurring, Account } from '../types'
 
 interface Props {
@@ -34,6 +36,8 @@ export const Home = ({
   onSearch, recurrings, onManageRecurring, onTransfer,
 }: Props) => {
   const [apercuTab, setApercuTab] = useState<'dep' | 'rev' | 'prel'>('dep')
+
+  const insights = useMemo(() => buildInsights(D.txs || []), [D.txs])
 
   /* ── Derived values ─────────────────────────────────────────── */
   const totalBal = D.persoBal != null
@@ -201,6 +205,11 @@ export const Home = ({
             </div>
           </div>
         )}
+
+        {/* ── Insights carousel (bleed to viewport edge for scroll) ── */}
+        <div style={{ margin: '0 -16px 16px' }}>
+          <InsightsCarousel insights={insights} t={t} />
+        </div>
 
         {/* ── Card: Aperçu du mois ────────────────────────────────── */}
         <div style={{
