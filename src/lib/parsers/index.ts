@@ -1,6 +1,9 @@
 import { parseOFX } from './ofx'
 import { parseBNP } from './bnp'
 import { parseBoursorama } from './boursorama'
+import { parseNickelPDF } from './nickel'
+import { parseCM } from './cm'
+import { parseQonto } from './qonto'
 import type { ParsedTx } from './ofx'
 
 export type { ParsedTx }
@@ -23,6 +26,9 @@ export const SUPPORTED_BANKS: BankDef[] = [
   { id: 'lbp',        name: 'La Banque Postale',   icon: '🟡', detail: 'Export OFX espace client',    color: '#FFD800', accept: '.ofx,.csv', encoding: 'UTF-8' },
   { id: 'lcl',        name: 'LCL',                 icon: '🟤', detail: 'Export OFX espace client',    color: '#C8962E', accept: '.ofx,.csv', encoding: 'UTF-8' },
   { id: 'ofx',        name: 'Autre banque (OFX)',   icon: '📂', detail: 'Format OFX universel',        color: '#6B7FD7', accept: '.ofx',      encoding: 'UTF-8' },
+  { id: 'nickel',     name: 'Nickel',              icon: '📄', detail: 'Relevé PDF mensuel (multi-fichiers)', color: '#10E8C0', accept: '.pdf', encoding: 'binary' },
+  { id: 'cm',         name: 'Crédit Mutuel',       icon: '🏦', detail: 'Export CSV espace client',    color: '#E03030', accept: '.csv',      encoding: 'ISO-8859-1' },
+  { id: 'qonto',      name: 'Qonto',               icon: '⚡', detail: 'Export CSV transactions',     color: '#21BF73', accept: '.csv',      encoding: 'UTF-8' },
 ]
 
 export function detectAndParse(text: string, filename: string): ParsedTx[] {
@@ -42,4 +48,25 @@ export function detectAndParse(text: string, filename: string): ParsedTx[] {
   }
 
   return []
+}
+
+export async function detectAndParseFile(file: File, bankId: string): Promise<ParsedTx[]> {
+  if (bankId === 'nickel' || file.name.toLowerCase().endsWith('.pdf')) {
+    return parseNickelPDF(await file.arrayBuffer())
+  }
+  if (bankId === 'cm') {
+    const text = await new Promise<string>((res, rej) => {
+      const r = new FileReader()
+      r.onload = e => res(e.target!.result as string)
+      r.onerror = rej
+      r.readAsText(file, 'ISO-8859-1')
+    })
+    return parseCM(text)
+  }
+  if (bankId === 'qonto') {
+    const text = await file.text()
+    return parseQonto(text)
+  }
+  const text = await file.text()
+  return detectAndParse(text, file.name)
 }

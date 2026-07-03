@@ -29,7 +29,7 @@ export function parseQonto(text: string): ParsedTx[] {
     const nom=cols[22]?cols[22].trim():'';
     const montant=cols[5].trim().replace(',','.');
     if(!dateRaw||!montant)continue;
-    const [d,m,y]=dateRaw.split('-');
+    const [y,m,d]=dateRaw.split('-');
     if(!d||!m||!y)continue;
     const amount=parseFloat(montant);
     if(isNaN(amount))continue;

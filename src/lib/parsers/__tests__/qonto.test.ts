@@ -22,10 +22,7 @@ describe('parseQonto', () => {
     ].join('\n')
     const res = parseQonto(csv)
     expect(res).toHaveLength(2)
-    // NOTE: parseQonto's date reassembly (y+'-'+m+'-'+d) inverts a YYYY-MM-DD
-    // input into DD-MM-YYYY — this quirk is preserved from the original
-    // implementation in ImportCSV.tsx (not fixed here, this is a pure move).
-    expect(res[0]).toMatchObject({ dt: '02-06-2026', amount: -45.9, merchant: 'CARREFOUR CAYENNE' })
+    expect(res[0]).toMatchObject({ dt: '2026-06-02', amount: -45.9, merchant: 'CARREFOUR CAYENNE' })
     expect(res[1].amount).toBe(1500)
   })
 

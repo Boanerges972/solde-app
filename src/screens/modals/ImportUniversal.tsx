@@ -3,7 +3,8 @@ import { db } from '../../lib/supabase'
 import { sp } from '../../lib/theme'
 import { fmt } from '../../lib/currency'
 import { Ic } from '../../components/Icon'
-import { detectAndParse, SUPPORTED_BANKS } from '../../lib/parsers/index'
+import { detectAndParseFile, SUPPORTED_BANKS } from '../../lib/parsers/index'
+import { hashAB, getStoredHashes, saveHashes, parseNickelPDF } from '../../lib/parsers/nickel'
 import type { ParsedTx } from '../../lib/parsers/index'
 import type { Theme, Account } from '../../types'
 
@@ -26,30 +27,60 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
   const [progress, setProgress] = useState(0)
   const [err, setErr] = useState('')
   const [skipped, setSkipped] = useState(0)
+  const [fileCount, setFileCount] = useState(0)
+  const [dupFileNames, setDupFileNames] = useState<string[]>([])
+  const [pendingHashes, setPendingHashes] = useState<string[]>([])
   const [newAccName, setNewAccName] = useState('')
   const [newAccType, setNewAccType] = useState('Courant')
   const [newAccColor, setNewAccColor] = useState('#10E8C0')
   const [createErr, setCreateErr] = useState('')
 
   const bankDef = SUPPORTED_BANKS.find(b => b.id === bank) ?? SUPPORTED_BANKS[SUPPORTED_BANKS.length - 1]
+  const isNickel = bankDef.id === 'nickel'
 
-  const handleFile = async (file: File | null | undefined) => {
-    if (!file) return
-    setErr(''); setLoading(true)
+  const handleFiles = async (files: FileList | null | undefined) => {
+    if (!files || files.length === 0) return
+    setErr(''); setLoading(true); setFileCount(files.length); setDupFileNames([])
     try {
-      const text = await new Promise<string>((res, rej) => {
-        const r = new FileReader()
-        r.onload = e => res(e.target!.result as string)
-        r.onerror = rej
-        r.readAsText(file, bankDef.encoding)
-      })
+      let allParsed: ParsedTx[] = []
+      const dups: string[] = []
+      const freshHashes: string[] = []
+      const storedHashes = isNickel ? new Set(getStoredHashes(uid)) : null
 
-      const parsed = detectAndParse(text, file.name)
-      if (!parsed.length) {
+      for (let f = 0; f < files.length; f++) {
+        const file = files[f]
+        if (isNickel) {
+          const ab = await file.arrayBuffer()
+          const hash = await hashAB(ab)
+          if (storedHashes!.has(hash)) {
+            dups.push(file.name)
+            continue
+          }
+          freshHashes.push(hash)
+          const parsed = await parseNickelPDF(ab)
+          allParsed = [...allParsed, ...parsed]
+        } else {
+          const parsed = await detectAndParseFile(file, bank)
+          allParsed = [...allParsed, ...parsed]
+        }
+      }
+      setDupFileNames(dups)
+      setPendingHashes(freshHashes)
+
+      if (!allParsed.length) {
         setErr('Aucune transaction trouvée. Vérifie le format du fichier.')
         setLoading(false)
         return
       }
+
+      // Dedup between files (same date+amount+merchant)
+      const seen = new Set<string>()
+      allParsed = allParsed.filter(tx => {
+        const key = `${tx.dt}|${tx.amount.toFixed(2)}|${tx.merchant}`
+        if (seen.has(key)) return false
+        seen.add(key)
+        return true
+      })
 
       // Deduplication: fetch existing transactions for this account
       const { data: existing } = await db
@@ -64,10 +95,10 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
         )
       )
 
-      const fresh = parsed.filter(tx =>
+      const fresh = allParsed.filter(tx =>
         !existingHashes.has(`${tx.dt}|${tx.amount.toFixed(2)}|${tx.merchant}`)
       )
-      const dupCount = parsed.length - fresh.length
+      const dupCount = allParsed.length - fresh.length
       setSkipped(dupCount)
 
       const sel: Record<number, boolean> = {}
@@ -105,6 +136,9 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
         .update({ balance: parseFloat(newBal.toFixed(2)), free: parseFloat(newBal.toFixed(2)) })
         .eq('id', accId).eq('user_id', uid)
     }
+    if (isNickel && pendingHashes.length) {
+      saveHashes(uid, [...getStoredHashes(uid), ...pendingHashes])
+    }
     setLoading(false); setStep('done')
     setTimeout(() => { onImported(); onClose() }, 1500)
   }
@@ -130,6 +164,9 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
       done++
       setProgress(Math.round(done / toImport.length * 100))
     }
+    if (isNickel && pendingHashes.length) {
+      saveHashes(uid, [...getStoredHashes(uid), ...pendingHashes])
+    }
     setLoading(false); setStep('done')
     setTimeout(() => { onImported(); onClose() }, 1500)
   }
@@ -148,7 +185,11 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
         <div>
           <div style={{ fontSize: 15, ...sp('s', 600), color: t.tx }}>{bankDef.icon} Import {bankDef.name}</div>
           <div style={{ fontSize: 11, ...sp('o'), color: t.sub }}>
-            {step === 'upload' ? 'Sélectionne ton export' : step === 'preview' ? txs.length + ' nouvelles transactions' : 'Import terminé !'}
+            {step === 'upload'
+              ? (isNickel ? 'Un ou plusieurs relevés PDF' : 'Sélectionne ton export')
+              : step === 'preview'
+                ? `${txs.length} nouvelles transactions${fileCount > 1 ? ' · ' + fileCount + ' fichiers' : ''}`
+                : 'Import terminé !'}
           </div>
         </div>
       </div>
@@ -158,14 +199,19 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
         {step === 'upload' && (
           <div>
             <label style={{ display: 'block', padding: '32px 20px', borderRadius: 16, border: `2px dashed ${bankDef.color}55`, textAlign: 'center', cursor: 'pointer', background: bankDef.color + '11', marginBottom: 20 }}>
-              <input type="file" accept={bankDef.accept} style={{ display: 'none' }} onChange={e => handleFile(e.target.files?.[0])} />
+              <input type="file" accept={bankDef.accept} multiple={isNickel} style={{ display: 'none' }} onChange={e => handleFiles(e.target.files)} />
               <div style={{ fontSize: 40, marginBottom: 12 }}>{loading ? '⏳' : '📊'}</div>
               <div style={{ fontSize: 15, ...sp('s', 600), color: t.tx, marginBottom: 6 }}>
-                {loading ? 'Lecture en cours…' : 'Sélectionner le fichier'}
+                {loading ? 'Lecture en cours…' : (isNickel ? 'Sélectionner un ou plusieurs PDF' : 'Sélectionner le fichier')}
               </div>
               <div style={{ fontSize: 12, ...sp('o'), color: t.sub }}>{bankDef.name} · {bankDef.accept.toUpperCase()}</div>
             </label>
             {err && <div style={{ padding: '12px', borderRadius: 12, background: t.rD, border: '1px solid ' + t.rose + '44', ...sp('o'), fontSize: 13, color: t.rose, marginBottom: 12 }}>{err}</div>}
+            {dupFileNames.length > 0 && (
+              <div style={{ padding: '12px 14px', background: t.aD, borderRadius: 12, border: '1px solid ' + t.amber + '44', fontSize: 13, ...sp('o'), color: t.amber, marginBottom: 12 }}>
+                ⚠️ {dupFileNames.length === 1 ? `"${dupFileNames[0]}" a déjà été importé.` : `${dupFileNames.length} fichiers déjà importés : ${dupFileNames.join(', ')}.`} Les doublons seront filtrés.
+              </div>
+            )}
             <div style={{ padding: '16px', background: t.card, borderRadius: 14, border: '1px solid ' + t.bo }}>
               <div style={{ fontSize: 12, ...sp('s', 600), color: t.sub, marginBottom: 10 }}>Comment exporter depuis {bankDef.name} ?</div>
               {bankDef.id === 'bnp' && ['Espace client BNP → Mes comptes', 'Sélectionner le compte', 'Télécharger relevé → Format CSV', 'Importer ici'].map((s, i) => (
@@ -184,7 +230,31 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
                   <span style={{ fontSize: 12, ...sp('o'), color: t.sub }}>{s}</span>
                 </div>
               ))}
-              {!['bnp', 'boursorama'].includes(bankDef.id) && ['Espace client de ta banque', 'Mes comptes → Historique', 'Exporter → Format OFX', 'Importer ici'].map((s, i) => (
+              {bankDef.id === 'nickel' && ['Ouvre l\'app Nickel ou espace.nickel.eu', 'Va dans Mon compte → Relevés', 'Télécharge le relevé du mois voulu', 'Importe-le ici'].map((s, i) => (
+                <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 8 }}>
+                  <div style={{ width: 20, height: 20, borderRadius: 10, background: bankDef.color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ fontSize: 10, ...sp('m', 700), color: bankDef.color }}>{i + 1}</span>
+                  </div>
+                  <span style={{ fontSize: 12, ...sp('o'), color: t.sub }}>{s}</span>
+                </div>
+              ))}
+              {bankDef.id === 'cm' && ['Espace client CM → Mes comptes', 'Sélectionner le compte', 'Télécharger → Format CSV', 'Importer ici'].map((s, i) => (
+                <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 8 }}>
+                  <div style={{ width: 20, height: 20, borderRadius: 10, background: bankDef.color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ fontSize: 10, ...sp('m', 700), color: bankDef.color }}>{i + 1}</span>
+                  </div>
+                  <span style={{ fontSize: 12, ...sp('o'), color: t.sub }}>{s}</span>
+                </div>
+              ))}
+              {bankDef.id === 'qonto' && ['Qonto → Transactions', 'Cliquer Exporter en haut à droite', 'Choisir CSV', 'Importer ici'].map((s, i) => (
+                <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 8 }}>
+                  <div style={{ width: 20, height: 20, borderRadius: 10, background: bankDef.color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ fontSize: 10, ...sp('m', 700), color: bankDef.color }}>{i + 1}</span>
+                  </div>
+                  <span style={{ fontSize: 12, ...sp('o'), color: t.sub }}>{s}</span>
+                </div>
+              ))}
+              {!['bnp', 'boursorama', 'nickel', 'cm', 'qonto'].includes(bankDef.id) && ['Espace client de ta banque', 'Mes comptes → Historique', 'Exporter → Format OFX', 'Importer ici'].map((s, i) => (
                 <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 8 }}>
                   <div style={{ width: 20, height: 20, borderRadius: 10, background: bankDef.color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <span style={{ fontSize: 10, ...sp('m', 700), color: bankDef.color }}>{i + 1}</span>
