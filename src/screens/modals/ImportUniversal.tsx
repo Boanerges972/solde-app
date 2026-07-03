@@ -6,6 +6,8 @@ import { Ic } from '../../components/Icon'
 import { detectAndParseFile, SUPPORTED_BANKS } from '../../lib/parsers/index'
 import { hashAB, getStoredHashes, saveHashes, parseNickelPDF } from '../../lib/parsers/nickel'
 import type { ParsedTx } from '../../lib/parsers/index'
+import { iconForCat } from '../../lib/parsers/categories'
+import { matchRule, type MerchantRule } from '../../lib/merchantRules'
 import type { Theme, Account } from '../../types'
 
 interface Props {
@@ -81,6 +83,16 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
         seen.add(key)
         return true
       })
+
+      // Règles apprises : la catégorie de l'utilisateur prime sur la détection par mots-clés
+      const { data: ruleRows } = await db.from('merchant_rules').select('id,pattern,category').eq('user_id', uid)
+      const userRules: MerchantRule[] = (ruleRows || []) as MerchantRule[]
+      if (userRules.length > 0) {
+        allParsed = allParsed.map(tx => {
+          const rule = matchRule(tx.merchant, userRules)
+          return rule ? { ...tx, category: rule.category, icon: iconForCat(rule.category) } : tx
+        })
+      }
 
       // Deduplication: fetch existing transactions for this account
       const { data: existing } = await db

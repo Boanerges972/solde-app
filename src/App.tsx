@@ -9,6 +9,7 @@ import { useOfflineSync } from './hooks/useOfflineSync'
 import { useTheme } from './hooks/useTheme'
 import { useBudgets } from './hooks/useBudgets'
 import { useGoals } from './hooks/useGoals'
+import { useMerchantRules } from './hooks/useMerchantRules'
 import { useBreakpoint } from './hooks/useBreakpoint'
 import { OfflineBanner } from './components/OfflineBanner'
 import { Nav } from './components/Nav'
@@ -32,6 +33,7 @@ import { TransferEntry } from './screens/modals/TransferEntry'
 import { RecurringManager } from './screens/modals/RecurringManager'
 import { BudgetsScreen } from './screens/modals/BudgetsScreen'
 import { GoalsScreen } from './screens/modals/GoalsScreen'
+import { RulesScreen } from './screens/modals/RulesScreen'
 import { SearchScreen } from './screens/modals/SearchScreen'
 import { ResetModal } from './screens/modals/ResetModal'
 import { LockScreen } from './screens/modals/LockScreen'
@@ -67,6 +69,7 @@ export default function App() {
   const [showRecurring, setShowRecurring] = useState(false);
   const [showBudgets, setShowBudgets] = useState(false);
   const [showGoals, setShowGoals] = useState(false);
+  const [showRules, setShowRules] = useState(false);
   const [depositAccount, setDepositAccount] = useState<import('./types').Account | null>(null);
   const [locked, setLocked] = useState(() => localStorage.getItem('qdq-pin-enabled') === '1');
   const [profile, setProfile] = useState<Profile>(() => {
@@ -138,6 +141,7 @@ export default function App() {
   const { recurrings, allHistory, reload: reloadRec, addRecurring, deleteRecurring, updateRecurring } = useRecurring(session ? session.user.id : null);
   const { budgets, saveBudget, deleteBudget } = useBudgets(session ? session.user.id : null);
   const { goals, addGoal, deposit: depositGoal, deleteGoal } = useGoals(session ? session.user.id : null);
+  const { rules: merchantRules, learnRule, deleteRule } = useMerchantRules(session ? session.user.id : null);
   const reload = () => { setAlertDismissed(false); reloadData(); };
   const { group, members, reload: reloadGroup, createGroup, joinGroup, leaveGroup } = useGroup(session ? session.user.id : null);
 
@@ -180,7 +184,7 @@ export default function App() {
     if (tab === 'comptes') return <Comptes D={data} t={t} onEdit={(a: unknown) => setEditAccount(a)} onNew={() => setEditAccount('new')} onImport={(bank: string) => { if (bank === 'pick') { setShowBankPicker(true); } else { setImportBank(bank); setShowImport(true); } }} onDeposit={(a) => setDepositAccount(a)} />;
     if (tab === 'groupe') return <Groupe t={t} uid={session.user.id} group={group} members={members} createGroup={createGroup} joinGroup={joinGroup} leaveGroup={leaveGroup} txs={data.txs} />;
     if (tab === 'analyses') return <Analyse D={data} t={t} allTxs={data.txs} allHistory={allHistory || []} recurrings={recurrings || []} />;
-    if (tab === 'profil') return <Settings t={t} user={session.user} onLogout={logout} profile={profile} onProfile={() => setShowProfile(true)} onSecurity={() => setShowPinSetup(true)} onRecurring={() => setShowRecurring(true)} onReset={() => setShowReset(true)} onGroupe={() => setTab('groupe')} themeMode={themeMode} onThemeMode={setThemeMode} onBudgets={() => setShowBudgets(true)} onGoals={() => setShowGoals(true)} />;
+    if (tab === 'profil') return <Settings t={t} user={session.user} onLogout={logout} profile={profile} onProfile={() => setShowProfile(true)} onSecurity={() => setShowPinSetup(true)} onRecurring={() => setShowRecurring(true)} onReset={() => setShowReset(true)} onGroupe={() => setTab('groupe')} themeMode={themeMode} onThemeMode={setThemeMode} onBudgets={() => setShowBudgets(true)} onGoals={() => setShowGoals(true)} onRules={() => setShowRules(true)} />;
     return null;
   };
 
@@ -205,7 +209,7 @@ export default function App() {
         <main style={{ height: isDesktop ? '100vh' : 'calc(100vh - 64px - env(safe-area-inset-top,0px))', overflowY: 'auto', paddingBottom: isDesktop ? 24 : 80 }}>
           {renderMain()}
         </main>
-        {showEntry && data && <ExpEntry D={data} t={t} onClose={() => setShowEntry(false)} onSave={addTx} group={group} members={members} uid={session.user.id} recurrings={recurrings || []} allHistory={allHistory || []} />}
+        {showEntry && data && <ExpEntry D={data} t={t} onClose={() => setShowEntry(false)} onSave={async (p: { merchant: string; category: string } & Record<string, unknown>) => { const r = await addTx(p as never); if (p.merchant && p.merchant !== p.category) learnRule(p.merchant, p.category); return r; }} group={group} members={members} uid={session.user.id} recurrings={recurrings || []} allHistory={allHistory || []} />}
         {editBudget && data && <EditBudget D={data} t={t} uid={session.user.id} onClose={() => setEditBudget(false)} onSaved={reload} defaultPeriod={localStorage.getItem('qdq-period') || 'week'} />}
         {showProfile && <ProfileScreen t={t} user={session?.user} onClose={() => setShowProfile(false)} onSaved={(p: Profile) => { setProfile(p); setShowProfile(false); }} />}
         {showBankPicker && <BankPicker t={t} onClose={() => setShowBankPicker(false)} onPick={(b: string) => { setShowBankPicker(false); setImportBank(b); setShowImport(true); }} />}
@@ -213,6 +217,7 @@ export default function App() {
         {showRecurring && data && <RecurringManager t={t} accounts={data.accounts} recurrings={recurrings || []} allHistory={allHistory || []} onAdd={addRecurring} onDelete={deleteRecurring} onUpdate={updateRecurring} onClose={() => setShowRecurring(false)} />}
         {showBudgets && data && <BudgetsScreen t={t} txs={data.txs} budgets={budgets} onSave={saveBudget} onDelete={deleteBudget} onClose={() => setShowBudgets(false)} />}
         {showGoals && <GoalsScreen t={t} goals={goals} onAdd={addGoal} onDeposit={depositGoal} onDelete={deleteGoal} onClose={() => setShowGoals(false)} />}
+        {showRules && <RulesScreen t={t} rules={merchantRules} onDelete={deleteRule} onClose={() => setShowRules(false)} />}
         {showSearch && data && <SearchScreen t={t} allTxs={data.txs} accounts={data.accounts} onClose={() => setShowSearch(false)} onDelete={deleteTx} />}
         {showReset && session && <ResetModal t={t} uid={session.user.id} onClose={() => setShowReset(false)} onDone={() => { reload(); setShowReset(false); }} />}
         {locked && <LockScreen t={t} onUnlock={() => setLocked(false)} />}
