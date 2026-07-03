@@ -7,8 +7,10 @@ import { useRecurring } from './hooks/useRecurring'
 import { useGroup } from './hooks/useGroup'
 import { useOfflineSync } from './hooks/useOfflineSync'
 import { useTheme } from './hooks/useTheme'
+import { useBreakpoint } from './hooks/useBreakpoint'
 import { OfflineBanner } from './components/OfflineBanner'
 import { Nav } from './components/Nav'
+import { Sidebar } from './components/Sidebar'
 import { BudgetAlert } from './components/BudgetAlert'
 import { RejectionAlert } from './components/RejectionAlert'
 import { IOSBanner } from './components/IOSBanner'
@@ -63,6 +65,7 @@ export default function App() {
     try { return JSON.parse(localStorage.getItem('qdq-profile') || '{}') } catch { return {} }
   });
   const { t, mode: themeMode, setMode: setThemeMode } = useTheme();
+  const { isDesktop } = useBreakpoint();
 
   useEffect(() => {
     db.auth.getSession().then(r => setSession(r.data.session));
@@ -131,13 +134,13 @@ export default function App() {
   const logout = async () => { await db.auth.signOut(); setTab('accueil'); };
 
   if (session === undefined) return (
-    <div style={{ width: 375, minHeight: '100vh', background: t.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
+    <div style={{ width: isDesktop ? '100%' : 375, minHeight: '100vh', background: t.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
       <div style={{ fontSize: 28, ...sp('s', 700), color: t.primary, letterSpacing: -1 }}>QDQ</div>
       <div style={{ width: 32, height: 32, border: '3px solid ' + t.primary + '33', borderTop: '3px solid ' + t.primary, borderRadius: '50%', animation: 'spin .8s linear infinite' }} />
     </div>
   );
 
-  if (!session) return (<div style={{ width: 375, minHeight: '100vh', background: t.bg }}><AuthScreen t={t} /></div>);
+  if (!session) return (<div style={{ width: isDesktop ? '100%' : 375, minHeight: '100vh', background: t.bg, display: 'flex', justifyContent: 'center' }}><div style={{ width: 375 }}><AuthScreen t={t} /></div></div>);
 
   const renderMain = () => {
     if (loading && !data) return (
@@ -174,29 +177,39 @@ export default function App() {
   void reloadGroup;
 
   return (
-    <div style={{ width: 375, minHeight: '100vh', position: 'relative', background: t.bg, boxShadow: '0 0 80px rgba(0,0,0,.6)', transition: 'background .3s', paddingTop: 'env(safe-area-inset-top,0px)' }}>
-      <StatusBar t={t} />
-      {showIOS && <IOSBanner t={t} onDismiss={() => { setShowIOS(false); localStorage.setItem('qdq-ios', '1'); }} />}
-      <OfflineBanner isOnline={isOnline} pendingCount={pendingCount} failedCount={failedCount} isSyncing={isSyncing} t={t} />
-      <main style={{ height: 'calc(100vh - 64px - env(safe-area-inset-top,0px))', overflowY: 'auto', paddingBottom: 80 }}>
-        {renderMain()}
-      </main>
-      <Nav tab={tab} onTab={id => setTab(id)} onAdd={() => setShowEntry(true)} t={t} />
-      {showEntry && data && <ExpEntry D={data} t={t} onClose={() => setShowEntry(false)} onSave={addTx} group={group} members={members} uid={session.user.id} recurrings={recurrings || []} allHistory={allHistory || []} />}
-      {editBudget && data && <EditBudget D={data} t={t} uid={session.user.id} onClose={() => setEditBudget(false)} onSaved={reload} defaultPeriod={localStorage.getItem('qdq-period') || 'week'} />}
-      {showProfile && <ProfileScreen t={t} user={session?.user} onClose={() => setShowProfile(false)} onSaved={(p: Profile) => { setProfile(p); setShowProfile(false); }} />}
-      {showBankPicker && <BankPicker t={t} onClose={() => setShowBankPicker(false)} onPick={(b: string) => { setShowBankPicker(false); setImportBank(b); setShowImport(true); }} />}
-      {showTransfer && data && <TransferEntry D={data} t={t} onClose={() => setShowTransfer(false)} onTransfer={addTransfer} />}
-      {showRecurring && data && <RecurringManager t={t} accounts={data.accounts} recurrings={recurrings || []} allHistory={allHistory || []} onAdd={addRecurring} onDelete={deleteRecurring} onUpdate={updateRecurring} onClose={() => setShowRecurring(false)} />}
-      {showSearch && data && <SearchScreen t={t} allTxs={data.txs} accounts={data.accounts} onClose={() => setShowSearch(false)} onDelete={deleteTx} />}
-      {showReset && session && <ResetModal t={t} uid={session.user.id} onClose={() => setShowReset(false)} onDone={() => { reload(); setShowReset(false); }} />}
-      {locked && <LockScreen t={t} onUnlock={() => setLocked(false)} />}
-      {showPinSetup && <PinSetup t={t} user={session?.user} onClose={() => setShowPinSetup(false)} />}
-      {showImport && data && importBank != null && SUPPORTED_BANKS.some(b => b.id === importBank) && (
-        <ImportUniversal t={t} uid={session.user.id} accounts={data.accounts} bank={importBank} onClose={() => setShowImport(false)} onImported={reload} onCreateAccount={() => { setShowImport(false); setEditAccount('new'); }} />
-      )}
-      {editAccount && data && <EditAccount account={editAccount === 'new' ? null : editAccount as import('./types').Account} isNew={editAccount === 'new'} t={t} uid={session.user.id} onClose={() => setEditAccount(null)} onSaved={reload} />}
-      {depositAccount && <DepositModal account={depositAccount} t={t} onClose={() => setDepositAccount(null)} onSave={addDeposit} />}
+    <div style={{
+      width: isDesktop ? '100%' : 375,
+      minHeight: '100vh', position: 'relative', background: t.bg,
+      display: isDesktop ? 'flex' : 'block',
+      boxShadow: isDesktop ? 'none' : '0 0 80px rgba(0,0,0,.6)',
+      transition: 'background .3s',
+      paddingTop: isDesktop ? 0 : 'env(safe-area-inset-top,0px)',
+    }}>
+      {isDesktop && <Sidebar tab={tab} onTab={id => setTab(id)} onAdd={() => setShowEntry(true)} t={t} />}
+      <div style={{ flex: 1, maxWidth: isDesktop ? 1100 : undefined, margin: isDesktop ? '0 auto' : undefined, width: '100%' }}>
+        <StatusBar t={t} />
+        {showIOS && <IOSBanner t={t} onDismiss={() => { setShowIOS(false); localStorage.setItem('qdq-ios', '1'); }} />}
+        <OfflineBanner isOnline={isOnline} pendingCount={pendingCount} failedCount={failedCount} isSyncing={isSyncing} t={t} />
+        <main style={{ height: isDesktop ? '100vh' : 'calc(100vh - 64px - env(safe-area-inset-top,0px))', overflowY: 'auto', paddingBottom: isDesktop ? 24 : 80 }}>
+          {renderMain()}
+        </main>
+        {showEntry && data && <ExpEntry D={data} t={t} onClose={() => setShowEntry(false)} onSave={addTx} group={group} members={members} uid={session.user.id} recurrings={recurrings || []} allHistory={allHistory || []} />}
+        {editBudget && data && <EditBudget D={data} t={t} uid={session.user.id} onClose={() => setEditBudget(false)} onSaved={reload} defaultPeriod={localStorage.getItem('qdq-period') || 'week'} />}
+        {showProfile && <ProfileScreen t={t} user={session?.user} onClose={() => setShowProfile(false)} onSaved={(p: Profile) => { setProfile(p); setShowProfile(false); }} />}
+        {showBankPicker && <BankPicker t={t} onClose={() => setShowBankPicker(false)} onPick={(b: string) => { setShowBankPicker(false); setImportBank(b); setShowImport(true); }} />}
+        {showTransfer && data && <TransferEntry D={data} t={t} onClose={() => setShowTransfer(false)} onTransfer={addTransfer} />}
+        {showRecurring && data && <RecurringManager t={t} accounts={data.accounts} recurrings={recurrings || []} allHistory={allHistory || []} onAdd={addRecurring} onDelete={deleteRecurring} onUpdate={updateRecurring} onClose={() => setShowRecurring(false)} />}
+        {showSearch && data && <SearchScreen t={t} allTxs={data.txs} accounts={data.accounts} onClose={() => setShowSearch(false)} onDelete={deleteTx} />}
+        {showReset && session && <ResetModal t={t} uid={session.user.id} onClose={() => setShowReset(false)} onDone={() => { reload(); setShowReset(false); }} />}
+        {locked && <LockScreen t={t} onUnlock={() => setLocked(false)} />}
+        {showPinSetup && <PinSetup t={t} user={session?.user} onClose={() => setShowPinSetup(false)} />}
+        {showImport && data && importBank != null && SUPPORTED_BANKS.some(b => b.id === importBank) && (
+          <ImportUniversal t={t} uid={session.user.id} accounts={data.accounts} bank={importBank} onClose={() => setShowImport(false)} onImported={reload} onCreateAccount={() => { setShowImport(false); setEditAccount('new'); }} />
+        )}
+        {editAccount && data && <EditAccount account={editAccount === 'new' ? null : editAccount as import('./types').Account} isNew={editAccount === 'new'} t={t} uid={session.user.id} onClose={() => setEditAccount(null)} onSaved={reload} />}
+        {depositAccount && <DepositModal account={depositAccount} t={t} onClose={() => setDepositAccount(null)} onSave={addDeposit} />}
+      </div>
+      {!isDesktop && <Nav tab={tab} onTab={id => setTab(id)} onAdd={() => setShowEntry(true)} t={t} />}
     </div>
   );
 }
