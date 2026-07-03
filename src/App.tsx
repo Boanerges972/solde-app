@@ -15,6 +15,7 @@ import { BudgetAlert } from './components/BudgetAlert'
 import { RejectionAlert } from './components/RejectionAlert'
 import { IOSBanner } from './components/IOSBanner'
 import { HomeSkeleton } from './components/Skeleton'
+import { PullToRefresh } from './components/PullToRefresh'
 import { AuthScreen } from './screens/Auth'
 import { Home } from './screens/Home'
 import { Comptes } from './screens/Comptes'
@@ -155,13 +156,19 @@ export default function App() {
     );
     if (!data) return null;
     if (tab === 'accueil') return (
-      <div>
-        {!alertDismissed && <BudgetAlert D={data} t={t} threshold={parseInt(localStorage.getItem('qdq-alert-threshold') || '80')} onDismiss={() => setAlertDismissed(true)} />}
-        <RejectionAlert t={t} accounts={data.accounts} recurrings={recurrings || []} onManage={() => setShowRecurring(true)} />
-        <Home D={data} t={t} onAcc={() => setTab('comptes')} onAdd={() => setShowEntry(true)} onEditBudget={() => setEditBudget(true)} onDelete={deleteTx} rtConnected={rtConnected} profile={profile} onSearch={() => setShowSearch(true)} recurrings={recurrings || []} onManageRecurring={() => setShowRecurring(true)} onTransfer={() => setShowTransfer(true)} />
-      </div>
+      <PullToRefresh onRefresh={async () => { reload(); }} t={t}>
+        <div>
+          {!alertDismissed && <BudgetAlert D={data} t={t} threshold={parseInt(localStorage.getItem('qdq-alert-threshold') || '80')} onDismiss={() => setAlertDismissed(true)} />}
+          <RejectionAlert t={t} accounts={data.accounts} recurrings={recurrings || []} onManage={() => setShowRecurring(true)} />
+          <Home D={data} t={t} onAcc={() => setTab('comptes')} onAdd={() => setShowEntry(true)} onEditBudget={() => setEditBudget(true)} onDelete={deleteTx} rtConnected={rtConnected} profile={profile} onSearch={() => setShowSearch(true)} recurrings={recurrings || []} onManageRecurring={() => setShowRecurring(true)} onTransfer={() => setShowTransfer(true)} />
+        </div>
+      </PullToRefresh>
     );
-    if (tab === 'depenses') return <Depenses D={data} t={t} onDelete={deleteTx} onSearch={() => setShowSearch(true)} />;
+    if (tab === 'depenses') return (
+      <PullToRefresh onRefresh={async () => { reload(); }} t={t}>
+        <Depenses D={data} t={t} onDelete={deleteTx} onSearch={() => setShowSearch(true)} />
+      </PullToRefresh>
+    );
     if (tab === 'comptes') return <Comptes D={data} t={t} onEdit={(a: unknown) => setEditAccount(a)} onNew={() => setEditAccount('new')} onImport={(bank: string) => { if (bank === 'pick') { setShowBankPicker(true); } else { setImportBank(bank); setShowImport(true); } }} onDeposit={(a) => setDepositAccount(a)} />;
     if (tab === 'groupe') return <Groupe t={t} uid={session.user.id} group={group} members={members} createGroup={createGroup} joinGroup={joinGroup} leaveGroup={leaveGroup} txs={data.txs} />;
     if (tab === 'analyses') return <Analyse D={data} t={t} allTxs={data.txs} allHistory={allHistory || []} recurrings={recurrings || []} />;
