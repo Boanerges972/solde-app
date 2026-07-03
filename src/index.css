@@ -14,3 +14,12 @@ button:focus:not(:focus-visible){outline:none}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* Micro-interactions */
+button{transition:transform .12s ease,opacity .12s ease}
+button:active{transform:scale(0.97)}
+@keyframes fadeSlideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+main>*{animation:fadeSlideIn .22s ease}
+@media (prefers-reduced-motion:reduce){
+  button,main>*{animation:none!important;transition:none!important}
+}
