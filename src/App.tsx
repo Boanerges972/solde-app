@@ -80,10 +80,35 @@ export default function App() {
   const { t, mode: themeMode, setMode: setThemeMode } = useTheme();
   const { isDesktop } = useBreakpoint();
 
+  const [sessionExpired, setSessionExpired] = useState(false);
+
   useEffect(() => {
     db.auth.getSession().then(r => setSession(r.data.session));
-    const { data: { subscription } } = db.auth.onAuthStateChange((_, s) => setSession(s));
+    const { data: { subscription } } = db.auth.onAuthStateChange((_, s) => {
+      setSession(prev => {
+        // Déconnexion subie (session encore affichée mais devenue nulle) → informer
+        if (prev && !s) setSessionExpired(true);
+        if (s) setSessionExpired(false);
+        return s;
+      });
+    });
     return () => subscription.unsubscribe();
+  }, []);
+
+  // Session morte (ex: refresh token invalidé par une restauration Supabase) :
+  // vérification au retour sur l'onglet + toutes les 5 minutes.
+  useEffect(() => {
+    const check = async () => {
+      const { data } = await db.auth.getSession();
+      setSession(prev => {
+        if (prev && !data.session) { setSessionExpired(true); return null; }
+        return prev;
+      });
+    };
+    const onVis = () => { if (!document.hidden) check(); };
+    document.addEventListener('visibilitychange', onVis);
+    const iv = setInterval(check, 5 * 60 * 1000);
+    return () => { document.removeEventListener('visibilitychange', onVis); clearInterval(iv); };
   }, []);
 
   // Apply saved currency on startup
@@ -156,7 +181,7 @@ export default function App() {
     </div>
   );
 
-  if (!session) return (<div style={{ width: isDesktop ? '100%' : 375, minHeight: '100vh', background: t.bg, display: 'flex', justifyContent: 'center' }}><div style={{ width: 375 }}><AuthScreen t={t} /></div></div>);
+  if (!session) return (<div style={{ width: isDesktop ? '100%' : 375, minHeight: '100vh', background: t.bg, display: 'flex', justifyContent: 'center' }}><div style={{ width: 375 }}><AuthScreen t={t} notice={sessionExpired ? 'Ta session a expiré — reconnecte-toi.' : undefined} /></div></div>);
 
   const renderMain = () => {
     if (loading && !data) return <HomeSkeleton t={t} />;

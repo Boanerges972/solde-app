@@ -23,18 +23,18 @@ const QDQLogo = () => (
   </div>
 )
 
-interface Props { t: Theme }
-export const AuthScreen = ({ t }: Props) => {
+interface Props { t: Theme; notice?: string }
+export const AuthScreen = ({ t, notice }: Props) => {
   const [onboarded] = useState(() => localStorage.getItem('qdq-onboarded') === '1')
   const [slide, setSlide] = useState(0)
-  const [showAuth, setShowAuth] = useState(onboarded)
+  const [showAuth, setShowAuth] = useState(onboarded || !!notice)
   const [mode, setMode] = useState('login')
   const [email, setEmail] = useState('')
   const [pwd, setPwd] = useState('')
   const [name, setName] = useState('')
   const [showPwd, setShowPwd] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [err, setErr] = useState('')
+  const [err, setErr] = useState(notice || '')
   const [ok, setOk] = useState('')
   const submit = async () => {
     setErr(''); setOk('');
