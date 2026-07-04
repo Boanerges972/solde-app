@@ -124,17 +124,37 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
     setLoading(false)
   }
 
+  /** Traduit les erreurs Supabase cryptiques en message actionnable. */
+  const friendlyDbError = (msg: string): string =>
+    /row-level security|JWT|token|expired/i.test(msg)
+      ? 'Session expirée — déconnecte-toi puis reconnecte-toi, et relance l\'import.'
+      : msg
+
+  /** Vérifie que la session est encore valide avant d'écrire en base. */
+  const sessionAlive = async (): Promise<boolean> => {
+    const { data } = await db.auth.getSession()
+    return !!data.session
+  }
+
   const doImport = async () => {
     const toImport = txs.filter((_, i) => selected[i])
     if (!toImport.length || !accId) return
-    setLoading(true); setProgress(0)
+    setErr(''); setLoading(true); setProgress(0)
+    if (!(await sessionAlive())) {
+      setErr('Session expirée — déconnecte-toi puis reconnecte-toi, et relance l\'import.')
+      setLoading(false); return
+    }
     let done = 0
     for (const tx of toImport) {
-      await db.from('transactions').insert({
+      const { error } = await db.from('transactions').insert({
         user_id: uid, merchant: tx.merchant, category: tx.category,
         icon: tx.icon, amount: tx.amount, account_id: accId,
         tx_date: tx.dt, group_id: null, paid_by: null,
       })
+      if (error) {
+        setErr(friendlyDbError(error.message) + (done > 0 ? ` (${done} transaction${done > 1 ? 's' : ''} déjà importée${done > 1 ? 's' : ''})` : ''))
+        setLoading(false); return
+      }
       done++
       setProgress(Math.round(done / toImport.length * 100))
     }
@@ -158,6 +178,10 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
   const doCreateAndImport = async () => {
     if (!newAccName.trim()) { setCreateErr('Nom requis'); return }
     setCreateErr(''); setLoading(true); setProgress(0)
+    if (!(await sessionAlive())) {
+      setCreateErr('Session expirée — déconnecte-toi puis reconnecte-toi, et relance l\'import.')
+      setLoading(false); return
+    }
     const toImport = txs.filter((_, i) => selected[i])
     const bal = parseFloat(toImport.reduce((s, tx) => s + tx.amount, 0).toFixed(2))
     const newId = newAccName.trim().toLowerCase().replace(/\s+/g, '_') + '_' + uid.slice(0, 6) + '_' + Math.random().toString(36).slice(2, 6)
@@ -165,14 +189,18 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
       id: newId, name: newAccName.trim(), short_name: newAccName.trim().slice(0, 4),
       balance: bal, free: bal, type: newAccType, color: newAccColor, user_id: uid, reserved: 0,
     })
-    if (error) { setCreateErr(error.message); setLoading(false); return }
+    if (error) { setCreateErr(friendlyDbError(error.message)); setLoading(false); return }
     let done = 0
     for (const tx of toImport) {
-      await db.from('transactions').insert({
+      const { error: txErr } = await db.from('transactions').insert({
         user_id: uid, merchant: tx.merchant, category: tx.category,
         icon: tx.icon, amount: tx.amount, account_id: newId,
         tx_date: tx.dt, group_id: null, paid_by: null,
       })
+      if (txErr) {
+        setCreateErr(friendlyDbError(txErr.message) + ` (compte créé, ${done}/${toImport.length} transactions importées)`)
+        setLoading(false); return
+      }
       done++
       setProgress(Math.round(done / toImport.length * 100))
     }
