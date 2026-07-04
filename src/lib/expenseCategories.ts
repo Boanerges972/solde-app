@@ -1,0 +1,25 @@
+export interface ExpenseCategory { n: string; ico: string; col: string }
+
+export const CATS_E: ExpenseCategory[] = [
+  {n:'Courses',       ico:'🛒', col:'#10E8C0'},
+  {n:'Restaurant',    ico:'🍽️', col:'#F5A623'},
+  {n:'Transport',     ico:'🚗', col:'#6B7FD7'},
+  {n:'Loisirs',       ico:'🎮', col:'#EC4899'},
+  {n:'Santé',         ico:'💊', col:'#EF4444'},
+  {n:'Maison',        ico:'🏠', col:'#8B5CF6'},
+  {n:'Vêtements',     ico:'👗', col:'#F472B6'},
+  {n:'Épargne',       ico:'🏦', col:'#14B8A6'},
+  {n:'Abonnements',   ico:'📱', col:'#3B82F6'},
+  {n:'Énergie',       ico:'⚡', col:'#F59E0B'},
+  {n:'Banque',        ico:'🏛️', col:'#64748B'},
+  {n:'Voyage',        ico:'✈️', col:'#06B6D4'},
+  {n:'Sport',         ico:'🏋️', col:'#84CC16'},
+  {n:'Education',     ico:'📚', col:'#A78BFA'},
+  {n:'Animaux',       ico:'🐾', col:'#F97316'},
+  {n:'Cadeaux',       ico:'🎁', col:'#EC4899'},
+  {n:'Médias',        ico:'📰', col:'#8B5CF6'},
+  {n:'Impôts',        ico:'🏛️', col:'#94A3B8'},
+  {n:'Remboursement', ico:'💸', col:'#06B6D4'},
+  {n:'Salaire',       ico:'💰', col:'#84CC16'},
+  {n:'Autre',         ico:'📦', col:'#8B90A7'},
+]

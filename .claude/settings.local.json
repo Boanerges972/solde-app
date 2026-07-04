@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(engineering:code-review)",
+      "Skill(engineering:code-review:*)",
+      "Skill(design:accessibility-review)",
+      "Skill(design:accessibility-review:*)",
+      "Skill(superpowers:executing-plans)",
+      "Skill(superpowers:executing-plans:*)",
+      "Skill(superpowers:brainstorming)",
+      "Skill(superpowers:brainstorming:*)",
+      "Bash(New-Item -ItemType Directory -Force \"C:\\\\Users\\\\Administrateur\\\\OneDrive\\\\Bureau\\\\CLAUDE\\\\QDQ\\\\qdq-pwa\\\\docs\\\\superpowers\\\\specs\")",
+      "Bash(Out-Null)",
+      "PowerShell(New-Item -ItemType Directory -Force \"C:\\\\Users\\\\Administrateur\\\\OneDrive\\\\Bureau\\\\CLAUDE\\\\QDQ\\\\qdq-pwa\\\\docs\\\\superpowers\\\\specs\")",
+      "Skill(superpowers:writing-plans)",
+      "Skill(superpowers:writing-plans:*)",
+      "Skill(superpowers:subagent-driven-development)",
+      "Skill(superpowers:subagent-driven-development:*)",
+      "Bash(npm install *)",
+      "Bash(Test-Path \"C:\\\\Users\\\\Administrateur\\\\OneDrive\\\\Bureau\\\\CLAUDE\\\\QDQ\\\\qdq-pwa\\\\index.html.bak\")",
+      "Bash(npx tsc *)",
+      "Bash(New-Item -ItemType Directory -Force \"C:\\\\Users\\\\Administrateur\\\\OneDrive\\\\Bureau\\\\CLAUDE\\\\QDQ\\\\qdq-pwa\\\\src\\\\hooks\")",
+      "Bash(Write-Output \"done\")",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;\" + $env:PATH; cd \"C:\\\\Users\\\\Administrateur\\\\OneDrive\\\\Bureau\\\\CLAUDE\\\\QDQ\\\\qdq-pwa\"; npx tsc --noEmit 2>&1)"
+    ]
+  }
+}
