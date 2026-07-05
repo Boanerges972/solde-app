@@ -1,4 +1,5 @@
 import { Icon } from './Icon'
+import { Logo } from './Logo'
 import { sp } from '../lib/theme'
 import type { Theme } from '../types'
 
@@ -17,7 +18,10 @@ export const Sidebar = ({ tab, onTab, onAdd, t }: Props) => (
     display: 'flex', flexDirection: 'column', padding: '24px 12px', gap: 4,
     position: 'sticky', top: 0,
   }}>
-    <div style={{ fontSize: 22, ...sp('s', 700), color: '#fff', letterSpacing: -0.5, padding: '0 12px 20px' }}>QDQ</div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 12px 20px' }}>
+      <Logo size={32} />
+      <span style={{ fontSize: 22, ...sp('s', 700), color: '#fff', letterSpacing: -0.5 }}>QDQ</span>
+    </div>
     {ITEMS.map(i => {
       const active = tab === i.id
       return (

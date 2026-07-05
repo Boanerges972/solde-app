@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { db } from '../lib/supabase'
 import { Icon } from '../components/Icon'
+import { Logo } from '../components/Logo'
 import { sp } from '../lib/theme'
 import type { Theme } from '../types'
 
@@ -17,9 +18,9 @@ const features = [
 ]
 
 const QDQLogo = () => (
-  <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-    background: '#0D1B3E', borderRadius: 20, padding: '10px 22px' }}>
-    <span style={{ fontSize: 36, fontWeight: 900, color: '#ffffff', letterSpacing: -1, fontFamily: 'Inter, sans-serif' }}>QDQ</span>
+  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12 }}>
+    <Logo size={52} />
+    <span style={{ fontSize: 34, fontWeight: 800, color: '#0D1B3E', letterSpacing: -2, fontFamily: 'Inter, sans-serif' }}>QDQ</span>
   </div>
 )
 

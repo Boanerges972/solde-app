@@ -8,6 +8,7 @@ import { useGroup } from './hooks/useGroup'
 import { useOfflineSync } from './hooks/useOfflineSync'
 import { useTheme } from './hooks/useTheme'
 import { useBudgets } from './hooks/useBudgets'
+import { Logo } from './components/Logo'
 import { useGoals } from './hooks/useGoals'
 import { useMerchantRules } from './hooks/useMerchantRules'
 import { useBreakpoint } from './hooks/useBreakpoint'
@@ -175,8 +176,8 @@ export default function App() {
   const logout = async () => { await db.auth.signOut(); setTab('accueil'); };
 
   if (session === undefined) return (
-    <div style={{ width: '100%', maxWidth: isDesktop ? undefined : 480, minHeight: '100vh', background: t.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
-      <div style={{ fontSize: 28, ...sp('s', 700), color: t.primary, letterSpacing: -1 }}>QDQ</div>
+    <div style={{ width: '100%', maxWidth: isDesktop ? undefined : 480, minHeight: '100vh', background: t.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 20 }}>
+      <Logo size={72} style={{ animation: 'fadeIn .5s ease' }} />
       <div style={{ width: 32, height: 32, border: '3px solid ' + t.primary + '33', borderTop: '3px solid ' + t.primary, borderRadius: '50%', animation: 'spin .8s linear infinite' }} />
     </div>
   );
