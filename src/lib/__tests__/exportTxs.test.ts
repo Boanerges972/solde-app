@@ -21,4 +21,18 @@ describe('buildCsv', () => {
   it('liste vide → en-tête seul', () => {
     expect(buildCsv([]).split('\n')).toHaveLength(1)
   })
+
+  it('neutralise les formules (injection CSV) — marchand commençant par =', () => {
+    const csv = buildCsv([tx('2026-07-01', -10, '=HYPERLINK("http://evil")')])
+    const cell = csv.split('\n')[1]
+    // préfixé par une apostrophe, donc plus interprété comme formule
+    expect(cell).toContain("'=HYPERLINK")
+    expect(cell).not.toMatch(/;=HYPERLINK/)
+  })
+
+  it('neutralise aussi + - @ en tête de champ', () => {
+    expect(buildCsv([tx('2026-07-01', -1, '+A1')]).split('\n')[1]).toContain("'+A1")
+    expect(buildCsv([tx('2026-07-01', -1, '-2+3')]).split('\n')[1]).toContain("'-2+3")
+    expect(buildCsv([tx('2026-07-01', -1, '@SUM')]).split('\n')[1]).toContain("'@SUM")
+  })
 })

@@ -3,8 +3,16 @@ import type { Transaction } from '../types'
 
 const HEADER = ['Date', 'Marchand', 'Catégorie', 'Montant', 'Compte']
 
+/** Neutralise l'injection de formule : un champ texte qui commence par
+ *  = + - @ (ou tab/CR) est traité comme formule par Excel/LibreOffice/Sheets.
+ *  On préfixe une apostrophe (échappement "texte" standard du tableur). */
+export function neutralizeFormula(v: string): string {
+  return /^[=+\-@\t\r]/.test(v) ? "'" + v : v
+}
+
 function esc(v: string): string {
-  return /[;"\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v
+  const s = neutralizeFormula(v)
+  return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s
 }
 
 /** CSV point-virgule (Excel FR) des transactions. */
@@ -31,8 +39,8 @@ export function downloadCsv(txs: Transaction[], filename = 'qdq-transactions.csv
 /** Télécharge les transactions en .xlsx. */
 export function downloadXlsx(txs: Transaction[], filename = 'qdq-transactions.xlsx') {
   const data = txs.map(t => ({
-    Date: t.dt, Marchand: t.m || '', 'Catégorie': t.cat || '',
-    Montant: t.amt, Compte: t.acc || '',
+    Date: t.dt, Marchand: neutralizeFormula(t.m || ''), 'Catégorie': neutralizeFormula(t.cat || ''),
+    Montant: t.amt, Compte: neutralizeFormula(t.acc || ''),
   }))
   const ws = XLSX.utils.json_to_sheet(data)
   const wb = XLSX.utils.book_new()
