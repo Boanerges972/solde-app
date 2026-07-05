@@ -1,5 +1,6 @@
 import { Icon } from './Icon'
 import { sp } from '../lib/theme'
+import { haptic } from '../lib/haptics'
 import type { Theme } from '../types'
 
 interface NavProps {
@@ -22,7 +23,7 @@ export const Nav = ({ tab, onTab, onAdd, t }: NavProps) => {
   const renderTab = (i: { id: string; ic: string; lb: string }) => {
     const active = tab === i.id
     return (
-      <button key={i.id} onClick={() => onTab(i.id)}
+      <button key={i.id} onClick={() => { haptic(); onTab(i.id) }}
         aria-label={i.lb} aria-current={active ? 'page' : undefined}
         style={{
           flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -39,15 +40,16 @@ export const Nav = ({ tab, onTab, onAdd, t }: NavProps) => {
   }
   return (
     <nav aria-label="Navigation principale" style={{
-      position: 'absolute', bottom: 0, left: 0, right: 0,
+      position: 'fixed', bottom: 0, left: 0, right: 0, margin: '0 auto', maxWidth: 480,
       background: NAV_BG,
       borderTop: 'none',
       display: 'flex', alignItems: 'flex-end',
-      padding: '0 0 20px', zIndex: 50, height: 72
+      padding: '0 0 calc(20px + env(safe-area-inset-bottom,0px))', zIndex: 50,
+      height: 'calc(72px + env(safe-area-inset-bottom,0px))'
     }}>
       {left.map(renderTab)}
       <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'flex-end', paddingBottom: 4 }}>
-        <button onClick={onAdd} aria-label="Nouvelle dépense"
+        <button onClick={() => { haptic(12); onAdd() }} aria-label="Nouvelle dépense"
           style={{
             width: 56, height: 56, borderRadius: 28,
             background: t.primary, border: 'none', cursor: 'pointer',

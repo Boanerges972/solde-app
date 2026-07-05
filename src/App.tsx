@@ -175,13 +175,13 @@ export default function App() {
   const logout = async () => { await db.auth.signOut(); setTab('accueil'); };
 
   if (session === undefined) return (
-    <div style={{ width: isDesktop ? '100%' : 375, minHeight: '100vh', background: t.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
+    <div style={{ width: '100%', maxWidth: isDesktop ? undefined : 480, minHeight: '100vh', background: t.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
       <div style={{ fontSize: 28, ...sp('s', 700), color: t.primary, letterSpacing: -1 }}>QDQ</div>
       <div style={{ width: 32, height: 32, border: '3px solid ' + t.primary + '33', borderTop: '3px solid ' + t.primary, borderRadius: '50%', animation: 'spin .8s linear infinite' }} />
     </div>
   );
 
-  if (!session) return (<div style={{ width: isDesktop ? '100%' : 375, minHeight: '100vh', background: t.bg, display: 'flex', justifyContent: 'center' }}><div style={{ width: 375 }}><AuthScreen t={t} notice={sessionExpired ? 'Ta session a expiré — reconnecte-toi.' : undefined} /></div></div>);
+  if (!session) return (<div style={{ width: '100%', minHeight: '100vh', background: t.bg, display: 'flex', justifyContent: 'center' }}><div style={{ width: '100%', maxWidth: 480 }}><AuthScreen t={t} notice={sessionExpired ? 'Ta session a expiré — reconnecte-toi.' : undefined} /></div></div>);
 
   const renderMain = () => {
     if (loading && !data) return <HomeSkeleton t={t} />;
@@ -221,10 +221,10 @@ export default function App() {
 
   return (
     <div style={{
-      width: isDesktop ? '100%' : 375,
+      width: '100%', maxWidth: isDesktop ? undefined : 480,
       minHeight: '100vh', position: 'relative', background: t.bg,
       display: isDesktop ? 'flex' : 'block',
-      boxShadow: isDesktop ? 'none' : '0 0 80px rgba(0,0,0,.6)',
+      boxShadow: 'none',
       transition: 'background .3s',
       paddingTop: isDesktop ? 0 : 'env(safe-area-inset-top,0px)',
     }}>
@@ -233,8 +233,8 @@ export default function App() {
         <StatusBar t={t} />
         {showIOS && <IOSBanner t={t} onDismiss={() => { setShowIOS(false); localStorage.setItem('qdq-ios', '1'); }} />}
         <OfflineBanner isOnline={isOnline} pendingCount={pendingCount} failedCount={failedCount} isSyncing={isSyncing} t={t} />
-        <main style={{ height: isDesktop ? '100vh' : 'calc(100vh - 64px - env(safe-area-inset-top,0px))', overflowY: 'auto', paddingBottom: isDesktop ? 24 : 80 }}>
-          {renderMain()}
+        <main style={{ height: isDesktop ? '100vh' : 'calc(100vh - 64px - env(safe-area-inset-top,0px))', overflowY: 'auto', paddingBottom: isDesktop ? 24 : 'calc(84px + env(safe-area-inset-bottom,0px))' }}>
+          <div key={tab}>{renderMain()}</div>
         </main>
         {showEntry && data && <ExpEntry D={data} t={t} onClose={() => setShowEntry(false)} onSave={async (p: { merchant: string; category: string } & Record<string, unknown>) => { const r = await addTx(p as never); if (p.merchant && p.merchant !== p.category) learnRule(p.merchant, p.category); return r; }} group={group} members={members} uid={session.user.id} recurrings={recurrings || []} allHistory={allHistory || []} />}
         {editBudget && data && <EditBudget D={data} t={t} uid={session.user.id} onClose={() => setEditBudget(false)} onSaved={reload} defaultPeriod={localStorage.getItem('qdq-period') || 'week'} />}
