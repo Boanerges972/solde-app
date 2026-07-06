@@ -209,7 +209,7 @@ export default function App() {
         <Depenses D={data} t={t} onDelete={deleteTx} onSearch={() => setShowSearch(true)} />
       </PullToRefresh>
     );
-    if (tab === 'comptes') return <Comptes D={data} t={t} onEdit={(a: unknown) => setEditAccount(a)} onNew={() => setEditAccount('new')} onImport={(bank: string) => { if (bank === 'pick') { setShowBankPicker(true); } else { setImportBank(bank); setShowImport(true); } }} onDeposit={(a) => setDepositAccount(a)} />;
+    if (tab === 'comptes') return <Comptes D={data} t={t} onEdit={(a: unknown) => setEditAccount(a)} onNew={() => setEditAccount('new')} onImport={(bank: string) => { if (bank === 'pick') { setShowBankPicker(true); } else { setImportBank(bank); setShowImport(true); } }} onDeposit={(a) => setDepositAccount(a)} onTransfer={() => setShowTransfer(true)} />;
     if (tab === 'groupe') return <Groupe t={t} uid={session.user.id} group={group} members={members} createGroup={createGroup} joinGroup={joinGroup} leaveGroup={leaveGroup} txs={data.txs} />;
     if (tab === 'analyses') return <Analyse D={data} t={t} allTxs={data.txs} allHistory={allHistory || []} recurrings={recurrings || []} />;
     if (tab === 'profil') return <Settings t={t} user={session.user} onLogout={logout} profile={profile} onProfile={() => setShowProfile(true)} onSecurity={() => setShowPinSetup(true)} onRecurring={() => setShowRecurring(true)} onReset={() => setShowReset(true)} onGroupe={() => setTab('groupe')} themeMode={themeMode} onThemeMode={setThemeMode} onBudgets={() => setShowBudgets(true)} onGoals={() => setShowGoals(true)} onRules={() => setShowRules(true)} onReport={() => setShowReport(true)} />;

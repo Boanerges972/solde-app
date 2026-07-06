@@ -10,6 +10,7 @@ interface Props {
   onNew: () => void
   onImport: (bank: string) => void
   onDeposit: (a: Account) => void
+  onTransfer?: () => void
 }
 
 const balColor = (a: Account, t: Theme): string => {
@@ -18,7 +19,7 @@ const balColor = (a: Account, t: Theme): string => {
   return t.rose
 }
 
-export const Comptes = ({ D, t, onEdit, onNew, onImport, onDeposit }: Props) => {
+export const Comptes = ({ D, t, onEdit, onNew, onImport, onDeposit, onTransfer }: Props) => {
   const total = D.accounts.reduce((s, a) => s + a.bal, 0)
   const hasPerso = D.persoAccs.length > 0
   const hasPro = D.proAccs.length > 0
@@ -65,6 +66,15 @@ export const Comptes = ({ D, t, onEdit, onNew, onImport, onDeposit }: Props) => 
             <Icon n="plus" sz={14} c={t.mint} />
             <span style={{ fontSize: 12, ...sp('o', 600), color: t.mint }}>Ajouter</span>
           </button>
+          {onTransfer && D.accounts.length >= 2 && (
+            <button
+              onClick={onTransfer}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: t.el, border: '1px solid ' + t.bo, borderRadius: 10, cursor: 'pointer' }}
+            >
+              <span style={{ fontSize: 13 }}>⇄</span>
+              <span style={{ fontSize: 12, ...sp('o', 600), color: t.sub }}>Transférer</span>
+            </button>
+          )}
         </div>
       </div>
 
