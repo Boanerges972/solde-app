@@ -7,6 +7,17 @@ export interface Theme {
   mint: string; rose: string; amber: string
   mD: string; rD: string; aD: string; rB: string
   primary: string; secondary: string
+  // ── Tokens direction hybride V3 (optionnels — présents seulement sur le thème V3)
+  /** Menthe de remplissage / icônes (vif). */
+  mintFill?: string
+  /** Menthe pour le TEXTE sur fond clair — assombrie pour respecter WCAG AA (≥ 4.5:1). */
+  mintText?: string
+  /** Indigo de marque (structure & actions). */
+  indigo?: string
+  /** Violet — accent décoratif non sémantique. */
+  violet?: string
+  /** Couleurs sémantiques dédiées (distinctes de l'accent de marque). */
+  success?: string; alert?: string; danger?: string; info?: string; neutral?: string
 }
 
 export interface AccountDebit { n: string; d: string; a: number }
