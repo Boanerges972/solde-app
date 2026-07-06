@@ -76,7 +76,7 @@ export const TxRow = ({ tx, t, onDelete }: Props) => {
           ) : (
             <button onClick={async () => { setExpanded(false); await onDelete(tx.id) }}
               style={{ flex: 1, padding: '8px', borderRadius: 10, background: t.rD,
-                border: 'none', cursor: 'pointer', ...sp('o', 600), fontSize: 12, color: t.rose }}>
+                border: 'none', cursor: 'pointer', ...sp('o', 600), fontSize: 12, color: t.dangerText }}>
               Supprimer
             </button>
           )}

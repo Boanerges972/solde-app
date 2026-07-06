@@ -246,7 +246,7 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
               </div>
               <div style={{ fontSize: 12, ...sp('o'), color: t.sub }}>{bankDef.name} · {bankDef.accept.toUpperCase()}</div>
             </label>
-            {err && <div style={{ padding: '12px', borderRadius: 12, background: t.rD, border: '1px solid ' + t.rose + '44', ...sp('o'), fontSize: 13, color: t.rose, marginBottom: 12 }}>{err}</div>}
+            {err && <div style={{ padding: '12px', borderRadius: 12, background: t.rD, border: '1px solid ' + t.rose + '44', ...sp('o'), fontSize: 13, color: t.dangerText, marginBottom: 12 }}>{err}</div>}
             {dupFileNames.length > 0 && (
               <div style={{ padding: '12px 14px', background: t.aD, borderRadius: 12, border: '1px solid ' + t.amber + '44', fontSize: 13, ...sp('o'), color: t.amber, marginBottom: 12 }}>
                 ⚠️ {dupFileNames.length === 1 ? `"${dupFileNames[0]}" a déjà été importé.` : `${dupFileNames.length} fichiers déjà importés : ${dupFileNames.join(', ')}.`} Les doublons seront filtrés.
@@ -311,7 +311,7 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
           <div>
             <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
               <div style={{ flex: 1, padding: '12px', background: t.rD, borderRadius: 12, border: '1px solid ' + t.rose + '33' }}>
-                <div style={{ fontSize: 11, ...sp('o'), color: t.rose }}>{expCount} dépenses</div>
+                <div style={{ fontSize: 11, ...sp('o'), color: t.dangerText }}>{expCount} dépenses</div>
                 <div style={{ fontSize: 16, ...sp('m', 600), color: t.tx, marginTop: 2 }}>{fmt(totalDebits)}</div>
               </div>
               <div style={{ flex: 1, padding: '12px', background: t.mD, borderRadius: 12, border: '1px solid ' + t.mint + '33' }}>
@@ -340,7 +340,7 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
                 <div style={{ fontSize: 11, ...sp('s', 600), color: t.sub, letterSpacing: .6, textTransform: 'uppercase', marginBottom: 10 }}>Créer le compte</div>
                 <input type="text" value={newAccName} onChange={e => setNewAccName(e.target.value)} placeholder="Nom du compte (ex: Compte BNP)"
                   style={{ width: '100%', padding: '11px 14px', background: t.el, border: '1.5px solid ' + (createErr ? t.rose : t.bo), borderRadius: 12, ...sp('o'), fontSize: 14, color: t.tx, outline: 'none', marginBottom: 10, boxSizing: 'border-box' }} />
-                {createErr && <div style={{ fontSize: 12, ...sp('o'), color: t.rose, marginBottom: 8 }}>{createErr}</div>}
+                {createErr && <div style={{ fontSize: 12, ...sp('o'), color: t.dangerText, marginBottom: 8 }}>{createErr}</div>}
                 <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
                   {['Courant', 'Épargne', 'Pro'].map(tp => (
                     <button key={tp} onClick={() => setNewAccType(tp)} style={{ padding: '7px 12px', borderRadius: 10, border: 'none', cursor: 'pointer', ...sp('o', 600), fontSize: 12, background: newAccType === tp ? newAccColor + '33' : t.el, color: newAccType === tp ? newAccColor : t.sub }}>

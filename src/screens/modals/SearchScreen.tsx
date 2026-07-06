@@ -167,7 +167,7 @@ export const SearchScreen = ({ t, allTxs, accounts, onClose, onDelete }: Props) 
           {activeFilters>0&&(
             <button onClick={clearAll}
               style={{padding:'7px 12px',borderRadius:20,border:'1px solid '+t.rose+'44',
-                background:t.rD,cursor:'pointer',fontSize:11,...sp('o',600),color:t.rose}}>
+                background:t.rD,cursor:'pointer',fontSize:11,...sp('o',600),color:t.dangerText}}>
               Tout effacer
             </button>
           )}
@@ -307,7 +307,7 @@ export const SearchScreen = ({ t, allTxs, accounts, onClose, onDelete }: Props) 
                     style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid ' + t.bo, background: t.el, color: t.sub, fontSize: 10.5, ...sp('o', 600), cursor: 'pointer' }}>Excel</button>
                 </>
               )}
-              <span style={{ ...sp('m', 600), color: total < 0 ? t.rose : t.mintText }}>{fmt(total)}</span>
+              <span style={{ ...sp('m', 600), color: total < 0 ? t.dangerText : t.mintText }}>{fmt(total)}</span>
             </div>
           </div>
         )}

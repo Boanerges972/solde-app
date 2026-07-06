@@ -228,7 +228,7 @@ export const RecurringManager = ({ t, accounts, recurrings, allHistory, onAdd, o
                     </div>
                   </div>
                   <div style={{textAlign:'right',flexShrink:0}}>
-                    <div style={{fontSize:14,...sp('m',600),color:t.rose}}>−{fmt(parseFloat(String(r.amount||0)),2)}</div>
+                    <div style={{fontSize:14,...sp('m',600),color:t.dangerText}}>−{fmt(parseFloat(String(r.amount||0)),2)}</div>
                     <button onClick={()=>onDelete(r.id)}
                       style={{fontSize:10,...sp('o'),color:t.muted,background:'none',
                         border:'none',cursor:'pointer',marginTop:2}}>supprimer</button>
@@ -305,7 +305,7 @@ export const RecurringManager = ({ t, accounts, recurrings, allHistory, onAdd, o
                           </div>
                         </div>
                         <div style={{textAlign:'right',flexShrink:0}}>
-                          <div style={{fontSize:13,...sp('m',600),color:t.rose,lineHeight:1}}>
+                          <div style={{fontSize:13,...sp('m',600),color:t.dangerText,lineHeight:1}}>
                             ~{fmt(d.avg,2)}
                           </div>
                           <div style={{fontSize:9,...sp('o'),color:t.muted,marginTop:2}}>
@@ -337,7 +337,7 @@ export const RecurringManager = ({ t, accounts, recurrings, allHistory, onAdd, o
                               <input type="number" defaultValue={d.avg.toFixed(2)} id={'amt-'+d.key}
                                 style={{width:'100%',padding:'8px 10px',background:t.el,
                                   border:'1px solid '+t.bo,borderRadius:10,...sp('m'),
-                                  fontSize:14,color:t.rose,outline:'none'}}/>
+                                  fontSize:14,color:t.dangerText,outline:'none'}}/>
                             </div>
                             <div style={{flex:1}}>
                               <div style={{fontSize:10,...sp('o'),color:t.muted,marginBottom:4}}>Jour</div>
@@ -392,7 +392,7 @@ export const RecurringManager = ({ t, accounts, recurrings, allHistory, onAdd, o
                 onChange={e=>setAmount(e.target.value)} placeholder="0,00"
                 style={{width:'100%',padding:'12px 14px',background:t.el,
                   border:'1.5px solid '+t.bo,borderRadius:12,...sp('m'),
-                  fontSize:18,color:t.rose,outline:'none'}}/>
+                  fontSize:18,color:t.dangerText,outline:'none'}}/>
             </div>
             <div>
               <div id="rec-day-label" style={{fontSize:11,...sp('s',600),color:t.sub,letterSpacing:.6,
@@ -425,7 +425,7 @@ export const RecurringManager = ({ t, accounts, recurrings, allHistory, onAdd, o
               </div>
             </div>
             {err&&<div role="alert" style={{padding:'10px',borderRadius:10,background:t.rD,
-              color:t.rose,...sp('o',600),fontSize:13}}>{err}</div>}
+              color:t.dangerText,...sp('o',600),fontSize:13}}>{err}</div>}
             <button onClick={()=>save()} disabled={saving}
               style={{padding:'15px',background:saving?t.el:t.primary,
                 border:'none',borderRadius:16,cursor:saving?'wait':'pointer',

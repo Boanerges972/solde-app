@@ -121,7 +121,7 @@ export const Groupe = ({ t, uid, group, members, createGroup, joinGroup, leaveGr
           <input value={myName} onChange={e => setMyName(e.target.value)} placeholder="Lory"
             style={{ width: '100%', padding: '12px 14px', background: t.el, border: '1.5px solid ' + t.bo, borderRadius: 12, ...sp('o'), fontSize: 14, color: t.tx, outline: 'none' }} />
         </div>
-        {err && <div style={{ padding: '10px', borderRadius: 10, background: t.rD, border: '1px solid ' + t.rose + '44', marginBottom: 14, ...sp('o'), fontSize: 13, color: t.rose }}>{err}</div>}
+        {err && <div style={{ padding: '10px', borderRadius: 10, background: t.rD, border: '1px solid ' + t.rose + '44', marginBottom: 14, ...sp('o'), fontSize: 13, color: t.dangerText }}>{err}</div>}
         <div style={{ display: 'flex', gap: 10 }}>
           <button onClick={() => { setMode(null); setErr('') }} style={{ flex: 1, padding: '14px', background: 'none', border: '1px solid ' + t.bo, borderRadius: 14, cursor: 'pointer', ...sp('o', 600), fontSize: 14, color: t.sub }}>
             Annuler
@@ -198,7 +198,7 @@ export const Groupe = ({ t, uid, group, members, createGroup, joinGroup, leaveGr
             <div style={{ fontSize: 13, ...sp('o'), color: t.sub, marginBottom: 6 }}>
               {debtor ? debtor.name : '?'} doit à {creditor ? creditor.name : '?'}
             </div>
-            <div style={{ fontSize: 42, ...sp('m', 300), color: t.rose, lineHeight: 1 }}>{fmt(balance)}</div>
+            <div style={{ fontSize: 42, ...sp('m', 300), color: t.dangerText, lineHeight: 1 }}>{fmt(balance)}</div>
             <div style={{ fontSize: 11, ...sp('o'), color: t.sub, marginTop: 6 }}>Total commun : {fmtS(totalCommun)} · Part : {fmtS(myShare)}/pers</div>
             {debtor && debtor.isMe && (
               <button onClick={() => settleUp(debtor.id, creditor ? creditor.id : '', balance)}
@@ -215,10 +215,10 @@ export const Groupe = ({ t, uid, group, members, createGroup, joinGroup, leaveGr
         {results.map((r, i) => (
           <div key={i} style={{ flex: 1, padding: '14px', background: r.isMe ? t.mD : t.card, borderRadius: 14, border: '1px solid ' + (r.isMe ? t.mint + '44' : t.bo), textAlign: 'center' }}>
             <div style={{ width: 36, height: 36, borderRadius: 18, background: r.net >= 0 ? t.mint + '22' : t.rD, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px' }}>
-              <span style={{ fontSize: 16, ...sp('s', 700), color: r.net >= 0 ? t.mintText : t.rose }}>{r.name.charAt(0).toUpperCase()}</span>
+              <span style={{ fontSize: 16, ...sp('s', 700), color: r.net >= 0 ? t.mintText : t.dangerText }}>{r.name.charAt(0).toUpperCase()}</span>
             </div>
             <div style={{ fontSize: 13, ...sp('o', 500), color: t.tx }}>{r.name}{r.isMe && <span style={{ fontSize: 10, color: t.mintText }}> (moi)</span>}</div>
-            <div style={{ fontSize: 16, ...sp('m', 600), color: r.net >= 0 ? t.mintText : t.rose, marginTop: 4 }}>
+            <div style={{ fontSize: 16, ...sp('m', 600), color: r.net >= 0 ? t.mintText : t.dangerText, marginTop: 4 }}>
               {r.net >= 0 ? '+' : ''}{fmt(r.net)}
             </div>
             <div style={{ fontSize: 10, ...sp('o'), color: t.sub, marginTop: 2 }}>{r.net >= 0 ? 'à recevoir' : 'à rembourser'}</div>

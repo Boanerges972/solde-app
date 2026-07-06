@@ -55,7 +55,7 @@ export const EditAccount = ({ account, isNew, t, uid, onClose, onSaved }: Props)
           <button onClick={onClose} style={{padding:'6px 14px',borderRadius:10,background:t.el,border:'none',cursor:'pointer',...sp('o',600),fontSize:13,color:t.sub}}>Annuler</button>
           <span id="ea-title" style={{fontSize:15,...sp('s',700),color:t.tx}}>{isNew?'Nouveau compte':'Modifier'}</span>
           {!isNew
-            ?<button onClick={()=>setConfirmDel(true)} style={{padding:'6px 12px',borderRadius:8,background:t.rD,border:'1px solid '+t.rose+'33',cursor:'pointer',...sp('o',600),fontSize:12,color:t.rose}}>Supprimer</button>
+            ?<button onClick={()=>setConfirmDel(true)} style={{padding:'6px 12px',borderRadius:8,background:t.rD,border:'1px solid '+t.rose+'33',cursor:'pointer',...sp('o',600),fontSize:12,color:t.dangerText}}>Supprimer</button>
             :<div style={{width:70}}/>
           }
         </div>
@@ -125,7 +125,7 @@ export const EditAccount = ({ account, isNew, t, uid, onClose, onSaved }: Props)
             </div>
           )}
         </div>
-        {err&&<div role="alert" style={{padding:'10px',borderRadius:10,background:t.rD,border:'1px solid '+t.rose+'44',marginBottom:12,...sp('o'),fontSize:13,color:t.rose}}>{err}</div>}
+        {err&&<div role="alert" style={{padding:'10px',borderRadius:10,background:t.rD,border:'1px solid '+t.rose+'44',marginBottom:12,...sp('o'),fontSize:13,color:t.dangerText}}>{err}</div>}
         <button onClick={save} disabled={saving} style={{width:'100%',padding:'14px',background:saving?t.el:'linear-gradient(135deg,'+col+','+col+'CC)',border:'none',borderRadius:14,cursor:saving?'wait':'pointer',...sp('o',700),fontSize:15,color:saving?t.sub:'#fff'}}>
           {saving?'Enregistrement…':(isNew?'Créer':'Enregistrer')}
         </button>

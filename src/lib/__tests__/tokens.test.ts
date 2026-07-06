@@ -42,4 +42,8 @@ describe('tokens V3 — direction hybride', () => {
   it('texte secondaire sur fond clair respecte AA', () => {
     expect(contrast(TV3.light.sub, TV3.light.bg)).toBeGreaterThanOrEqual(4.5)
   })
+
+  it('rouge-texte (montants négatifs) sur blanc respecte AA (fix du 3.76:1 sur #EF4444)', () => {
+    expect(contrast(TV3.light.dangerText!, TV3.light.card)).toBeGreaterThanOrEqual(4.5)
+  })
 })

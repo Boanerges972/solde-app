@@ -68,14 +68,14 @@ export const RejectionAlert = ({ t, accounts, recurrings, onManage }: Props) => 
         background: 'linear-gradient(135deg,' + t.rose + '22,' + t.rose + '0A)' }}>
         <span style={{ fontSize: 22, flexShrink: 0 }}>🚨</span>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, ...sp('o', 700), color: t.rose }}>Risque de rejet dans 14 jours</div>
-          <div style={{ fontSize: 11, ...sp('o'), color: t.rose, opacity: .8, marginTop: 1 }}>
+          <div style={{ fontSize: 13, ...sp('o', 700), color: t.dangerText }}>Risque de rejet dans 14 jours</div>
+          <div style={{ fontSize: 11, ...sp('o'), color: t.dangerText, opacity: .8, marginTop: 1 }}>
             {risks.length} compte{risks.length > 1 ? 's' : ''} insuffisant{risks.length > 1 ? 's' : ''}
           </div>
         </div>
         <button onClick={dismiss} aria-label="Fermer l'alerte de rejet"
           style={{ background: 'none', border: 'none', cursor: 'pointer',
-            fontSize: 18, color: t.rose, opacity: .6, lineHeight: 1 }}>✕</button>
+            fontSize: 18, color: t.dangerText, opacity: .6, lineHeight: 1 }}>✕</button>
       </div>
       {risks.map(({ acc, ard: v }) => (
         <div key={acc!.id} style={{ padding: '10px 14px',
@@ -96,7 +96,7 @@ export const RejectionAlert = ({ t, accounts, recurrings, onManage }: Props) => 
               <span style={{ fontSize: 11, ...sp('o'), color: t.muted, marginRight: 6 }}>
                 {d.daysUntil === 0 ? "Aujourd'hui" : d.daysUntil === 1 ? 'Demain' : 'Dans ' + d.daysUntil + 'j'}
               </span>
-              <span style={{ fontSize: 12, ...sp('m', 600), color: t.rose }}>−{fmt(d.amt, 0)}</span>
+              <span style={{ fontSize: 12, ...sp('m', 600), color: t.dangerText }}>−{fmt(d.amt, 0)}</span>
             </div>
           ))}
         </div>
@@ -104,7 +104,7 @@ export const RejectionAlert = ({ t, accounts, recurrings, onManage }: Props) => 
       <button onClick={onManage}
         style={{ display: 'block', width: '100%', padding: '11px', background: t.rose + '18',
           border: 'none', borderTop: '1px solid ' + t.rose + '22', cursor: 'pointer',
-          ...sp('o', 600), fontSize: 13, color: t.rose }}>
+          ...sp('o', 600), fontSize: 13, color: t.dangerText }}>
         Gérer mes prélèvements →
       </button>
     </div>

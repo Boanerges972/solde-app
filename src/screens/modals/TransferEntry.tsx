@@ -161,7 +161,7 @@ export const TransferEntry = ({ D, t, onClose, onTransfer }: Props) => {
                   </div>
                   <div style={{fontSize:10,...sp('o'),color:t.muted,marginTop:3}}>
                     {dir}{fmt(n,0)}
-                    {after<0&&<span style={{color:t.rose}}> ⚠ découvert</span>}
+                    {after<0&&<span style={{color:t.dangerText}}> ⚠ découvert</span>}
                   </div>
                 </div>
               ))}
@@ -191,7 +191,7 @@ export const TransferEntry = ({ D, t, onClose, onTransfer }: Props) => {
         {err&&(
           <div style={{padding:'10px 14px',borderRadius:12,background:t.rD,
             border:'1px solid '+t.rose+'44',marginBottom:14,
-            ...sp('o',600),fontSize:13,color:t.rose}}>{err}</div>
+            ...sp('o',600),fontSize:13,color:t.dangerText}}>{err}</div>
         )}
 
         <button onClick={save} disabled={saving||!n||fromId===toId}

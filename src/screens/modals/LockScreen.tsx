@@ -57,7 +57,7 @@ export const LockScreen = ({ t, onUnlock }: Props) => {
         ))}
       </div>
       <div style={{height:20,marginBottom:24,fontSize:13,...sp('o',600),
-        color:t.rose,opacity:msg?1:0,transition:'opacity .2s'}}>{msg}</div>
+        color:t.dangerText,opacity:msg?1:0,transition:'opacity .2s'}}>{msg}</div>
       <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,width:264}}>
         {keys.map((k,i)=>{
           if (k==='bio') return (

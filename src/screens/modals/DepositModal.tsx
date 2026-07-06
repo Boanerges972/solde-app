@@ -104,14 +104,14 @@ export const DepositModal = ({ account, t, onClose, onSave }: Props) => {
             <button key={k} onClick={()=>handleKey(k)}
               style={{padding:'16px 0',borderRadius:14,border:'none',cursor:'pointer',
                 background:k==='⌫'?t.rD:t.el,
-                ...(k==='⌫'?{color:t.rose}:{color:t.tx}),
+                ...(k==='⌫'?{color:t.dangerText}:{color:t.tx}),
                 fontSize:k==='⌫'?18:20,...sp('m',400)}}>
               {k}
             </button>
           ))}
         </div>
 
-        {err&&<div role="alert" style={{padding:'8px 12px',borderRadius:10,background:t.rD,border:'1px solid '+t.rose+'44',marginBottom:10,...sp('o'),fontSize:13,color:t.rose}}>{err}</div>}
+        {err&&<div role="alert" style={{padding:'8px 12px',borderRadius:10,background:t.rD,border:'1px solid '+t.rose+'44',marginBottom:10,...sp('o'),fontSize:13,color:t.dangerText}}>{err}</div>}
 
         <button onClick={save} disabled={saving||!n}
           style={{width:'100%',padding:'15px',background:(!n||saving)?t.el:t.primary,

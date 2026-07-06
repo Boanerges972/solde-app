@@ -47,7 +47,7 @@ const PushSettings = ({ t, uid }: { t: Theme; uid: string }) => {
           <div style={{ fontSize: 12, ...sp('o'), color: subscribed ? t.mint : t.sub }}>{subscribed ? 'Activées sur cet appareil' : 'Désactivées'}</div>
         </div>
         <button onClick={toggle} disabled={busy}
-          style={{ padding: '7px 12px', borderRadius: 10, background: subscribed ? t.rD : t.mD, border: '1px solid ' + (subscribed ? t.rose : t.mintText) + '44', cursor: 'pointer', ...sp('o', 600), fontSize: 12, color: subscribed ? t.rose : t.mintText, opacity: busy ? 0.5 : 1 }}>
+          style={{ padding: '7px 12px', borderRadius: 10, background: subscribed ? t.rD : t.mD, border: '1px solid ' + (subscribed ? t.dangerText : t.mintText) + '44', cursor: 'pointer', ...sp('o', 600), fontSize: 12, color: subscribed ? t.dangerText : t.mintText, opacity: busy ? 0.5 : 1 }}>
           {busy ? '…' : subscribed ? 'Désactiver' : 'Activer'}
         </button>
       </div>
@@ -319,7 +319,7 @@ export const Settings = ({ t, user, onLogout, profile, onProfile, onSecurity, on
 
     <button onClick={onLogout} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%', padding: '14px', background: t.rD, border: '1px solid ' + t.rose + '33', borderRadius: 14, cursor: 'pointer' }}>
       <Icon n="logout" sz={18} c={t.rose} />
-      <span style={{ fontSize: 14, ...sp('o', 600), color: t.rose }}>Se déconnecter</span>
+      <span style={{ fontSize: 14, ...sp('o', 600), color: t.dangerText }}>Se déconnecter</span>
     </button>
   </div>
 );

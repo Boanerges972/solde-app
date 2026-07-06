@@ -143,7 +143,7 @@ export const PrevisionelView = ({ t, recurrings, accounts }: Props) => {
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div style={{
             fontSize: 13, ...sp('m', 600),
-            color: endBalance >= 0 ? t.mintText : t.rose
+            color: endBalance >= 0 ? t.mintText : t.dangerText
           }}>
             {fmt(endBalance, 0)}
           </div>
@@ -152,7 +152,7 @@ export const PrevisionelView = ({ t, recurrings, accounts }: Props) => {
           </div>
           <div style={{
             fontSize: 11, ...sp('o', 600),
-            color: endBalance >= startBalance ? t.mintText : t.rose,
+            color: endBalance >= startBalance ? t.mintText : t.dangerText,
             background: endBalance >= startBalance ? t.mD : t.rD,
             padding: '2px 7px', borderRadius: 6
           }}>
@@ -284,7 +284,7 @@ export const PrevisionelView = ({ t, recurrings, accounts }: Props) => {
                     <div style={{ fontSize: 13, ...sp('o', 600), color: t.tx, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, marginRight: 8 }}>
                       {ev.recurring.name}
                     </div>
-                    <div style={{ fontSize: 14, ...sp('m', 600), color: t.rose, flexShrink: 0 }}>
+                    <div style={{ fontSize: 14, ...sp('m', 600), color: t.dangerText, flexShrink: 0 }}>
                       -{fmt(ev.amount, 0)}
                     </div>
                   </div>
@@ -302,7 +302,7 @@ export const PrevisionelView = ({ t, recurrings, accounts }: Props) => {
                     </div>
                     <div style={{
                       fontSize: 12, ...sp('m', 600),
-                      color: ev.runningBalance >= 0 ? t.mintText : t.rose,
+                      color: ev.runningBalance >= 0 ? t.mintText : t.dangerText,
                     }}>
                       {fmt(ev.runningBalance, 0)}
                     </div>
@@ -316,9 +316,9 @@ export const PrevisionelView = ({ t, recurrings, accounts }: Props) => {
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 4, position: 'relative' }}>
             <div style={{
               width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
-              background: endBalance >= 0 ? t.mintText : t.rose,
+              background: endBalance >= 0 ? t.mintText : t.dangerText,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 0 0 4px ' + (endBalance >= 0 ? t.mintText : t.rose) + '22',
+              boxShadow: '0 0 0 4px ' + (endBalance >= 0 ? t.mintText : t.dangerText) + '22',
               zIndex: 1,
             }}>
               <span style={{ fontSize: 18 }}>{endBalance >= 0 ? '✅' : '⚠️'}</span>
@@ -333,7 +333,7 @@ export const PrevisionelView = ({ t, recurrings, accounts }: Props) => {
                 <div>
                   <div style={{
                     fontSize: 13, ...sp('s', 700),
-                    color: endBalance >= 0 ? t.mintText : t.rose
+                    color: endBalance >= 0 ? t.mintText : t.dangerText
                   }}>
                     Fin {MONTH_FR[month]}
                   </div>
@@ -344,13 +344,13 @@ export const PrevisionelView = ({ t, recurrings, accounts }: Props) => {
                 <div style={{ textAlign: 'right' }}>
                   <div style={{
                     fontSize: 20, ...sp('m', 700),
-                    color: endBalance >= 0 ? t.mintText : t.rose
+                    color: endBalance >= 0 ? t.mintText : t.dangerText
                   }}>
                     {fmt(endBalance, 0)}
                   </div>
                   <div style={{
                     fontSize: 10, ...sp('o'),
-                    color: endBalance >= 0 ? t.mintText : t.rose,
+                    color: endBalance >= 0 ? t.mintText : t.dangerText,
                     opacity: 0.8, marginTop: 1
                   }}>
                     {endBalance >= 0 ? 'solde positif' : 'solde négatif'}

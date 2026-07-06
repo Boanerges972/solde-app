@@ -21,7 +21,7 @@ export const ConfirmDialog = ({ t, message, onConfirm, onCancel }: Props) => (
           Annuler
         </button>
         <button onClick={onConfirm}
-          style={{ flex: 1, padding: '13px', background: t.rD, border: '1px solid ' + t.rose + '44', borderRadius: 12, cursor: 'pointer', ...sp('o', 700), fontSize: 14, color: t.rose }}>
+          style={{ flex: 1, padding: '13px', background: t.rD, border: '1px solid ' + t.rose + '44', borderRadius: 12, cursor: 'pointer', ...sp('o', 700), fontSize: 14, color: t.dangerText }}>
           Supprimer
         </button>
       </div>

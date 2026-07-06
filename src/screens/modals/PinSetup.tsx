@@ -33,7 +33,7 @@ export const PinSetup = ({ t, user, onClose }: Props) => {
               transition:'background .15s'}}/>
           ))}
         </div>
-        {err&&<div style={{fontSize:12,...sp('o',600),color:t.rose}}>{err}</div>}
+        {err&&<div style={{fontSize:12,...sp('o',600),color:t.dangerText}}>{err}</div>}
         <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,width:240}}>
           {keys.map((k,i)=>{
             if (k==='') return <div key={i}/>
@@ -142,7 +142,7 @@ export const PinSetup = ({ t, user, onClose }: Props) => {
             </div>
           </div>
         )}
-        {err&&step==='menu'&&<div style={{fontSize:12,...sp('o',600),color:t.rose,textAlign:'center',marginTop:8}}>{err}</div>}
+        {err&&step==='menu'&&<div style={{fontSize:12,...sp('o',600),color:t.dangerText,textAlign:'center',marginTop:8}}>{err}</div>}
       </div>
     </div>
   )

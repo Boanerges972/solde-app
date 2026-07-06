@@ -53,18 +53,18 @@ export const ResetModal = ({ t, uid, onClose, onDone }: Props) => {
           <>
             <div style={{textAlign:'center',marginBottom:20}}>
               <div style={{fontSize:52,marginBottom:12}}>🗑️</div>
-              <div style={{fontSize:18,...sp('s',700),color:t.rose,marginBottom:8}}>
+              <div style={{fontSize:18,...sp('s',700),color:t.dangerText,marginBottom:8}}>
                 Remise à zéro
               </div>
               <div style={{fontSize:13,...sp('o'),color:t.sub,lineHeight:1.6}}>
-                Cette action va supprimer <span style={{color:t.rose,...sp('o',700)}}>définitivement</span> :
+                Cette action va supprimer <span style={{color:t.dangerText,...sp('o',700)}}>définitivement</span> :
               </div>
             </div>
             {['Toutes tes transactions','Tous tes comptes','Ton budget hebdomadaire',
               'Tes prélèvements configurés','Les données du foyer partagé'].map((item,i)=>(
               <div key={i} style={{display:'flex',alignItems:'center',gap:10,
                 padding:'8px 0',borderBottom:'1px solid '+t.bo}}>
-                <span style={{fontSize:14,color:t.rose,flexShrink:0}}>✕</span>
+                <span style={{fontSize:14,color:t.dangerText,flexShrink:0}}>✕</span>
                 <span style={{fontSize:13,...sp('o'),color:t.sub}}>{item}</span>
               </div>
             ))}
@@ -83,7 +83,7 @@ export const ResetModal = ({ t, uid, onClose, onDone }: Props) => {
               <button onClick={()=>setStep(2)}
                 style={{flex:1,padding:'13px',borderRadius:14,background:t.rD,
                   border:'1px solid '+t.rose+'44',cursor:'pointer',
-                  ...sp('o',700),fontSize:14,color:t.rose}}>
+                  ...sp('o',700),fontSize:14,color:t.dangerText}}>
                 Continuer →
               </button>
             </div>
@@ -99,7 +99,7 @@ export const ResetModal = ({ t, uid, onClose, onDone }: Props) => {
                 Confirmation requise
               </div>
               <div style={{fontSize:13,...sp('o'),color:t.sub,lineHeight:1.6}}>
-                Tape <span style={{color:t.rose,...sp('m',700),
+                Tape <span style={{color:t.dangerText,...sp('m',700),
                   letterSpacing:1}}>{CONFIRM_WORD}</span> pour confirmer
               </div>
             </div>
@@ -109,7 +109,7 @@ export const ResetModal = ({ t, uid, onClose, onDone }: Props) => {
               autoFocus
               style={{width:'100%',padding:'14px',background:t.el,
                 border:'2px solid '+(typed===CONFIRM_WORD?t.rose:t.bo),
-                borderRadius:14,...sp('m',600),fontSize:18,color:t.rose,
+                borderRadius:14,...sp('m',600),fontSize:18,color:t.dangerText,
                 outline:'none',textAlign:'center',letterSpacing:2,marginBottom:16}}/>
             <div style={{display:'flex',gap:10}}>
               <button onClick={()=>{setStep(1);setTyped('');}}

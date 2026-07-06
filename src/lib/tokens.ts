@@ -33,6 +33,8 @@ export const BRAND = {
   danger: '#EF4444',
   // FIX contraste : blanc sur #EF4444 = 3.76:1 (échec). Fond des boutons danger foncé.
   dangerBtn: '#DC2626', // brand danger-600 — blanc dessus ≥ 4.5:1
+  // FIX contraste : #EF4444 en TEXTE sur blanc = 3.76:1 (échec). Rouge foncé pour texte.
+  dangerTextLight: '#B91C1C', // danger-700 — sur blanc ≈ 5.9:1
   info: '#3B82F6',
   neutral: '#64748B',
 } as const
@@ -49,6 +51,7 @@ export const TV3: { light: Theme; dark: Theme } = {
     rB: 'rgba(239,68,68,0.22)',
     mintFill: BRAND.mintFill, mintText: BRAND.mintTextLight,
     indigo: BRAND.indigo, violet: BRAND.violet, dangerBtn: BRAND.dangerBtn,
+    dangerText: BRAND.dangerTextLight,
     success: BRAND.success, alert: BRAND.alert, danger: BRAND.danger,
     info: BRAND.info, neutral: BRAND.neutral,
   },
@@ -63,6 +66,7 @@ export const TV3: { light: Theme; dark: Theme } = {
     // Sur fond sombre, la menthe vive passe le contraste en texte : mintText = mintFill
     mintFill: BRAND.mintFill, mintText: BRAND.mintFill,
     indigo: '#6366F1', violet: BRAND.violet, dangerBtn: '#DC2626',
+    dangerText: '#F87171', // rouge clair — texte sur fond sombre
     success: '#4ADE80', alert: '#FBBF24', danger: '#F87171',
     info: '#7DA2F2', neutral: '#94A3B8',
   },

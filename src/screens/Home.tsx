@@ -160,7 +160,7 @@ export const Home = ({
             <div style={{ width: 1, background: t.bo, flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 11, ...sp('s', 400), color: t.sub, marginBottom: 2 }}>Dépenses</div>
-              <div style={{ fontSize: 16, ...sp('s', 700), color: t.rose }}>
+              <div style={{ fontSize: 16, ...sp('s', 700), color: t.dangerText }}>
                 {fmt(D.monthSpent || 0, 2)}
               </div>
               <div style={{ fontSize: 10, ...sp('s', 400), color: t.muted, marginTop: 2 }}>Ce mois</div>

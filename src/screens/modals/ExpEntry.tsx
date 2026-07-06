@@ -183,7 +183,7 @@ export const ExpEntry = ({ D, t, onClose, onSave, group, members, uid, recurring
                   {[
                     { label: 'Solde après opération', value: fmtBal(selectedScore.soldeApres), color: selectedScore.soldeApres >= 0 ? t.tx : t.rose },
                     { label: 'Prélèvements restants du mois', value: selectedScore.committed > 0 ? '−' + fmtBal(selectedScore.committed) : '—', color: t.amber },
-                    { label: 'Solde prévisionnel fin de mois', value: fmtBal(selectedScore.finDeMois), color: selectedScore.finDeMois >= 0 ? t.mintText : t.rose },
+                    { label: 'Solde prévisionnel fin de mois', value: fmtBal(selectedScore.finDeMois), color: selectedScore.finDeMois >= 0 ? t.mintText : t.dangerText },
                   ].map(({ label, value, color }, i, arr) => (
                     <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                       paddingBottom: i < arr.length - 1 ? 10 : 0, marginBottom: i < arr.length - 1 ? 10 : 0,
