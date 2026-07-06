@@ -16,6 +16,8 @@ export interface Theme {
   indigo?: string
   /** Violet — accent décoratif non sémantique. */
   violet?: string
+  /** Rouge foncé pour les FONDS de boutons danger (blanc dessus AA). */
+  dangerBtn?: string
   /** Couleurs sémantiques dédiées (distinctes de l'accent de marque). */
   success?: string; alert?: string; danger?: string; info?: string; neutral?: string
 }

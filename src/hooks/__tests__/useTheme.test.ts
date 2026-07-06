@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useTheme } from '../useTheme'
-import { T } from '../../lib/theme'
+import { TV3 as T } from '../../lib/tokens'
 
 function mockMatchMedia(prefersDark: boolean) {
   const listeners: Array<(e: { matches: boolean }) => void> = []

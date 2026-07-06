@@ -34,4 +34,12 @@ describe('tokens V3 — direction hybride', () => {
   it('thème sombre : la menthe vive sert de menthe-texte', () => {
     expect(TV3.dark.mintText).toBe(TV3.dark.mintFill)
   })
+
+  it('bouton danger : blanc sur dangerBtn respecte AA (fix du 3.76:1 sur #EF4444)', () => {
+    expect(contrast('#FFFFFF', TV3.light.dangerBtn!)).toBeGreaterThanOrEqual(4.5)
+  })
+
+  it('texte secondaire sur fond clair respecte AA', () => {
+    expect(contrast(TV3.light.sub, TV3.light.bg)).toBeGreaterThanOrEqual(4.5)
+  })
 })
