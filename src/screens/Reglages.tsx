@@ -47,7 +47,7 @@ const PushSettings = ({ t, uid }: { t: Theme; uid: string }) => {
           <div style={{ fontSize: 12, ...sp('o'), color: subscribed ? t.mint : t.sub }}>{subscribed ? 'Activées sur cet appareil' : 'Désactivées'}</div>
         </div>
         <button onClick={toggle} disabled={busy}
-          style={{ padding: '7px 12px', borderRadius: 10, background: subscribed ? t.rD : t.mD, border: '1px solid ' + (subscribed ? t.rose : t.mint) + '44', cursor: 'pointer', ...sp('o', 600), fontSize: 12, color: subscribed ? t.rose : t.mint, opacity: busy ? 0.5 : 1 }}>
+          style={{ padding: '7px 12px', borderRadius: 10, background: subscribed ? t.rD : t.mD, border: '1px solid ' + (subscribed ? t.rose : t.mintText) + '44', cursor: 'pointer', ...sp('o', 600), fontSize: 12, color: subscribed ? t.rose : t.mintText, opacity: busy ? 0.5 : 1 }}>
           {busy ? '…' : subscribed ? 'Désactiver' : 'Activer'}
         </button>
       </div>
@@ -87,7 +87,7 @@ const NotifSettings = ({ t }: { t: Theme }) => {
           <div style={{ fontSize: 12, ...sp('o'), color: perm === 'granted' ? t.mint : t.sub }}>{perm === 'granted' ? 'Activées' : 'Non autorisées'}</div>
         </div>
         {perm !== 'granted' && (
-          <button onClick={requestPerm} style={{ padding: '7px 12px', borderRadius: 10, background: t.mD, border: '1px solid ' + t.mint + '44', cursor: 'pointer', ...sp('o', 600), fontSize: 12, color: t.mint }}>
+          <button onClick={requestPerm} style={{ padding: '7px 12px', borderRadius: 10, background: t.mD, border: '1px solid ' + t.mint + '44', cursor: 'pointer', ...sp('o', 600), fontSize: 12, color: t.mintText }}>
             Activer
           </button>
         )}

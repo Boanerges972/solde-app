@@ -45,7 +45,7 @@ export const LockScreen = ({ t, onUnlock }: Props) => {
       justifyContent:'center',
       paddingBottom:'env(safe-area-inset-bottom,0px)'}}>
       <div style={{marginBottom:40,textAlign:'center'}}>
-        <div style={{fontSize:36,...sp('s',700),color:t.mint,letterSpacing:-1.5}}>QDQ</div>
+        <div style={{fontSize:36,...sp('s',700),color:t.mintText,letterSpacing:-1.5}}>QDQ</div>
         <div style={{fontSize:13,...sp('o'),color:t.sub,marginTop:4}}>Entrez votre code</div>
       </div>
       <div style={{display:'flex',gap:18,marginBottom:14,

@@ -73,7 +73,7 @@ export const DepositModal = ({ account, t, onClose, onSave }: Props) => {
             {amount ? '+' + fmt(n || 0) : '0,00 €'}
           </div>
           <div style={{fontSize:12,...sp('o'),color:t.sub,marginTop:2}}>
-            Solde actuel : {fmt(account.bal)} → <span style={{color:t.mint}}>{fmt((account.bal||0)+(n||0))}</span>
+            Solde actuel : {fmt(account.bal)} → <span style={{color:t.mintText}}>{fmt((account.bal||0)+(n||0))}</span>
           </div>
         </div>
 

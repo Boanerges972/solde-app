@@ -108,7 +108,7 @@ export const ProfileScreen = ({ t, user, onClose, onSaved }: Props) => {
                     {c.pos==='before'?c.sym+' 1 234,56':'1 234,56 '+c.sym}
                   </div>
                 </div>
-                {currency===c.code&&<span style={{color:t.mint,fontSize:16}}>✓</span>}
+                {currency===c.code&&<span style={{color:t.mintText,fontSize:16}}>✓</span>}
               </button>
             ))}
           </div>

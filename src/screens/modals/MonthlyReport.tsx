@@ -68,18 +68,18 @@ export const MonthlyReport = ({ t, txs, onClose }: Props) => {
             <div style={{ fontSize: 11, ...sp('o'), color: t.sub }}>Dépenses</div>
             <div style={{ fontSize: 18, ...sp('m', 700), color: t.rose }}>{fmt(cur.totalSpent)}</div>
             {deltaPct != null && (
-              <div style={{ fontSize: 10.5, ...sp('o', 600), color: deltaPct > 0 ? t.rose : t.mint }}>
+              <div style={{ fontSize: 10.5, ...sp('o', 600), color: deltaPct > 0 ? t.rose : t.mintText }}>
                 {deltaPct > 0 ? '+' : ''}{deltaPct}% vs {prevLabel}
               </div>
             )}
           </div>
           <div style={{ flex: 1, background: t.mD, borderRadius: 12, padding: '12px 14px' }}>
             <div style={{ fontSize: 11, ...sp('o'), color: t.sub }}>Revenus</div>
-            <div style={{ fontSize: 18, ...sp('m', 700), color: t.mint }}>{fmt(cur.totalIncome)}</div>
+            <div style={{ fontSize: 18, ...sp('m', 700), color: t.mintText }}>{fmt(cur.totalIncome)}</div>
           </div>
           <div style={{ flex: 1, background: t.el, borderRadius: 12, padding: '12px 14px' }}>
             <div style={{ fontSize: 11, ...sp('o'), color: t.sub }}>Solde du mois</div>
-            <div style={{ fontSize: 18, ...sp('m', 700), color: cur.totalIncome - cur.totalSpent >= 0 ? t.mint : t.rose }}>
+            <div style={{ fontSize: 18, ...sp('m', 700), color: cur.totalIncome - cur.totalSpent >= 0 ? t.mintText : t.rose }}>
               {fmt(cur.totalIncome - cur.totalSpent)}
             </div>
           </div>

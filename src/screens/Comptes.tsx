@@ -64,7 +64,7 @@ export const Comptes = ({ D, t, onEdit, onNew, onImport, onDeposit, onTransfer }
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: t.mD, border: '1px solid ' + t.mint + '44', borderRadius: 10, cursor: 'pointer' }}
           >
             <Icon n="plus" sz={14} c={t.mint} />
-            <span style={{ fontSize: 12, ...sp('o', 600), color: t.mint }}>Ajouter</span>
+            <span style={{ fontSize: 12, ...sp('o', 600), color: t.mintText }}>Ajouter</span>
           </button>
           {onTransfer && D.accounts.length >= 2 && (
             <button
@@ -254,7 +254,7 @@ export const Comptes = ({ D, t, onEdit, onNew, onImport, onDeposit, onTransfer }
               }}
             >
               <span style={{ fontSize: 18 }}>＋</span>
-              <span style={{ fontSize: 8, ...sp('o', 600), color: t.mint }}>fonds</span>
+              <span style={{ fontSize: 8, ...sp('o', 600), color: t.mintText }}>fonds</span>
             </button>
           </div>
         )

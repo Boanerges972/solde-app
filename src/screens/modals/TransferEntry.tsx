@@ -66,7 +66,7 @@ export const TransferEntry = ({ D, t, onClose, onTransfer }: Props) => {
               {amount||'0,00'}
             </span>
             <span style={{fontSize:20,...sp('m',300),color:t.sub}}> €</span>
-            <span style={{fontSize:42,...sp('m',300),color:t.mint,animation:'blink 1s infinite',lineHeight:1}}>|</span>
+            <span style={{fontSize:42,...sp('m',300),color:t.mintText,animation:'blink 1s infinite',lineHeight:1}}>|</span>
           </div>
           <input type="number" min="0" step="0.01" value={amount}
             aria-label="Montant du virement en euros"
@@ -183,7 +183,7 @@ export const TransferEntry = ({ D, t, onClose, onTransfer }: Props) => {
           border:'1px solid '+t.mint+'33',marginBottom:14,
           display:'flex',alignItems:'center',gap:8}}>
           <span style={{fontSize:15}}>ℹ️</span>
-          <span style={{fontSize:12,...sp('o'),color:t.mint}}>
+          <span style={{fontSize:12,...sp('o'),color:t.mintText}}>
             Ce virement ne compte pas dans tes dépenses hebdomadaires
           </span>
         </div>

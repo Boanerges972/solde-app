@@ -70,7 +70,7 @@ export const ResetModal = ({ t, uid, onClose, onDone }: Props) => {
             ))}
             <div style={{marginTop:14,padding:'10px 12px',borderRadius:12,
               background:t.mD,border:'1px solid '+t.mint+'33',marginBottom:20}}>
-              <span style={{fontSize:12,...sp('o',600),color:t.mint}}>
+              <span style={{fontSize:12,...sp('o',600),color:t.mintText}}>
                 ✓ Ton compte et tes préférences sont conservés
               </span>
             </div>

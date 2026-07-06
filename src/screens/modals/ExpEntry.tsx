@@ -136,7 +136,7 @@ export const ExpEntry = ({ D, t, onClose, onSave, group, members, uid, recurring
                       <span style={{ fontSize: 12, color: t.sub, flex: 1, lineHeight: 1.4 }}>
                         C'est l'option qui optimise le mieux vos finances ce mois-ci.
                       </span>
-                      <div style={{ background: t.mD, color: t.mint, fontSize: 10, fontWeight: 700,
+                      <div style={{ background: t.mD, color: t.mintText, fontSize: 10, fontWeight: 700,
                         padding: '3px 10px', borderRadius: 20, marginLeft: 10, whiteSpace: 'nowrap' }}>
                         Recommandé
                       </div>
@@ -183,7 +183,7 @@ export const ExpEntry = ({ D, t, onClose, onSave, group, members, uid, recurring
                   {[
                     { label: 'Solde après opération', value: fmtBal(selectedScore.soldeApres), color: selectedScore.soldeApres >= 0 ? t.tx : t.rose },
                     { label: 'Prélèvements restants du mois', value: selectedScore.committed > 0 ? '−' + fmtBal(selectedScore.committed) : '—', color: t.amber },
-                    { label: 'Solde prévisionnel fin de mois', value: fmtBal(selectedScore.finDeMois), color: selectedScore.finDeMois >= 0 ? t.mint : t.rose },
+                    { label: 'Solde prévisionnel fin de mois', value: fmtBal(selectedScore.finDeMois), color: selectedScore.finDeMois >= 0 ? t.mintText : t.rose },
                   ].map(({ label, value, color }, i, arr) => (
                     <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                       paddingBottom: i < arr.length - 1 ? 10 : 0, marginBottom: i < arr.length - 1 ? 10 : 0,
@@ -243,7 +243,7 @@ export const ExpEntry = ({ D, t, onClose, onSave, group, members, uid, recurring
           <div style={{display:'inline-flex',alignItems:'baseline',gap:2}}>
             <span style={{fontSize:46,...sp('m',300),color:amount?t.tx:t.muted,lineHeight:1}}>{amount||'0,00'}</span>
             <span style={{fontSize:20,...sp('m',300),color:t.sub}}> €</span>
-            <span style={{fontSize:42,...sp('m',300),color:t.mint,animation:'blink 1s infinite',lineHeight:1}}>|</span>
+            <span style={{fontSize:42,...sp('m',300),color:t.mintText,animation:'blink 1s infinite',lineHeight:1}}>|</span>
           </div>
           <input type="number" min="0" step="0.01" value={amount} onChange={e=>setAmount(e.target.value)}
             style={{position:'absolute',opacity:0,width:'100%',height:'100%',top:0,left:0,cursor:'pointer'}}/>

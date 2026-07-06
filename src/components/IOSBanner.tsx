@@ -21,7 +21,7 @@ export const IOSBanner = ({ t, onDismiss }: Props) => (
     {([['1', 'Tape sur', '⬆️', 'en bas de Safari'], ['2', 'Fais défiler et tape', '📋', "Sur l'écran d'accueil"], ['3', 'Tape', '✅', 'Ajouter en haut']] as [string, string, string, string][]).map(([n, a, ic, b]) => (
       <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
         <div style={{ width: 22, height: 22, borderRadius: 11, background: t.mD, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <span style={{ fontSize: 10, ...sp('m', 700), color: t.mint }}>{n}</span>
+          <span style={{ fontSize: 10, ...sp('m', 700), color: t.mintText }}>{n}</span>
         </div>
         <span style={{ fontSize: 13, ...sp('o'), color: t.sub }}>{a} <span style={{ fontSize: 16 }}>{ic}</span> <span style={{ color: t.tx }}>{b}</span></span>
       </div>

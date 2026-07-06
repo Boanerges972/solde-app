@@ -157,7 +157,7 @@ export const RecurringManager = ({ t, accounts, recurrings, allHistory, onAdd, o
             <button onClick={()=>setTab('add')}
               style={{padding:'6px 12px',borderRadius:10,background:t.mD,
                 border:'1px solid '+t.mint+'44',cursor:'pointer',
-                ...sp('o',600),fontSize:13,color:t.mint}}>+ Manuel</button>
+                ...sp('o',600),fontSize:13,color:t.mintText}}>+ Manuel</button>
           ):<div style={{width:70}}/>}
         </div>
 
@@ -247,7 +247,7 @@ export const RecurringManager = ({ t, accounts, recurrings, allHistory, onAdd, o
               border:'1px solid '+t.mint+'33',marginBottom:14,
               display:'flex',gap:8,alignItems:'flex-start'}}>
               <span style={{fontSize:16,flexShrink:0}}>🤖</span>
-              <div style={{fontSize:11,...sp('o'),color:t.mint,lineHeight:1.5}}>
+              <div style={{fontSize:11,...sp('o'),color:t.mintText,lineHeight:1.5}}>
                 Analyse de ton historique. ✅ = 6 mois+ consécutifs · 🔍 = 3 à 5 mois · 👁 = à surveiller
               </div>
             </div>
@@ -317,7 +317,7 @@ export const RecurringManager = ({ t, accounts, recurrings, allHistory, onAdd, o
                       <div style={{display:'flex',gap:0,borderTop:'1px solid '+t.bo+'66'}}>
                         <button onClick={()=>confirmDetected(d)}
                           style={{flex:1,padding:'10px',background:'none',border:'none',
-                            cursor:'pointer',fontSize:12,...sp('o',600),color:t.mint,
+                            cursor:'pointer',fontSize:12,...sp('o',600),color:t.mintText,
                             borderRight:'1px solid '+t.bo+'66'}}>
                           ✓ Ajouter aux prélèvements
                         </button>

@@ -113,7 +113,7 @@ export const Groupe = ({ t, uid, group, members, createGroup, joinGroup, leaveGr
           <div style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 11, ...sp('s', 600), color: t.sub, letterSpacing: .6, textTransform: 'uppercase', marginBottom: 6 }}>Code d'invitation</div>
             <input value={code} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="A3F7K2" maxLength={6}
-              style={{ width: '100%', padding: '12px 14px', background: t.el, border: '1.5px solid ' + t.bo, borderRadius: 12, ...sp('m', 600), fontSize: 22, letterSpacing: 6, color: t.mint, textAlign: 'center', outline: 'none' }} />
+              style={{ width: '100%', padding: '12px 14px', background: t.el, border: '1.5px solid ' + t.bo, borderRadius: 12, ...sp('m', 600), fontSize: 22, letterSpacing: 6, color: t.mintText, textAlign: 'center', outline: 'none' }} />
           </div>
         )}
         <div style={{ marginBottom: 20 }}>
@@ -172,7 +172,7 @@ export const Groupe = ({ t, uid, group, members, createGroup, joinGroup, leaveGr
           <div style={{ fontSize: 17, ...sp('s', 700), color: t.tx }}>{group.name}</div>
           <div style={{ fontSize: 12, ...sp('o'), color: t.sub }}>{members.map(m => m.display_name).join(' & ')}</div>
         </div>
-        <button onClick={() => setShowCode(s => !s)} style={{ padding: '7px 12px', borderRadius: 10, background: t.mD, border: '1px solid ' + t.mint + '44', cursor: 'pointer', ...sp('m', 600), fontSize: 11, color: t.mint }}>
+        <button onClick={() => setShowCode(s => !s)} style={{ padding: '7px 12px', borderRadius: 10, background: t.mD, border: '1px solid ' + t.mint + '44', cursor: 'pointer', ...sp('m', 600), fontSize: 11, color: t.mintText }}>
           {showCode ? group.invite_code : 'Code'}
         </button>
       </div>
@@ -180,7 +180,7 @@ export const Groupe = ({ t, uid, group, members, createGroup, joinGroup, leaveGr
       {showCode && (
         <div style={{ padding: '14px', background: t.mD, borderRadius: 14, border: '1px solid ' + t.mint + '44', marginBottom: 14, textAlign: 'center' }}>
           <div style={{ fontSize: 11, ...sp('o'), color: t.sub, marginBottom: 6 }}>Partage ce code à ton partenaire</div>
-          <div style={{ fontSize: 30, ...sp('m', 700), color: t.mint, letterSpacing: 8 }}>{group.invite_code}</div>
+          <div style={{ fontSize: 30, ...sp('m', 700), color: t.mintText, letterSpacing: 8 }}>{group.invite_code}</div>
         </div>
       )}
 
@@ -190,7 +190,7 @@ export const Groupe = ({ t, uid, group, members, createGroup, joinGroup, leaveGr
         {balance === 0 ? (
           <div>
             <div style={{ fontSize: 36 }}>🎉</div>
-            <div style={{ fontSize: 15, ...sp('s', 600), color: t.mint, marginTop: 8 }}>Vous êtes quittes !</div>
+            <div style={{ fontSize: 15, ...sp('s', 600), color: t.mintText, marginTop: 8 }}>Vous êtes quittes !</div>
             <div style={{ fontSize: 12, ...sp('o'), color: t.sub, marginTop: 4 }}>Total commun : {fmtS(totalCommun)}</div>
           </div>
         ) : (
@@ -215,10 +215,10 @@ export const Groupe = ({ t, uid, group, members, createGroup, joinGroup, leaveGr
         {results.map((r, i) => (
           <div key={i} style={{ flex: 1, padding: '14px', background: r.isMe ? t.mD : t.card, borderRadius: 14, border: '1px solid ' + (r.isMe ? t.mint + '44' : t.bo), textAlign: 'center' }}>
             <div style={{ width: 36, height: 36, borderRadius: 18, background: r.net >= 0 ? t.mint + '22' : t.rD, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px' }}>
-              <span style={{ fontSize: 16, ...sp('s', 700), color: r.net >= 0 ? t.mint : t.rose }}>{r.name.charAt(0).toUpperCase()}</span>
+              <span style={{ fontSize: 16, ...sp('s', 700), color: r.net >= 0 ? t.mintText : t.rose }}>{r.name.charAt(0).toUpperCase()}</span>
             </div>
-            <div style={{ fontSize: 13, ...sp('o', 500), color: t.tx }}>{r.name}{r.isMe && <span style={{ fontSize: 10, color: t.mint }}> (moi)</span>}</div>
-            <div style={{ fontSize: 16, ...sp('m', 600), color: r.net >= 0 ? t.mint : t.rose, marginTop: 4 }}>
+            <div style={{ fontSize: 13, ...sp('o', 500), color: t.tx }}>{r.name}{r.isMe && <span style={{ fontSize: 10, color: t.mintText }}> (moi)</span>}</div>
+            <div style={{ fontSize: 16, ...sp('m', 600), color: r.net >= 0 ? t.mintText : t.rose, marginTop: 4 }}>
               {r.net >= 0 ? '+' : ''}{fmt(r.net)}
             </div>
             <div style={{ fontSize: 10, ...sp('o'), color: t.sub, marginTop: 2 }}>{r.net >= 0 ? 'à recevoir' : 'à rembourser'}</div>
@@ -270,7 +270,7 @@ export const Groupe = ({ t, uid, group, members, createGroup, joinGroup, leaveGr
               <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: 2 }}>
                 <span style={{ fontSize: 46, ...sp('m', 300), color: addAmt ? t.tx : t.muted, lineHeight: 1 }}>{addAmt || '0,00'}</span>
                 <span style={{ fontSize: 20, ...sp('m', 300), color: t.sub }}> €</span>
-                <span style={{ fontSize: 42, ...sp('m', 300), color: t.mint, animation: 'blink 1s infinite', lineHeight: 1 }}>|</span>
+                <span style={{ fontSize: 42, ...sp('m', 300), color: t.mintText, animation: 'blink 1s infinite', lineHeight: 1 }}>|</span>
               </div>
               <input type="number" min="0" step="0.01" value={addAmt} onChange={e => setAddAmt(e.target.value)}
                 style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', top: 0, left: 0, cursor: 'pointer' }} />
@@ -293,7 +293,7 @@ export const Groupe = ({ t, uid, group, members, createGroup, joinGroup, leaveGr
                   }}>
                     <span style={{ fontSize: 16, width: 22, textAlign: 'center', flexShrink: 0 }}>{c.ico}</span>
                     <span style={{ fontSize: 13, ...sp('o', addCat === c.n ? 600 : 400), color: addCat === c.n ? t.mint : t.tx, flex: 1 }}>{c.n}</span>
-                    {addCat === c.n && <span style={{ fontSize: 12, color: t.mint }}>✓</span>}
+                    {addCat === c.n && <span style={{ fontSize: 12, color: t.mintText }}>✓</span>}
                   </button>
                 ))}
               </div>

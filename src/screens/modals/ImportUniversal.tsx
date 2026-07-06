@@ -315,7 +315,7 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
                 <div style={{ fontSize: 16, ...sp('m', 600), color: t.tx, marginTop: 2 }}>{fmt(totalDebits)}</div>
               </div>
               <div style={{ flex: 1, padding: '12px', background: t.mD, borderRadius: 12, border: '1px solid ' + t.mint + '33' }}>
-                <div style={{ fontSize: 11, ...sp('o'), color: t.mint }}>Sélectionnées</div>
+                <div style={{ fontSize: 11, ...sp('o'), color: t.mintText }}>Sélectionnées</div>
                 <div style={{ fontSize: 16, ...sp('m', 600), color: t.tx, marginTop: 2 }}>{Object.values(selected).filter(Boolean).length}</div>
               </div>
             </div>
@@ -353,7 +353,7 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
                     <button key={c} onClick={() => setNewAccColor(c)} style={{ width: 28, height: 28, borderRadius: 14, background: c, border: 'none', cursor: 'pointer', outline: newAccColor === c ? '3px solid ' + t.tx : '3px solid transparent', outlineOffset: 2 }} />
                   ))}
                 </div>
-                <div style={{ padding: '10px 12px', background: t.mD, borderRadius: 10, fontSize: 12, ...sp('o'), color: t.mint }}>
+                <div style={{ padding: '10px 12px', background: t.mD, borderRadius: 10, fontSize: 12, ...sp('o'), color: t.mintText }}>
                   💰 Solde calculé : <b>{fmt(Math.abs(txs.filter((_, i) => selected[i]).reduce((s, tx) => s + tx.amount, 0)))}</b>
                   {txs.filter((_, i) => selected[i]).reduce((s, tx) => s + tx.amount, 0) < 0 ? ' (débiteur)' : ' (créditeur)'}
                 </div>
@@ -361,7 +361,7 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
             )}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <span style={{ fontSize: 12, ...sp('o'), color: t.sub }}>{Object.values(selected).filter(Boolean).length} / {txs.length}</span>
-              <button onClick={() => { const all = Object.values(selected).every(Boolean); const ns: Record<number, boolean> = {}; txs.forEach((_, i) => { ns[i] = !all }); setSelected(ns) }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, ...sp('o', 600), color: t.mint }}>
+              <button onClick={() => { const all = Object.values(selected).every(Boolean); const ns: Record<number, boolean> = {}; txs.forEach((_, i) => { ns[i] = !all }); setSelected(ns) }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, ...sp('o', 600), color: t.mintText }}>
                 {Object.values(selected).every(Boolean) ? 'Tout désélectionner' : 'Tout sélectionner'}
               </button>
             </div>

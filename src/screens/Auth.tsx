@@ -217,7 +217,7 @@ export const AuthScreen = ({ t, notice }: Props) => {
           </div>
         )}
         {err && <div role="alert" style={{ padding: '10px', borderRadius: 10, background: t.rD, border: '1px solid ' + t.rose + '44', marginBottom: 12, ...sp('o'), fontSize: 13, color: t.rose }}>{err}</div>}
-        {ok && <div role="status" style={{ padding: '10px', borderRadius: 10, background: t.mD, border: '1px solid ' + t.mint + '44', marginBottom: 12, ...sp('o'), fontSize: 13, color: t.mint }}>{ok}</div>}
+        {ok && <div role="status" style={{ padding: '10px', borderRadius: 10, background: t.mD, border: '1px solid ' + t.mint + '44', marginBottom: 12, ...sp('o'), fontSize: 13, color: t.mintText }}>{ok}</div>}
         <button onClick={submit} disabled={loading}
           style={{ width: '100%', padding: '14px', borderRadius: 14, border: 'none', cursor: loading ? 'wait' : 'pointer', background: loading ? t.el : t.primary, ...sp('o', 700), fontSize: 15, color: loading ? t.sub : '#fff' }}>
           {loading ? '...' : (mode === 'login' ? 'Se connecter' : mode === 'signup' ? 'Créer mon compte' : 'Envoyer')}
