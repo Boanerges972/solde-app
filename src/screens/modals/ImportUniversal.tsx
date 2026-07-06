@@ -246,7 +246,7 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
               </div>
               <div style={{ fontSize: 12, ...sp('o'), color: t.sub }}>{bankDef.name} · {bankDef.accept.toUpperCase()}</div>
             </label>
-            {err && <div style={{ padding: '12px', borderRadius: 12, background: t.rD, border: '1px solid ' + t.rose + '44', ...sp('o'), fontSize: 13, color: t.rose, marginBottom: 12 }}>{err}</div>}
+            {err && <div style={{ padding: '12px', borderRadius: 12, background: t.rD, border: '1px solid ' + t.rose + '44', ...sp('o'), fontSize: 13, color: t.dangerText, marginBottom: 12 }}>{err}</div>}
             {dupFileNames.length > 0 && (
               <div style={{ padding: '12px 14px', background: t.aD, borderRadius: 12, border: '1px solid ' + t.amber + '44', fontSize: 13, ...sp('o'), color: t.amber, marginBottom: 12 }}>
                 ⚠️ {dupFileNames.length === 1 ? `"${dupFileNames[0]}" a déjà été importé.` : `${dupFileNames.length} fichiers déjà importés : ${dupFileNames.join(', ')}.`} Les doublons seront filtrés.
@@ -311,11 +311,11 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
           <div>
             <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
               <div style={{ flex: 1, padding: '12px', background: t.rD, borderRadius: 12, border: '1px solid ' + t.rose + '33' }}>
-                <div style={{ fontSize: 11, ...sp('o'), color: t.rose }}>{expCount} dépenses</div>
+                <div style={{ fontSize: 11, ...sp('o'), color: t.dangerText }}>{expCount} dépenses</div>
                 <div style={{ fontSize: 16, ...sp('m', 600), color: t.tx, marginTop: 2 }}>{fmt(totalDebits)}</div>
               </div>
               <div style={{ flex: 1, padding: '12px', background: t.mD, borderRadius: 12, border: '1px solid ' + t.mint + '33' }}>
-                <div style={{ fontSize: 11, ...sp('o'), color: t.mint }}>Sélectionnées</div>
+                <div style={{ fontSize: 11, ...sp('o'), color: t.mintText }}>Sélectionnées</div>
                 <div style={{ fontSize: 16, ...sp('m', 600), color: t.tx, marginTop: 2 }}>{Object.values(selected).filter(Boolean).length}</div>
               </div>
             </div>
@@ -340,7 +340,7 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
                 <div style={{ fontSize: 11, ...sp('s', 600), color: t.sub, letterSpacing: .6, textTransform: 'uppercase', marginBottom: 10 }}>Créer le compte</div>
                 <input type="text" value={newAccName} onChange={e => setNewAccName(e.target.value)} placeholder="Nom du compte (ex: Compte BNP)"
                   style={{ width: '100%', padding: '11px 14px', background: t.el, border: '1.5px solid ' + (createErr ? t.rose : t.bo), borderRadius: 12, ...sp('o'), fontSize: 14, color: t.tx, outline: 'none', marginBottom: 10, boxSizing: 'border-box' }} />
-                {createErr && <div style={{ fontSize: 12, ...sp('o'), color: t.rose, marginBottom: 8 }}>{createErr}</div>}
+                {createErr && <div style={{ fontSize: 12, ...sp('o'), color: t.dangerText, marginBottom: 8 }}>{createErr}</div>}
                 <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
                   {['Courant', 'Épargne', 'Pro'].map(tp => (
                     <button key={tp} onClick={() => setNewAccType(tp)} style={{ padding: '7px 12px', borderRadius: 10, border: 'none', cursor: 'pointer', ...sp('o', 600), fontSize: 12, background: newAccType === tp ? newAccColor + '33' : t.el, color: newAccType === tp ? newAccColor : t.sub }}>
@@ -353,7 +353,7 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
                     <button key={c} onClick={() => setNewAccColor(c)} style={{ width: 28, height: 28, borderRadius: 14, background: c, border: 'none', cursor: 'pointer', outline: newAccColor === c ? '3px solid ' + t.tx : '3px solid transparent', outlineOffset: 2 }} />
                   ))}
                 </div>
-                <div style={{ padding: '10px 12px', background: t.mD, borderRadius: 10, fontSize: 12, ...sp('o'), color: t.mint }}>
+                <div style={{ padding: '10px 12px', background: t.mD, borderRadius: 10, fontSize: 12, ...sp('o'), color: t.mintText }}>
                   💰 Solde calculé : <b>{fmt(Math.abs(txs.filter((_, i) => selected[i]).reduce((s, tx) => s + tx.amount, 0)))}</b>
                   {txs.filter((_, i) => selected[i]).reduce((s, tx) => s + tx.amount, 0) < 0 ? ' (débiteur)' : ' (créditeur)'}
                 </div>
@@ -361,7 +361,7 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
             )}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <span style={{ fontSize: 12, ...sp('o'), color: t.sub }}>{Object.values(selected).filter(Boolean).length} / {txs.length}</span>
-              <button onClick={() => { const all = Object.values(selected).every(Boolean); const ns: Record<number, boolean> = {}; txs.forEach((_, i) => { ns[i] = !all }); setSelected(ns) }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, ...sp('o', 600), color: t.mint }}>
+              <button onClick={() => { const all = Object.values(selected).every(Boolean); const ns: Record<number, boolean> = {}; txs.forEach((_, i) => { ns[i] = !all }); setSelected(ns) }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, ...sp('o', 600), color: t.mintText }}>
                 {Object.values(selected).every(Boolean) ? 'Tout désélectionner' : 'Tout sélectionner'}
               </button>
             </div>
@@ -373,7 +373,7 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
                   <div style={{ fontSize: 13, ...sp('o', 500), color: t.tx, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.merchant}</div>
                   <div style={{ fontSize: 11, ...sp('o'), color: t.sub, marginTop: 1 }}>{tx.category} · {tx.dt.split('-').reverse().join('/')}</div>
                 </div>
-                <div style={{ fontSize: 13, ...sp('m', 500), color: tx.amount < 0 ? t.tx : t.mint, flexShrink: 0 }}>
+                <div style={{ fontSize: 13, ...sp('m', 500), color: tx.amount < 0 ? t.tx : t.mintText, flexShrink: 0 }}>
                   {tx.amount < 0 ? '−' : '+'}{fmt(Math.abs(tx.amount))}
                 </div>
                 <div style={{ width: 18, height: 18, borderRadius: 9, flexShrink: 0, background: selected[i] ? t.mint : t.bo, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

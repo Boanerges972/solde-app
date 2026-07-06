@@ -69,11 +69,11 @@ export const DepositModal = ({ account, t, onClose, onSave }: Props) => {
 
         {/* Montant affiché */}
         <div style={{textAlign:'center',marginBottom:16}}>
-          <div style={{fontSize:42,...sp('m',300),color:amount?t.mint:t.muted,letterSpacing:1,minHeight:52}}>
+          <div style={{fontSize:42,...sp('m',300),color:amount?t.mintText:t.muted,letterSpacing:1,minHeight:52}}>
             {amount ? '+' + fmt(n || 0) : '0,00 €'}
           </div>
           <div style={{fontSize:12,...sp('o'),color:t.sub,marginTop:2}}>
-            Solde actuel : {fmt(account.bal)} → <span style={{color:t.mint}}>{fmt((account.bal||0)+(n||0))}</span>
+            Solde actuel : {fmt(account.bal)} → <span style={{color:t.mintText}}>{fmt((account.bal||0)+(n||0))}</span>
           </div>
         </div>
 
@@ -83,7 +83,7 @@ export const DepositModal = ({ account, t, onClose, onSave }: Props) => {
             <button key={c.n} onClick={()=>setCat(c)}
               style={{flexShrink:0,padding:'6px 12px',borderRadius:50,border:'none',cursor:'pointer',
                 background:cat.n===c.n?t.mD:t.el,...sp('o',500),fontSize:12,
-                color:cat.n===c.n?t.mint:t.sub,
+                color:cat.n===c.n?t.mintText:t.sub,
                 outline:cat.n===c.n?'1.5px solid '+t.mint:'none'}}>
               {c.ico} {c.n}
             </button>
@@ -104,14 +104,14 @@ export const DepositModal = ({ account, t, onClose, onSave }: Props) => {
             <button key={k} onClick={()=>handleKey(k)}
               style={{padding:'16px 0',borderRadius:14,border:'none',cursor:'pointer',
                 background:k==='⌫'?t.rD:t.el,
-                ...(k==='⌫'?{color:t.rose}:{color:t.tx}),
+                ...(k==='⌫'?{color:t.dangerText}:{color:t.tx}),
                 fontSize:k==='⌫'?18:20,...sp('m',400)}}>
               {k}
             </button>
           ))}
         </div>
 
-        {err&&<div role="alert" style={{padding:'8px 12px',borderRadius:10,background:t.rD,border:'1px solid '+t.rose+'44',marginBottom:10,...sp('o'),fontSize:13,color:t.rose}}>{err}</div>}
+        {err&&<div role="alert" style={{padding:'8px 12px',borderRadius:10,background:t.rD,border:'1px solid '+t.rose+'44',marginBottom:10,...sp('o'),fontSize:13,color:t.dangerText}}>{err}</div>}
 
         <button onClick={save} disabled={saving||!n}
           style={{width:'100%',padding:'15px',background:(!n||saving)?t.el:t.primary,

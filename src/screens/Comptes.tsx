@@ -16,7 +16,7 @@ interface Props {
 const balColor = (a: Account, t: Theme): string => {
   if (a.bal > 0) return t.tx
   if (a.overdraft > 0 && a.bal >= -a.overdraft) return t.amber
-  return t.rose
+  return t.dangerText
 }
 
 export const Comptes = ({ D, t, onEdit, onNew, onImport, onDeposit, onTransfer }: Props) => {
@@ -32,7 +32,7 @@ export const Comptes = ({ D, t, onEdit, onNew, onImport, onDeposit, onTransfer }
         <div style={{ marginBottom: 4, fontSize: 12, ...sp('o', 500), color: t.sub, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
           Patrimoine total
         </div>
-        <div style={{ fontSize: 32, ...sp('m', 600), color: total < 0 ? t.rose : t.tx, lineHeight: 1.1 }}>
+        <div style={{ fontSize: 32, ...sp('m', 600), color: total < 0 ? t.dangerText : t.tx, lineHeight: 1.1 }}>
           {(total < 0 ? '−' : '') + fmt(Math.abs(total))}
         </div>
         {showSplit && (
@@ -64,7 +64,7 @@ export const Comptes = ({ D, t, onEdit, onNew, onImport, onDeposit, onTransfer }
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: t.mD, border: '1px solid ' + t.mint + '44', borderRadius: 10, cursor: 'pointer' }}
           >
             <Icon n="plus" sz={14} c={t.mint} />
-            <span style={{ fontSize: 12, ...sp('o', 600), color: t.mint }}>Ajouter</span>
+            <span style={{ fontSize: 12, ...sp('o', 600), color: t.mintText }}>Ajouter</span>
           </button>
           {onTransfer && D.accounts.length >= 2 && (
             <button
@@ -137,7 +137,7 @@ export const Comptes = ({ D, t, onEdit, onNew, onImport, onDeposit, onTransfer }
                   {fmtS(a.bal)}
                 </div>
                 {acc.alert && acc.msg && (
-                  <div style={{ fontSize: 11, ...sp('o'), color: t.rose, marginTop: 4 }}>
+                  <div style={{ fontSize: 11, ...sp('o'), color: t.dangerText, marginTop: 4 }}>
                     ⚠ {acc.msg}
                   </div>
                 )}
@@ -176,7 +176,7 @@ export const Comptes = ({ D, t, onEdit, onNew, onImport, onDeposit, onTransfer }
                         borderRadius: 8,
                         fontSize: 11,
                         ...sp('o', 500),
-                        color: t.rose,
+                        color: t.dangerText,
                       }}
                     >
                       Dépassement découvert
@@ -254,7 +254,7 @@ export const Comptes = ({ D, t, onEdit, onNew, onImport, onDeposit, onTransfer }
               }}
             >
               <span style={{ fontSize: 18 }}>＋</span>
-              <span style={{ fontSize: 8, ...sp('o', 600), color: t.mint }}>fonds</span>
+              <span style={{ fontSize: 8, ...sp('o', 600), color: t.mintText }}>fonds</span>
             </button>
           </div>
         )

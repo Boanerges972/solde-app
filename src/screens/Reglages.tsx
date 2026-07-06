@@ -44,10 +44,10 @@ const PushSettings = ({ t, uid }: { t: Theme; uid: string }) => {
         <div style={{ width: 36, height: 36, borderRadius: 10, background: t.mD, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>📲</div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 14, ...sp('o', 500), color: t.tx }}>Notifications push</div>
-          <div style={{ fontSize: 12, ...sp('o'), color: subscribed ? t.mint : t.sub }}>{subscribed ? 'Activées sur cet appareil' : 'Désactivées'}</div>
+          <div style={{ fontSize: 12, ...sp('o'), color: subscribed ? t.mintText : t.sub }}>{subscribed ? 'Activées sur cet appareil' : 'Désactivées'}</div>
         </div>
         <button onClick={toggle} disabled={busy}
-          style={{ padding: '7px 12px', borderRadius: 10, background: subscribed ? t.rD : t.mD, border: '1px solid ' + (subscribed ? t.rose : t.mint) + '44', cursor: 'pointer', ...sp('o', 600), fontSize: 12, color: subscribed ? t.rose : t.mint, opacity: busy ? 0.5 : 1 }}>
+          style={{ padding: '7px 12px', borderRadius: 10, background: subscribed ? t.rD : t.mD, border: '1px solid ' + (subscribed ? t.dangerText : t.mintText) + '44', cursor: 'pointer', ...sp('o', 600), fontSize: 12, color: subscribed ? t.dangerText : t.mintText, opacity: busy ? 0.5 : 1 }}>
           {busy ? '…' : subscribed ? 'Désactiver' : 'Activer'}
         </button>
       </div>
@@ -84,10 +84,10 @@ const NotifSettings = ({ t }: { t: Theme }) => {
         <div style={{ width: 36, height: 36, borderRadius: 10, background: t.aD, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🔔</div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 14, ...sp('o', 500), color: t.tx }}>Alertes budget</div>
-          <div style={{ fontSize: 12, ...sp('o'), color: perm === 'granted' ? t.mint : t.sub }}>{perm === 'granted' ? 'Activées' : 'Non autorisées'}</div>
+          <div style={{ fontSize: 12, ...sp('o'), color: perm === 'granted' ? t.mintText : t.sub }}>{perm === 'granted' ? 'Activées' : 'Non autorisées'}</div>
         </div>
         {perm !== 'granted' && (
-          <button onClick={requestPerm} style={{ padding: '7px 12px', borderRadius: 10, background: t.mD, border: '1px solid ' + t.mint + '44', cursor: 'pointer', ...sp('o', 600), fontSize: 12, color: t.mint }}>
+          <button onClick={requestPerm} style={{ padding: '7px 12px', borderRadius: 10, background: t.mD, border: '1px solid ' + t.mint + '44', cursor: 'pointer', ...sp('o', 600), fontSize: 12, color: t.mintText }}>
             Activer
           </button>
         )}
@@ -278,7 +278,7 @@ export const Settings = ({ t, user, onLogout, profile, onProfile, onSecurity, on
                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🔐</div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 14, ...sp('o', 500), color: t.tx }}>Code PIN</div>
-                <div style={{ fontSize: 11, ...sp('o'), color: pinOn ? t.mint : t.sub, marginTop: 1 }}>
+                <div style={{ fontSize: 11, ...sp('o'), color: pinOn ? t.mintText : t.sub, marginTop: 1 }}>
                   {pinOn ? (bioOn ? 'Activé · biométrie activée' : 'Activé') : 'Désactivé'}
                 </div>
               </div>
@@ -319,7 +319,7 @@ export const Settings = ({ t, user, onLogout, profile, onProfile, onSecurity, on
 
     <button onClick={onLogout} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%', padding: '14px', background: t.rD, border: '1px solid ' + t.rose + '33', borderRadius: 14, cursor: 'pointer' }}>
       <Icon n="logout" sz={18} c={t.rose} />
-      <span style={{ fontSize: 14, ...sp('o', 600), color: t.rose }}>Se déconnecter</span>
+      <span style={{ fontSize: 14, ...sp('o', 600), color: t.dangerText }}>Se déconnecter</span>
     </button>
   </div>
 );

@@ -15,13 +15,13 @@ export const TxRow = ({ tx, t, onDelete }: Props) => {
   const { offset, handlers, reset, open } = useSwipe()
   const isIncome = tx.amt >= 0
   const isTransfer = tx.isTransfer
-  const amtCol = isTransfer ? t.sub : isIncome ? t.mint : t.tx
+  const amtCol = isTransfer ? t.sub : isIncome ? t.mintText : t.tx
   return (
     <div style={{ position: 'relative', overflow: 'hidden' }}>
       <button onClick={() => { reset(); setExpanded(true) }}
         aria-label="Supprimer la transaction" tabIndex={open ? 0 : -1}
         style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 88,
-          background: t.rose, color: '#fff', border: 'none', cursor: 'pointer', fontSize: 13 }}>
+          background: t.dangerBtn, color: '#fff', border: 'none', cursor: 'pointer', fontSize: 13 }}>
         Supprimer
       </button>
       <div {...handlers}
@@ -76,7 +76,7 @@ export const TxRow = ({ tx, t, onDelete }: Props) => {
           ) : (
             <button onClick={async () => { setExpanded(false); await onDelete(tx.id) }}
               style={{ flex: 1, padding: '8px', borderRadius: 10, background: t.rD,
-                border: 'none', cursor: 'pointer', ...sp('o', 600), fontSize: 12, color: t.rose }}>
+                border: 'none', cursor: 'pointer', ...sp('o', 600), fontSize: 12, color: t.dangerText }}>
               Supprimer
             </button>
           )}

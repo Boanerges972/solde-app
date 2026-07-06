@@ -66,7 +66,7 @@ export const ProjectionChart = ({ t, accounts, recurrings, txs }: Props) => {
         <span style={{ fontSize: 22, ...sp('m', 700), color: t.tx }}>{fmt(points[points.length - 1].balance, 0)}</span>
         <span style={{ fontSize: 12, ...sp('o'), color: t.sub }}>dans {horizon} jours</span>
         {goesNegative && (
-          <span style={{ fontSize: 10.5, ...sp('o', 600), color: t.rose, background: t.rD, padding: '2px 8px', borderRadius: 6 }}>
+          <span style={{ fontSize: 10.5, ...sp('o', 600), color: t.dangerText, background: t.rD, padding: '2px 8px', borderRadius: 6 }}>
             ⚠️ passe sous 0 le {new Date(minPoint.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
           </span>
         )}

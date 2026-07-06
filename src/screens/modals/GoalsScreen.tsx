@@ -128,7 +128,7 @@ export const GoalsScreen = ({ t, goals, onAdd, onDeposit, onDelete, onClose }: P
                   <span style={{ fontSize: 16 }}>{g.icon}</span>
                   <span style={{ fontSize: 13, ...sp('o', 600), color: t.tx, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.name}</span>
                 </div>
-                <div style={{ fontSize: 11, ...sp('m', 600), color: done ? t.mint : t.sub, marginTop: 3 }}>
+                <div style={{ fontSize: 11, ...sp('m', 600), color: done ? t.mintText : t.sub, marginTop: 3 }}>
                   {fmt(g.saved_amount)} / {fmt(g.target_amount)}
                 </div>
                 {suggested != null && (

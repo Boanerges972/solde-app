@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
-import { T } from '../lib/theme'
+// Direction V3 (hybride indigo + menthe). L'ancien thème menthe/navy `T`
+// reste dans src/lib/theme.ts si besoin de rollback.
+import { TV3 as T } from '../lib/tokens'
 import type { Theme } from '../types'
 
 export type ThemeMode = 'auto' | 'light' | 'dark'

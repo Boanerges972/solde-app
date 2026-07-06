@@ -143,7 +143,7 @@ export const Home = ({
             <div style={{ fontSize: 28, ...sp('m', 700), color: t.tx, letterSpacing: -0.5, lineHeight: 1 }}>
               {totalBal < 0 ? '−' : ''}{fmt(Math.abs(totalBal), 2)}
             </div>
-            <div style={{ fontSize: 12, ...sp('s', 500), color: t.mint, marginTop: 5 }}>
+            <div style={{ fontSize: 12, ...sp('s', 500), color: t.mintText, marginTop: 5 }}>
               +{fmt(D.monthIncome > 0 ? D.monthIncome * 0.01 : 0, 2)} € vs hier
             </div>
           </div>
@@ -152,7 +152,7 @@ export const Home = ({
           <div style={{ display: 'flex', gap: 16 }}>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 11, ...sp('s', 400), color: t.sub, marginBottom: 2 }}>Revenus</div>
-              <div style={{ fontSize: 16, ...sp('s', 700), color: t.mint }}>
+              <div style={{ fontSize: 16, ...sp('s', 700), color: t.mintText }}>
                 {fmt(D.monthIncome || 0, 2)}
               </div>
               <div style={{ fontSize: 10, ...sp('s', 400), color: t.muted, marginTop: 2 }}>Ce mois</div>
@@ -160,7 +160,7 @@ export const Home = ({
             <div style={{ width: 1, background: t.bo, flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 11, ...sp('s', 400), color: t.sub, marginBottom: 2 }}>Dépenses</div>
-              <div style={{ fontSize: 16, ...sp('s', 700), color: t.rose }}>
+              <div style={{ fontSize: 16, ...sp('s', 700), color: t.dangerText }}>
                 {fmt(D.monthSpent || 0, 2)}
               </div>
               <div style={{ fontSize: 10, ...sp('s', 400), color: t.muted, marginTop: 2 }}>Ce mois</div>
@@ -174,7 +174,7 @@ export const Home = ({
             background: t.mD, borderRadius: 16, padding: 14,
             border: `1.5px solid ${t.mint}`, marginBottom: 16,
           }}>
-            <div style={{ fontSize: 10, ...sp('s', 700), color: t.mint, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
+            <div style={{ fontSize: 10, ...sp('s', 700), color: t.mintText, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
               ⭐ Meilleur choix disponible
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
@@ -290,7 +290,7 @@ export const Home = ({
                 </div>
               ) : (
                 <>
-                  <div style={{ fontSize: 32, ...sp('m', 700), color: t.mint, letterSpacing: -0.5, marginBottom: 6 }}>
+                  <div style={{ fontSize: 32, ...sp('m', 700), color: t.mintText, letterSpacing: -0.5, marginBottom: 6 }}>
                     +{fmt(D.monthIncome, 2)}
                   </div>
                   <div style={{ fontSize: 12, ...sp('s', 400), color: t.sub }}>Ce mois</div>

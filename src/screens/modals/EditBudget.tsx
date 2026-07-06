@@ -95,7 +95,7 @@ export const EditBudget = ({ D, t, uid, onClose, onSaved, defaultPeriod = 'week'
               style={{flex:1,minWidth:52,padding:'9px 0',borderRadius:10,border:'none',
                 cursor:'pointer',...sp('o',600),fontSize:12,
                 background:parseInt(val)===v?t.mint+'22':t.el,
-                color:parseInt(val)===v?t.mint:t.sub}}>
+                color:parseInt(val)===v?t.mintText:t.sub}}>
               {v>=1000?v/1000+'k':v}€
             </button>
           ))}

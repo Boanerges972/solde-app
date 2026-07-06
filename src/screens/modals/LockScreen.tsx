@@ -45,7 +45,7 @@ export const LockScreen = ({ t, onUnlock }: Props) => {
       justifyContent:'center',
       paddingBottom:'env(safe-area-inset-bottom,0px)'}}>
       <div style={{marginBottom:40,textAlign:'center'}}>
-        <div style={{fontSize:36,...sp('s',700),color:t.mint,letterSpacing:-1.5}}>QDQ</div>
+        <div style={{fontSize:36,...sp('s',700),color:t.mintText,letterSpacing:-1.5}}>QDQ</div>
         <div style={{fontSize:13,...sp('o'),color:t.sub,marginTop:4}}>Entrez votre code</div>
       </div>
       <div style={{display:'flex',gap:18,marginBottom:14,
@@ -57,7 +57,7 @@ export const LockScreen = ({ t, onUnlock }: Props) => {
         ))}
       </div>
       <div style={{height:20,marginBottom:24,fontSize:13,...sp('o',600),
-        color:t.rose,opacity:msg?1:0,transition:'opacity .2s'}}>{msg}</div>
+        color:t.dangerText,opacity:msg?1:0,transition:'opacity .2s'}}>{msg}</div>
       <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,width:264}}>
         {keys.map((k,i)=>{
           if (k==='bio') return (
