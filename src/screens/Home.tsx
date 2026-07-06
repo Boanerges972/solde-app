@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { sp } from '../lib/theme'
 import { fmt } from '../lib/currency'
 import { DonutChart } from '../components/DonutChart'
+import { Logo } from '../components/Logo'
 import { scoreAccounts } from '../lib/scoreAccounts'
 import { buildInsights } from '../lib/insights'
 import { InsightsCarousel } from '../components/InsightsCarousel'
@@ -79,6 +80,11 @@ export const Home = ({
 
       {/* ══ DARK NAVY HEADER ════════════════════════════════════════ */}
       <div style={{ background: '#0D1B3E', padding: '50px 20px 80px' }}>
+        {/* Marque */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+          <Logo size={28} />
+          <span style={{ fontSize: 18, ...sp('s', 700), color: '#fff', letterSpacing: -0.5 }}>QDQ</span>
+        </div>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
           {/* Left: greeting + title */}
           <div style={{ flex: 1, minWidth: 0 }}>
