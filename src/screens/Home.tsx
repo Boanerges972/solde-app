@@ -82,7 +82,7 @@ export const Home = ({
       <div style={{ background: '#0D1B3E', padding: '50px 20px 80px' }}>
         {/* Marque */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
-          <Logo size={28} />
+          <Logo size={26} bare fg="#fff" />
           <span style={{ fontSize: 18, ...sp('s', 700), color: '#fff', letterSpacing: -0.5 }}>QDQ</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>

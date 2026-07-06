@@ -19,7 +19,7 @@ export const Sidebar = ({ tab, onTab, onAdd, t }: Props) => (
     position: 'sticky', top: 0,
   }}>
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 12px 20px' }}>
-      <Logo size={32} />
+      <Logo size={30} bare fg="#fff" />
       <span style={{ fontSize: 22, ...sp('s', 700), color: '#fff', letterSpacing: -0.5 }}>QDQ</span>
     </div>
     {ITEMS.map(i => {
