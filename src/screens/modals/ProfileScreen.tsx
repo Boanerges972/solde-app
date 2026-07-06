@@ -54,7 +54,7 @@ export const ProfileScreen = ({ t, user, onClose, onSaved }: Props) => {
         <button onClick={save} disabled={saving||ok}
           style={{padding:'6px 14px',borderRadius:10,border:'none',cursor:'pointer',...sp('o',700),fontSize:13,
           background:ok?t.mD:saving?t.el:t.primary,
-          color:ok?t.mint:saving?t.sub:'#fff'}}>
+          color:ok?t.mintText:saving?t.sub:'#fff'}}>
           {ok?'✓ Sauvé':saving?'…':'Sauver'}
         </button>
       </div>
@@ -100,7 +100,7 @@ export const ProfileScreen = ({ t, user, onClose, onSaved }: Props) => {
                 cursor:'pointer',textAlign:'left'}}>
                 <div style={{width:40,height:28,borderRadius:6,background:currency===c.code?t.mint+'22':t.el,
                   display:'flex',alignItems:'center',justifyContent:'center',marginRight:12,flexShrink:0}}>
-                  <span style={{fontSize:12,...sp('m',700),color:currency===c.code?t.mint:t.sub}}>{c.sym}</span>
+                  <span style={{fontSize:12,...sp('m',700),color:currency===c.code?t.mintText:t.sub}}>{c.sym}</span>
                 </div>
                 <div style={{flex:1}}>
                   <div style={{fontSize:13,...sp('o',500),color:currency===c.code?t.tx:t.sub}}>{c.label}</div>

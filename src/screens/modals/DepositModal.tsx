@@ -69,7 +69,7 @@ export const DepositModal = ({ account, t, onClose, onSave }: Props) => {
 
         {/* Montant affiché */}
         <div style={{textAlign:'center',marginBottom:16}}>
-          <div style={{fontSize:42,...sp('m',300),color:amount?t.mint:t.muted,letterSpacing:1,minHeight:52}}>
+          <div style={{fontSize:42,...sp('m',300),color:amount?t.mintText:t.muted,letterSpacing:1,minHeight:52}}>
             {amount ? '+' + fmt(n || 0) : '0,00 €'}
           </div>
           <div style={{fontSize:12,...sp('o'),color:t.sub,marginTop:2}}>
@@ -83,7 +83,7 @@ export const DepositModal = ({ account, t, onClose, onSave }: Props) => {
             <button key={c.n} onClick={()=>setCat(c)}
               style={{flexShrink:0,padding:'6px 12px',borderRadius:50,border:'none',cursor:'pointer',
                 background:cat.n===c.n?t.mD:t.el,...sp('o',500),fontSize:12,
-                color:cat.n===c.n?t.mint:t.sub,
+                color:cat.n===c.n?t.mintText:t.sub,
                 outline:cat.n===c.n?'1.5px solid '+t.mint:'none'}}>
               {c.ico} {c.n}
             </button>

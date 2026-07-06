@@ -292,7 +292,7 @@ export const Groupe = ({ t, uid, group, members, createGroup, joinGroup, leaveGr
                     cursor: 'pointer', textAlign: 'left'
                   }}>
                     <span style={{ fontSize: 16, width: 22, textAlign: 'center', flexShrink: 0 }}>{c.ico}</span>
-                    <span style={{ fontSize: 13, ...sp('o', addCat === c.n ? 600 : 400), color: addCat === c.n ? t.mint : t.tx, flex: 1 }}>{c.n}</span>
+                    <span style={{ fontSize: 13, ...sp('o', addCat === c.n ? 600 : 400), color: addCat === c.n ? t.mintText : t.tx, flex: 1 }}>{c.n}</span>
                     {addCat === c.n && <span style={{ fontSize: 12, color: t.mintText }}>✓</span>}
                   </button>
                 ))}
@@ -304,8 +304,8 @@ export const Groupe = ({ t, uid, group, members, createGroup, joinGroup, leaveGr
               <div style={{ display: 'flex', gap: 8 }}>
                 {members.map(m => (
                   <button key={m.user_id} onClick={() => setAddPaid(m.user_id)} style={{ flex: 1, padding: '12px', borderRadius: 12, border: 'none', cursor: 'pointer', background: addPaid === m.user_id ? t.mint + '22' : t.el, outline: addPaid === m.user_id ? '1.5px solid ' + t.mint + '55' : 'none' }}>
-                    <div style={{ fontSize: 20, ...sp('s', 700), color: addPaid === m.user_id ? t.mint : t.sub }}>{m.display_name.charAt(0).toUpperCase()}</div>
-                    <div style={{ fontSize: 12, ...sp('o', 500), color: addPaid === m.user_id ? t.mint : t.sub, marginTop: 4 }}>{m.display_name}</div>
+                    <div style={{ fontSize: 20, ...sp('s', 700), color: addPaid === m.user_id ? t.mintText : t.sub }}>{m.display_name.charAt(0).toUpperCase()}</div>
+                    <div style={{ fontSize: 12, ...sp('o', 500), color: addPaid === m.user_id ? t.mintText : t.sub, marginTop: 4 }}>{m.display_name}</div>
                   </button>
                 ))}
               </div>

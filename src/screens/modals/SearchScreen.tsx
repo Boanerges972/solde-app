@@ -157,7 +157,7 @@ export const SearchScreen = ({ t, allTxs, accounts, onClose, onDelete }: Props) 
               background:activeFilters?t.mD:'none',cursor:'pointer'}}>
             <span style={{fontSize:14}}>⚙️</span>
             <span style={{fontSize:12,...sp('o',activeFilters?700:500),
-              color:activeFilters?t.mint:t.sub}}>Filtres</span>
+              color:activeFilters?t.mintText:t.sub}}>Filtres</span>
             {activeFilters>0&&(
               <span style={{width:18,height:18,borderRadius:9,background:t.mint,
                 display:'flex',alignItems:'center',justifyContent:'center',

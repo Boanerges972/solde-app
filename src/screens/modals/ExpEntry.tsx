@@ -349,8 +349,8 @@ export const ExpEntry = ({ D, t, onClose, onSave, group, members, uid, recurring
             <div style={{display:'flex',gap:7,flexWrap:'wrap'}}>
               {members.map(m=>(
                 <button key={m.user_id} onClick={()=>setPaidBy(m.user_id)} style={{display:'flex',alignItems:'center',gap:6,padding:'7px 12px',borderRadius:50,background:paidBy===m.user_id?t.mint+'22':t.el,border:'1px solid '+(paidBy===m.user_id?t.mint+'55':'transparent'),cursor:'pointer'}}>
-                  <span style={{fontSize:14,...sp('s',700),color:paidBy===m.user_id?t.mint:t.sub}}>{m.display_name.charAt(0).toUpperCase()}</span>
-                  <span style={{fontSize:12,...sp('o',500),color:paidBy===m.user_id?t.mint:t.sub}}>{m.display_name}</span>
+                  <span style={{fontSize:14,...sp('s',700),color:paidBy===m.user_id?t.mintText:t.sub}}>{m.display_name.charAt(0).toUpperCase()}</span>
+                  <span style={{fontSize:12,...sp('o',500),color:paidBy===m.user_id?t.mintText:t.sub}}>{m.display_name}</span>
                 </button>
               ))}
             </div>
