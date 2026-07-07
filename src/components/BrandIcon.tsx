@@ -15,7 +15,7 @@ interface Props {
  *  Clearbit → favicon Google → `fallback`. Aucune donnée sensible n'est envoyée
  *  au-delà du domaine de la marque affichée. */
 export const BrandIcon = ({ domain, size = 40, fallback, rounded = 11, style }: Props) => {
-  const [stage, setStage] = useState(0) // 0 clearbit · 1 google · 2 fallback
+  const [stage, setStage] = useState(0) // 0 google · 1 duckduckgo · 2 fallback
   if (!domain || stage >= 2) {
     return (
       <div style={{ width: size, height: size, borderRadius: rounded, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...style }}>
@@ -24,8 +24,8 @@ export const BrandIcon = ({ domain, size = 40, fallback, rounded = 11, style }: 
     )
   }
   const src = stage === 0
-    ? `https://logo.clearbit.com/${domain}?size=${size * 2}`
-    : `https://www.google.com/s2/favicons?domain=${domain}&sz=64`
+    ? `https://www.google.com/s2/favicons?domain=${domain}&sz=128`
+    : `https://icons.duckduckgo.com/ip3/${domain}.ico`
   return (
     <img
       src={src}
@@ -43,7 +43,7 @@ export const BrandIcon = ({ domain, size = 40, fallback, rounded = 11, style }: 
 export const BANK_DOMAIN: Record<string, string> = {
   bnp: 'mabanque.bnpparibas',
   boursorama: 'boursorama.com',
-  sg: 'societegenerale.fr',
+  sg: 'particuliers.societegenerale.fr',
   ca: 'credit-agricole.fr',
   lbp: 'labanquepostale.fr',
   lcl: 'lcl.fr',
