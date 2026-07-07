@@ -1,5 +1,5 @@
-// Génère toutes les icônes PNG à partir du logo QDQ officiel (handoff agence).
-// Icône : squircle indigo #4F46E5 + Q-Question blanc. Usage : node scripts/gen-icons.mjs
+// Génère les icônes PNG à partir du logo QDQ premium (Q-Question lustré).
+// Icône : squircle indigo dégradé + reflet + glyphe blanc lissé. Usage : node scripts/gen-icons.mjs
 import sharp from 'sharp'
 import { mkdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -9,20 +9,24 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const iconsDir = join(root, 'public', 'icons')
 mkdirSync(iconsDir, { recursive: true })
 
-const BG = '#4F46E5' // indigo de marque
-const FG = '#FFFFFF'
+const glyph = (fg = '#fff') => `
+  <g fill="none" stroke="${fg}" stroke-width="20" stroke-linecap="round"><circle cx="120" cy="104" r="46"/><path d="M120 150 C 150 158, 158 138, 150 122"/></g>
+  <circle cx="120" cy="188" r="13" fill="${fg}"/>`
 
-// Tracé officiel du Q-Question (viewBox 1024, handoff agence).
-const qPath = 'M512 250c-142 0-246 99-246 238s104 238 246 238c28 0 55-4 80-13l82 88c16 17 44 6 44-17v-80c28-22 50-51 65-85 14-36 22-80 22-131 0-139-151-238-293-238Zm0 104c83 0 141 55 141 134 0 80-58 135-141 135s-141-55-141-135c0-79 58-134 141-134Z'
+const defs = `<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6366F1"/><stop offset="1" stop-color="#4338CA"/></linearGradient>
+  <radialGradient id="gl" cx="0.5" cy="0.28" r="0.72"><stop offset="0" stop-color="#fff" stop-opacity="0.28"/><stop offset="0.6" stop-color="#fff" stop-opacity="0"/></radialGradient>
+</defs>`
 
-// Icône arrondie (squircle), corners transparents.
-const squircle = () => `<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-  <rect width="1024" height="1024" rx="224" fill="${BG}"/><path d="${qPath}" fill="${FG}"/></svg>`
+// Squircle arrondi (coins transparents).
+const squircle = () => `<svg width="240" height="240" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">${defs}
+  <rect x="16" y="16" width="208" height="208" rx="60" fill="url(#bg)"/>
+  <rect x="16" y="16" width="208" height="208" rx="60" fill="url(#gl)"/>${glyph()}</svg>`
 
-// Version maskable : fond plein cadre, marque réduite dans la zone de sécurité.
-const maskable = () => `<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-  <rect width="1024" height="1024" fill="${BG}"/>
-  <g transform="translate(512,512) scale(0.78) translate(-512,-512)"><path d="${qPath}" fill="${FG}"/></g></svg>`
+// Maskable : fond plein cadre + glyphe réduit dans la zone de sécurité.
+const maskable = () => `<svg width="240" height="240" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">${defs}
+  <rect width="240" height="240" fill="url(#bg)"/><rect width="240" height="240" fill="url(#gl)"/>
+  <g transform="translate(120,120) scale(0.8) translate(-120,-120)">${glyph()}</g></svg>`
 
 const png = (svg, size, out) =>
   sharp(Buffer.from(svg)).resize(size, size).png().toFile(join(iconsDir, out))
@@ -36,4 +40,4 @@ await Promise.all([
   png(squircle(), 16, 'favicon-16.png'),
 ])
 
-console.log('Icônes générées dans public/icons/ (logo officiel indigo)')
+console.log('Icônes générées dans public/icons/ (logo premium indigo lustré)')

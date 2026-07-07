@@ -1,5 +1,6 @@
 import { sp } from '../../lib/theme'
 import { SUPPORTED_BANKS } from '../../lib/parsers/index'
+import { BrandIcon, BANK_DOMAIN } from '../../components/BrandIcon'
 import type { Theme } from '../../types'
 
 interface Props { t: Theme; onPick: (bank: string) => void; onClose: () => void }
@@ -17,7 +18,8 @@ export const BankPicker = ({ t, onPick, onClose }: Props) => (
       {SUPPORTED_BANKS.map(b => (
         <button key={b.id} onClick={() => onPick(b.id)}
           style={{ display: 'flex', alignItems: 'center', gap: 14, width: '100%', padding: '12px 14px', background: t.el, border: 'none', borderRadius: 14, marginBottom: 8, cursor: 'pointer', textAlign: 'left' }}>
-          <div style={{ width: 40, height: 40, borderRadius: 11, background: b.color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>{b.icon}</div>
+          <BrandIcon domain={BANK_DOMAIN[b.id]} size={40}
+            fallback={<div style={{ width: 40, height: 40, borderRadius: 11, background: b.color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>{b.icon}</div>} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 14, ...sp('o', 600), color: t.tx }}>{b.name}</div>
             <div style={{ fontSize: 11, ...sp('o'), color: t.sub, marginTop: 2 }}>{b.detail}</div>
