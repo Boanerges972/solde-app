@@ -474,6 +474,7 @@ declare
     v_inserted boolean;
     v_delta    numeric := 0;
     v_count    integer := 0;
+    v_skipped  integer := 0;
     v_amt      numeric;
     v_row      jsonb;
 begin
@@ -518,6 +519,19 @@ begin
         if (v_row->>'tx_date') is null then
             raise exception 'imported tx_date missing at row %', v_count using errcode = '22004';
         end if;
+        -- DÉDUP : saute si une tx identique existe déjà sur ce compte
+        -- (même date + montant + libellé). Évite les doublons au ré-import.
+        -- Tradeoff assumé : 2 tx réellement identiques le même jour → 1 gardée.
+        if exists (
+            select 1 from public.transactions t
+             where t.account_id = p_account_id
+               and t.tx_date = (v_row->>'tx_date')::date
+               and t.amount = v_amt
+               and t.merchant is not distinct from (v_row->>'merchant')
+        ) then
+            v_skipped := v_skipped + 1;
+            continue;
+        end if;
         insert into public.transactions(merchant, category, icon, amount, account_id, tx_date, user_id)
         values (v_row->>'merchant', v_row->>'category', coalesce(v_row->>'icon', '💳'),
                 v_amt, p_account_id, (v_row->>'tx_date')::date, v_user_id);
@@ -531,7 +545,7 @@ begin
      where id = p_account_id;
 
     return jsonb_build_object('success', true, 'replayed', false, 'operation_id', p_operation_id,
-                              'imported', v_count, 'balance_delta', v_delta);
+                              'imported', v_count, 'skipped', v_skipped, 'balance_delta', v_delta);
 end;
 $$;
 

@@ -51,6 +51,7 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
   const [newAccType, setNewAccType] = useState('Courant')
   const [newAccColor, setNewAccColor] = useState('#10E8C0')
   const [createErr, setCreateErr] = useState('')
+  const [importSummary, setImportSummary] = useState<{ imported: number; skipped: number } | null>(null)
 
   const bankDef = SUPPORTED_BANKS.find(b => b.id === bank) ?? SUPPORTED_BANKS[SUPPORTED_BANKS.length - 1]
   const isNickel = bankDef.id === 'nickel'
@@ -171,7 +172,7 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
     }
     // Chemin RPC : N insert + UN delta atomiques (préserve le solde initial).
     if (USE_RPC) {
-      const { error } = await rpcImportBatch({
+      const { data, error } = await rpcImportBatch({
         operationId: newOpId(), accountId: accId,
         txs: toImport.map(tx => ({
           merchant: tx.merchant, category: tx.category, icon: tx.icon,
@@ -179,6 +180,8 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
         })),
       })
       if (error) { setErr(friendlyDbError(error.message)); setLoading(false); return }
+      const r = data as { imported?: number; skipped?: number } | null
+      setImportSummary({ imported: r?.imported ?? 0, skipped: r?.skipped ?? 0 })
       setProgress(100)
       if (isNickel && pendingHashes.length) {
         saveHashes(uid, [...getStoredHashes(uid), ...pendingHashes])
@@ -239,7 +242,7 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
     if (error) { setCreateErr(friendlyDbError(error.message)); setLoading(false); return }
 
     if (USE_RPC) {
-      const { error: impErr } = await rpcImportBatch({
+      const { data: impData, error: impErr } = await rpcImportBatch({
         operationId: newOpId(), accountId: newId,
         txs: toImport.map(tx => ({
           merchant: tx.merchant, category: tx.category, icon: tx.icon,
@@ -247,6 +250,8 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
         })),
       })
       if (impErr) { setCreateErr(friendlyDbError(impErr.message) + ' (compte créé, import échoué)'); setLoading(false); return }
+      const r = impData as { imported?: number; skipped?: number } | null
+      setImportSummary({ imported: r?.imported ?? 0, skipped: r?.skipped ?? 0 })
       setProgress(100)
       if (isNickel && pendingHashes.length) {
         saveHashes(uid, [...getStoredHashes(uid), ...pendingHashes])
@@ -460,7 +465,16 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
           <div style={{ textAlign: 'center', paddingTop: 60 }}>
             <div style={{ fontSize: 56, marginBottom: 16 }}>✅</div>
             <div style={{ fontSize: 18, ...sp('s', 700), color: t.tx }}>Import terminé !</div>
-            <div style={{ fontSize: 13, ...sp('o'), color: t.sub, marginTop: 8 }}>{Object.values(selected).filter(Boolean).length} transactions importées</div>
+            <div style={{ fontSize: 13, ...sp('o'), color: t.sub, marginTop: 8 }}>
+              {importSummary
+                ? `${importSummary.imported} transaction${importSummary.imported > 1 ? 's' : ''} ajoutée${importSummary.imported > 1 ? 's' : ''}`
+                : `${Object.values(selected).filter(Boolean).length} transactions importées`}
+            </div>
+            {importSummary && importSummary.skipped > 0 && (
+              <div style={{ fontSize: 12, ...sp('o'), color: t.amber, marginTop: 6 }}>
+                {importSummary.skipped} doublon{importSummary.skipped > 1 ? 's' : ''} déjà présent{importSummary.skipped > 1 ? 's' : ''} — ignoré{importSummary.skipped > 1 ? 's' : ''}
+              </div>
+            )}
           </div>
         )}
       </div>
