@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { db } from '../../lib/supabase'
+import { rpcSetBalance } from '../../lib/rpc'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { sp } from '../../lib/theme'
 import { fmt } from '../../lib/currency'
@@ -28,14 +29,28 @@ export const EditAccount = ({ account, isNew, t, uid, onClose, onSaved }: Props)
     const balance = parseFloat(String(bal).replace(',', '.').replace(/\s/g, ''))
     if (isNaN(balance)) { setErr('Solde invalide (ex: -983.50 ou 1560.75)'); return }
     setSaving(true)
-    const newId = name.toLowerCase().replace(/\s+/g, '_') + '_' + uid.slice(0, 6) + '_' + Math.random().toString(36).slice(2, 6)
-    const p = { name: name.trim(), short_name: name.trim().slice(0, 4), balance, type, color: col, user_id: uid, free: balance, reserved: 0 }
-    const res = isNew
-      ? await db.from('accounts').insert({ ...p, id: newId })
-      : await db.from('accounts').update(p).eq('id', account!.id)
+    let accId = account?.id ?? ''
+    if (isNew) {
+      accId = name.toLowerCase().replace(/\s+/g, '_') + '_' + uid.slice(0, 6) + '_' + Math.random().toString(36).slice(2, 6)
+      const { error } = await db.from('accounts').insert({
+        id: accId, name: name.trim(), short_name: name.trim().slice(0, 4),
+        balance, free: balance, type, color: col, user_id: uid, reserved: 0,
+      })
+      if (error) { setSaving(false); setErr(error.message); return }
+    } else {
+      // Colonnes éditables uniquement — balance/free NE passent PLUS en direct
+      // (interdites côté client après Section 7 ; override du solde via RPC).
+      const { error: uErr } = await db.from('accounts')
+        .update({ name: name.trim(), short_name: name.trim().slice(0, 4), type, color: col })
+        .eq('id', account!.id)
+      if (uErr) { setSaving(false); setErr(uErr.message); return }
+      if (balance !== account!.bal) {
+        const { error: bErr } = await rpcSetBalance({ accountId: account!.id, balance })
+        if (bErr) { setSaving(false); setErr(bErr.message); return }
+      }
+    }
     setSaving(false)
-    if (res.error) { setErr(res.error.message); return }
-    const odKey = 'qdq-od-' + (isNew ? newId : account!.id)
+    const odKey = 'qdq-od-' + accId
     const odVal = parseFloat(overdraft || '0')
     if (odVal > 0) { localStorage.setItem(odKey, String(odVal)) }
     else { localStorage.removeItem(odKey) }

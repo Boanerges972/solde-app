@@ -74,3 +74,10 @@ export function rpcSetReserved(p: { accountId: string; reserved: number }): Prom
     p_account_id: p.accountId, p_reserved: p.reserved,
   }) as unknown as Promise<RpcResult>
 }
+
+/** Override manuel du solde (EditAccount). Recalcule free côté base. */
+export function rpcSetBalance(p: { accountId: string; balance: number }): Promise<RpcResult> {
+  return db.rpc('rpc_set_balance', {
+    p_account_id: p.accountId, p_balance: p.balance,
+  }) as unknown as Promise<RpcResult>
+}
