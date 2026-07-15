@@ -1,4 +1,5 @@
 import type { ParsedTx } from './ofx'
+import { parseAmountFR } from './amount'
 
 const CM_CATS: Record<string, string[]> = {
   'Courses':['CARREFOUR','LEADER PRICE','CASINO','LECLERC','INTERMARCHE','LIDL','ALDI','MONOPRIX','SUPERMARCHE','MARCHE'],
@@ -67,20 +68,20 @@ export function parseCM(text: string): ParsedTx[] {
       // Use header-detected indices
       libelle=libIdx>=0&&cols[libIdx]?cols[libIdx]:'';
       if(hasDebitCredit&&debitIdx>=0&&creditIdx>=0){
-        const d=cols[debitIdx]?.replace(',','.').replace('+','');
-        const c=cols[creditIdx]?.replace(',','.').replace('+','');
-        if(d&&parseFloat(d))amount=-Math.abs(parseFloat(d));
-        else if(c&&parseFloat(c))amount=Math.abs(parseFloat(c));
+        const d=parseAmountFR(cols[debitIdx]);
+        const c=parseAmountFR(cols[creditIdx]);
+        if(!isNaN(d)&&d!==0)amount=-Math.abs(d);
+        else if(!isNaN(c)&&c!==0)amount=Math.abs(c);
       }else if(amtIdx>=0&&cols[amtIdx]){
-        amount=parseFloat(cols[amtIdx].replace(',','.').replace('+',''));
+        amount=parseAmountFR(cols[amtIdx]);
       }
       // fallback if indices not found
       if(!libelle)libelle=cols[3]||cols[2]||'';
-      if(isNaN(amount)&&cols[2])amount=parseFloat(cols[2].replace(',','.').replace('+',''));
+      if(isNaN(amount)&&cols[2])amount=parseAmountFR(cols[2]);
     }else{
       // No header — column count heuristic
-      if(cols.length>=5){libelle=cols[3];amount=parseFloat(cols[2].replace(',','.').replace('+',''));}
-      else if(cols.length>=4){libelle=cols[2];amount=parseFloat(cols[1].replace(',','.').replace('+',''));}
+      if(cols.length>=5){libelle=cols[3];amount=parseAmountFR(cols[2]);}
+      else if(cols.length>=4){libelle=cols[2];amount=parseAmountFR(cols[1]);}
     }
 
     libelle=libelle.trim();
