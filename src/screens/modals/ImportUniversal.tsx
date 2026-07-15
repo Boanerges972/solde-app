@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { db } from '../../lib/supabase'
 import { sp } from '../../lib/theme'
 import { fmt } from '../../lib/currency'
@@ -21,11 +21,25 @@ interface Props {
   onCreateAccount?: () => void
 }
 
+/** Normalise pour comparaison : minuscules, sans accents ni séparateurs. */
+const norm = (s: string) => (s || '').toLowerCase().normalize('NFD').replace(/[^a-z0-9]/g, '')
+
+/** Cherche le compte existant correspondant à la banque importée (par nom/id). */
+function matchAccount(accounts: Account[], bankDef: { id: string; name: string }): Account | undefined {
+  const bId = norm(bankDef.id), bName = norm(bankDef.name)
+  return accounts.find(a => {
+    const aId = norm(a.id), aName = norm(a.name || '')
+    return (!!aName && (aName.includes(bName) || bName.includes(aName)))
+        || (!!aId && (aId.includes(bId) || bId.includes(aId)))
+  })
+}
+
 export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, onCreateAccount }: Props) => {
   const [step, setStep] = useState<'upload' | 'preview' | 'done'>('upload')
   const [txs, setTxs] = useState<ParsedTx[]>([])
   const [selected, setSelected] = useState<Record<number, boolean>>({})
-  const [accId, setAccId] = useState(accounts[0]?.id ?? '')
+  // accId '' = mode « créer un nouveau compte ». Sinon = importer dans ce compte.
+  const [accId, setAccId] = useState('')
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState(0)
   const [err, setErr] = useState('')
@@ -40,6 +54,16 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
 
   const bankDef = SUPPORTED_BANKS.find(b => b.id === bank) ?? SUPPORTED_BANKS[SUPPORTED_BANKS.length - 1]
   const isNickel = bankDef.id === 'nickel'
+
+  // Présélection : compte correspondant à la banque importée. Si AUCUN compte
+  // ne correspond → mode création (accId='') + nom pré-rempli. Évite d'importer
+  // silencieusement dans un compte non lié (ex: Boursorama → Nickel).
+  useEffect(() => {
+    const m = matchAccount(accounts, bankDef)
+    if (m) setAccId(m.id)
+    else { setAccId(''); setNewAccName(prev => prev || bankDef.name) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bank])
 
   const handleFiles = async (files: FileList | null | undefined) => {
     if (!files || files.length === 0) return
@@ -366,7 +390,7 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
                 ⚠️ {skipped} transaction{skipped > 1 ? 's' : ''} déjà importée{skipped > 1 ? 's' : ''} — ignorée{skipped > 1 ? 's' : ''}
               </div>
             )}
-            {accounts.length > 0 ? (
+            {accounts.length > 0 && (
               <div style={{ marginBottom: 14 }}>
                 <div style={{ fontSize: 11, ...sp('s', 600), color: t.sub, letterSpacing: .6, textTransform: 'uppercase', marginBottom: 8 }}>Importer dans</div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -375,9 +399,14 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
                       <span style={{ fontSize: 12, ...sp('o', 600), color: accId === a.id ? a.col : t.tx }}>{a.short}</span>
                     </button>
                   ))}
+                  {/* Toujours proposer un nouveau compte (banque sans compte lié). */}
+                  <button onClick={() => { setAccId(''); setNewAccName(n => n || bankDef.name) }} style={{ padding: '8px 13px', borderRadius: 10, border: '1px dashed ' + (accId === '' ? bankDef.color : t.bo), cursor: 'pointer', background: accId === '' ? bankDef.color + '22' : 'transparent' }}>
+                    <span style={{ fontSize: 12, ...sp('o', 600), color: accId === '' ? bankDef.color : t.sub }}>+ Nouveau</span>
+                  </button>
                 </div>
               </div>
-            ) : (
+            )}
+            {accId === '' && (
               <div style={{ marginBottom: 14, padding: '16px', background: t.card, borderRadius: 14, border: '1px solid ' + t.bo }}>
                 <div style={{ fontSize: 11, ...sp('s', 600), color: t.sub, letterSpacing: .6, textTransform: 'uppercase', marginBottom: 10 }}>Créer le compte</div>
                 <input type="text" value={newAccName} onChange={e => setNewAccName(e.target.value)} placeholder="Nom du compte (ex: Compte BNP)"
@@ -451,7 +480,7 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
               <button onClick={onClose} style={{ flex: 1, padding: '15px', background: 'none', border: '1px solid ' + t.bo, borderRadius: 14, cursor: 'pointer', ...sp('o', 600), fontSize: 14, color: t.sub }}>
                 Annuler
               </button>
-              {accounts.length === 0 ? (
+              {accId === '' ? (
                 <button onClick={doCreateAndImport} style={{ flex: 2, padding: '15px', background: bankDef.color, border: 'none', borderRadius: 14, cursor: 'pointer', ...sp('o', 700), fontSize: 14, color: '#fff' }}>
                   Créer & importer ({Object.values(selected).filter(Boolean).length})
                 </button>
