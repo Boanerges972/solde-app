@@ -75,7 +75,12 @@ function parseNickelText(text: string): ParsedTx[] {
 }
 
 export async function parseNickelPDF(ab: ArrayBuffer): Promise<ParsedTx[]> {
-  const pdf=await (window as any).pdfjsLib.getDocument({data:new Uint8Array(ab)}).promise;
+  // pdfjs chargé À LA DEMANDE (code-split) — évite ~1 Mo au démarrage.
+  // Worker émis en asset par Vite (?url), récupéré au 1er parse PDF.
+  const pdfjs = await import('pdfjs-dist')
+  const workerUrl = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default
+  pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
+  const pdf=await pdfjs.getDocument({data:new Uint8Array(ab)}).promise;
   let fullText='';
   for(let p=1;p<=pdf.numPages;p++){
     const page=await pdf.getPage(p);
