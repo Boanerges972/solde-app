@@ -8,6 +8,7 @@ import { hashAB, getStoredHashes, saveHashes, parseNickelPDF } from '../../lib/p
 import type { ParsedTx } from '../../lib/parsers/index'
 import { iconForCat } from '../../lib/parsers/categories'
 import { matchRule, type MerchantRule } from '../../lib/merchantRules'
+import { USE_RPC, newOpId, rpcImportBatch } from '../../lib/rpc'
 import type { Theme, Account } from '../../types'
 
 interface Props {
@@ -144,6 +145,25 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
       setErr('Session expirée — déconnecte-toi puis reconnecte-toi, et relance l\'import.')
       setLoading(false); return
     }
+    // Chemin RPC : N insert + UN delta atomiques (préserve le solde initial).
+    if (USE_RPC) {
+      const { error } = await rpcImportBatch({
+        operationId: newOpId(), accountId: accId,
+        txs: toImport.map(tx => ({
+          merchant: tx.merchant, category: tx.category, icon: tx.icon,
+          amount: tx.amount, tx_date: tx.dt,
+        })),
+      })
+      if (error) { setErr(friendlyDbError(error.message)); setLoading(false); return }
+      setProgress(100)
+      if (isNickel && pendingHashes.length) {
+        saveHashes(uid, [...getStoredHashes(uid), ...pendingHashes])
+      }
+      setLoading(false); setStep('done')
+      setTimeout(() => { onImported(); onClose() }, 1500)
+      return
+    }
+
     let done = 0
     for (const tx of toImport) {
       const { error } = await db.from('transactions').insert({
@@ -158,7 +178,8 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
       done++
       setProgress(Math.round(done / toImport.length * 100))
     }
-    // Recalculate account balance
+    // Recalculate account balance (legacy — BUG : écrase le solde initial ;
+    // remplacé par le delta atomique de rpc_import_batch quand USE_RPC).
     const { data: allTxs } = await db
       .from('transactions').select('amount')
       .eq('account_id', accId).eq('user_id', uid)
@@ -185,11 +206,32 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
     const toImport = txs.filter((_, i) => selected[i])
     const bal = parseFloat(toImport.reduce((s, tx) => s + tx.amount, 0).toFixed(2))
     const newId = newAccName.trim().toLowerCase().replace(/\s+/g, '_') + '_' + uid.slice(0, 6) + '_' + Math.random().toString(36).slice(2, 6)
+    // Sous RPC : compte créé à 0, le delta est appliqué par rpc_import_batch.
+    const initBal = USE_RPC ? 0 : bal
     const { error } = await db.from('accounts').insert({
       id: newId, name: newAccName.trim(), short_name: newAccName.trim().slice(0, 4),
-      balance: bal, free: bal, type: newAccType, color: newAccColor, user_id: uid, reserved: 0,
+      balance: initBal, free: initBal, type: newAccType, color: newAccColor, user_id: uid, reserved: 0,
     })
     if (error) { setCreateErr(friendlyDbError(error.message)); setLoading(false); return }
+
+    if (USE_RPC) {
+      const { error: impErr } = await rpcImportBatch({
+        operationId: newOpId(), accountId: newId,
+        txs: toImport.map(tx => ({
+          merchant: tx.merchant, category: tx.category, icon: tx.icon,
+          amount: tx.amount, tx_date: tx.dt,
+        })),
+      })
+      if (impErr) { setCreateErr(friendlyDbError(impErr.message) + ' (compte créé, import échoué)'); setLoading(false); return }
+      setProgress(100)
+      if (isNickel && pendingHashes.length) {
+        saveHashes(uid, [...getStoredHashes(uid), ...pendingHashes])
+      }
+      setLoading(false); setStep('done')
+      setTimeout(() => { onImported(); onClose() }, 1500)
+      return
+    }
+
     let done = 0
     for (const tx of toImport) {
       const { error: txErr } = await db.from('transactions').insert({

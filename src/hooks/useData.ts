@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { db } from '../lib/supabase'
 import { saveAccounts, saveTransactions, loadAccounts, loadTransactions, enqueue } from '../lib/idb'
 import { applyOptimisticTx } from './useOfflineSync'
+import { USE_RPC, newOpId, rpcAddTx, rpcDeleteTx, rpcTransfer, rpcDeleteTransfer } from '../lib/rpc'
 import type { AppData, Transaction, Account } from '../types'
 
 export function useData(uid: string | null) {
@@ -168,6 +169,8 @@ export function useData(uid: string | null) {
           tx_date: today,
           group_id: payload.group_id || null,
           paid_by: payload.paid_by || null,
+          // Clé d'idempotence figée dès la mise en file (réutilisée au replay).
+          operation_id: newOpId(),
         },
         timestamp: Date.now(),
         retries: 0,
@@ -197,13 +200,41 @@ export function useData(uid: string | null) {
       setData(prev => applyOptimisticTx(prev, fakeTx))
       return null
     }
-    // ── Online path (existing code below) ─────────────────────
+    // ── Online path ───────────────────────────────────────────
     const n = Math.abs(parseFloat(String(payload.amount)))
     const wk = Math.ceil((Number(new Date()) - Number(new Date(new Date().getFullYear(), 0, 1))) / 604800000)
+    const today = new Date().toISOString().slice(0, 10)
+
+    // Chemin RPC : solde + budget gérés atomiquement côté base.
+    if (USE_RPC) {
+      const budget = data ? data.budget : 400
+      const { error } = await rpcAddTx({
+        operationId: newOpId(), accountId: payload.account_id,
+        merchant: payload.merchant, category: payload.category, icon: payload.icon,
+        amount: -n, txDate: today, budget,
+      })
+      if (!error) {
+        // Notification budget (calcul client, inchangé).
+        const threshold = parseInt(localStorage.getItem('qdq-alert-threshold') || '80')
+        const prevPct = data ? (data.spent / budget * 100) : 0
+        const newPct = ((data ? data.spent : 0) + n) / budget * 100
+        if (Notification.permission === 'granted') {
+          if (newPct >= 100 && prevPct < 100) {
+            new Notification('QDQ — Budget dépassé !', { body: 'Tu as dépensé ' + Math.round(newPct) + '% de ton budget cette semaine.', icon: '/icons/icon-192.png' })
+          } else if (newPct >= threshold && prevPct < threshold) {
+            new Notification('QDQ — Alerte budget', { body: Math.round(newPct) + '% du budget utilisé. Il reste ' + Math.round(budget - (data ? data.spent : 0) - n) + '€.', icon: '/icons/icon-192.png' })
+          }
+        }
+        await load()
+      }
+      return error ? { message: error.message } : null
+    }
+
+    // ── Chemin legacy (flag off) ──────────────────────────────
     const { error: e } = await db.from('transactions').insert({
       user_id: uid, merchant: payload.merchant, category: payload.category,
       icon: payload.icon, amount: -n, account_id: payload.account_id,
-      tx_date: new Date().toISOString().slice(0, 10),
+      tx_date: today,
       group_id: payload.group_id || null, paid_by: payload.paid_by || null,
     })
     if (!e) {
@@ -238,6 +269,17 @@ export function useData(uid: string | null) {
 
   const deleteTx = useCallback(async (txId: string) => {
     const tx = data?.txs?.find(t => t.id === txId)
+
+    // Chemin RPC : virement → delete_transfer (2 jambes) ; sinon delete_tx.
+    if (USE_RPC) {
+      const transferId = (tx as unknown as { transfer_id?: string } | undefined)?.transfer_id
+      const res = tx?.isTransfer && transferId
+        ? await rpcDeleteTransfer({ operationId: newOpId(), transferId })
+        : await rpcDeleteTx({ operationId: newOpId(), transactionId: Number(txId) })
+      if (!res.error) await load()
+      return
+    }
+
     await db.from('transactions').delete().eq('id', txId)
     if (tx && data?.accounts) {
       const acc = data.accounts.find(a => a.id === tx.account_id)
@@ -263,6 +305,16 @@ export function useData(uid: string | null) {
     const fromAcc = data?.accounts?.find(a => a.id === fromId)
     const toAcc = data?.accounts?.find(a => a.id === toId)
     if (!fromAcc || !toAcc) return { error: 'Compte introuvable' }
+
+    // Chemin RPC : virement atomique (2 lignes + 2 soldes).
+    if (USE_RPC) {
+      const { error } = await rpcTransfer({
+        operationId: newOpId(), fromAccountId: fromId, toAccountId: toId,
+        amount: n, txDate: today, note,
+      })
+      if (!error) await load()
+      return { error: error ? error.message : null }
+    }
 
     try {
       const r1 = await db.from('transactions').insert({
@@ -313,11 +365,24 @@ export function useData(uid: string | null) {
     amount: number | string; account_id: string
   }) => {
     const n = Math.abs(parseFloat(String(payload.amount)))
+    const today = new Date().toISOString().slice(0, 10)
+
+    // Chemin RPC : entrée (amount>0), solde géré côté base.
+    if (USE_RPC) {
+      const { error } = await rpcAddTx({
+        operationId: newOpId(), accountId: payload.account_id,
+        merchant: payload.merchant, category: payload.category,
+        icon: payload.icon || '💰', amount: n, txDate: today,
+      })
+      if (!error) await load()
+      return error ? { message: error.message } : null
+    }
+
     const { error: e } = await db.from('transactions').insert({
       user_id: uid, merchant: payload.merchant, category: payload.category,
       icon: payload.icon || '💰', amount: n,
       account_id: payload.account_id,
-      tx_date: new Date().toISOString().slice(0, 10),
+      tx_date: today,
     })
     if (!e) {
       const acc = data?.accounts?.find(a => a.id === payload.account_id)

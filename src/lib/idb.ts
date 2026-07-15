@@ -16,6 +16,8 @@ export interface PendingEntry {
     tx_date: string
     group_id?: string | null
     paid_by?: string | null
+    // operation_id généré à la mise en file, réutilisé au replay (idempotence).
+    operation_id?: string
   }
   timestamp: number
   retries: number

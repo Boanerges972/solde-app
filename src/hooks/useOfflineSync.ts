@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { db } from '../lib/supabase'
 import { loadQueue, removeFromQueue, updateQueueEntry } from '../lib/idb'
+import { USE_RPC, newOpId, rpcAddTx } from '../lib/rpc'
 import type { AppData, Transaction } from '../types'
 
 export interface OfflineSyncState {
@@ -71,6 +72,21 @@ export function useOfflineSync(
           const p = entry.payload
           const n = Math.abs(p.amount)
 
+          // Chemin RPC : insert + solde + budget atomiques et IDEMPOTENTS.
+          // operation_id figé à la mise en file → un replay après crash ne
+          // crée pas de doublon (financial_ops rejette le 2e appel).
+          if (USE_RPC) {
+            const { error } = await rpcAddTx({
+              operationId: p.operation_id || newOpId(),
+              accountId: p.account_id, merchant: p.merchant, category: p.category,
+              icon: p.icon, amount: -n, txDate: p.tx_date,
+            })
+            if (error) throw new Error(error.message)
+            await removeFromQueue(entry.id!)
+            continue
+          }
+
+          // ── Chemin legacy (flag off) — non idempotent ──────────
           // Insert transaction
           const { error } = await db.from('transactions').insert({
             user_id: p.uid, merchant: p.merchant, category: p.category,
