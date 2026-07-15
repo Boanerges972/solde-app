@@ -122,8 +122,37 @@ export const Home = ({
 
       {/* ══ SCROLLABLE CONTENT (overlaps header by 40px) ═══════════ */}
       <div style={{ flex: 1, marginTop: -40, padding: '0 16px', paddingBottom: 32 }}>
-      <div style={isDesktop ? { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' } : undefined}>
       <div>
+      <div>
+
+        {/* ── Section: Comptes (remontée en tête de l'Accueil) ─────── */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <span style={{ fontSize: 15, ...sp('s', 700), color: t.tx }}>Comptes</span>
+            <button onClick={onAcc} style={{ fontSize: 12, ...sp('s', 500), color: t.primary, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+              Voir tout →
+            </button>
+          </div>
+          {persoAccs.length === 0 ? (
+            <div style={{ fontSize: 13, ...sp('s', 400), color: t.muted, textAlign: 'center', padding: '20px 0' }}>
+              Aucun compte
+            </div>
+          ) : (
+            persoAccs.map(a => (
+              <button key={a.id} onClick={onAcc} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', background: t.card, borderRadius: 14, padding: 14, marginBottom: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: `1px solid ${t.bo}`, cursor: 'pointer', textAlign: 'left' }}>
+                <LetterBadge acc={a} size={40} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, ...sp('s', 700), color: t.tx, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.name}</div>
+                  <div style={{ fontSize: 12, ...sp('s', 400), color: t.sub, marginTop: 2 }}>{a.type || 'Compte courant'}</div>
+                </div>
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div style={{ fontSize: 14, ...sp('m', 700), color: t.tx }}>{a.bal < 0 ? '−' : ''}{fmt(Math.abs(a.bal), 2)}</div>
+                </div>
+                <span style={{ fontSize: 18, color: t.muted, flexShrink: 0 }}>›</span>
+              </button>
+            ))
+          )}
+        </div>
 
         {/* ── Card: Situation globale ─────────────────────────────── */}
         <div style={{
@@ -351,60 +380,6 @@ export const Home = ({
 
       </div>
 
-      <div>
-
-        {/* ── Section: Comptes ─────────────────────────────────────── */}
-        <div>
-          {/* Section header */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <span style={{ fontSize: 15, ...sp('s', 700), color: t.tx }}>Comptes</span>
-            <button
-              onClick={onAcc}
-              style={{ fontSize: 12, ...sp('s', 500), color: t.primary, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-            >
-              Voir tout →
-            </button>
-          </div>
-
-          {persoAccs.length === 0 ? (
-            <div style={{ fontSize: 13, ...sp('s', 400), color: t.muted, textAlign: 'center', padding: '20px 0' }}>
-              Aucun compte
-            </div>
-          ) : (
-            persoAccs.map(a => (
-              <button
-                key={a.id}
-                onClick={onAcc}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 12, width: '100%',
-                  background: t.card, borderRadius: 14, padding: 14, marginBottom: 8,
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                  border: `1px solid ${t.bo}`, cursor: 'pointer',
-                  textAlign: 'left',
-                }}
-              >
-                <LetterBadge acc={a} size={40} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, ...sp('s', 700), color: t.tx,
-                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {a.name}
-                  </div>
-                  <div style={{ fontSize: 12, ...sp('s', 400), color: t.sub, marginTop: 2 }}>
-                    {a.type || 'Compte courant'}
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <div style={{ fontSize: 14, ...sp('m', 700), color: t.tx }}>
-                    {a.bal < 0 ? '−' : ''}{fmt(Math.abs(a.bal), 2)}
-                  </div>
-                </div>
-                <span style={{ fontSize: 18, color: t.muted, flexShrink: 0 }}>›</span>
-              </button>
-            ))
-          )}
-        </div>
-
-      </div>
       </div>
       </div>
     </div>
