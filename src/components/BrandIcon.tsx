@@ -52,3 +52,24 @@ export const BANK_DOMAIN: Record<string, string> = {
   qonto: 'qonto.com',
   ofx: '',
 }
+
+/** Jetons reconnaissables (nom/id de compte) → domaine du logo. Ordre = priorité. */
+const BANK_TOKENS: [string, string][] = [
+  ['boursorama', 'boursorama.com'], ['bourso', 'boursorama.com'], ['boursobank', 'boursorama.com'],
+  ['creditmutuel', 'creditmutuel.fr'],
+  ['creditagricole', 'credit-agricole.fr'],
+  ['labanquepostale', 'labanquepostale.fr'],
+  ['societegenerale', 'particuliers.societegenerale.fr'],
+  ['bnpparibas', 'mabanque.bnpparibas'], ['bnp', 'mabanque.bnpparibas'],
+  ['nickel', 'nickel.eu'],
+  ['qonto', 'qonto.com'],
+  ['lcl', 'lcl.fr'],
+]
+
+/** Devine le domaine (logo) d'un compte d'après son nom/id. undefined si inconnu. */
+export function accountDomain(acc?: { id?: string; name?: string } | null): string | undefined {
+  if (!acc) return undefined
+  const hay = ((acc.name || '') + ' ' + (acc.id || '')).toLowerCase().normalize('NFD').replace(/[^a-z0-9]/g, '')
+  for (const [token, dom] of BANK_TOKENS) if (hay.includes(token)) return dom
+  return undefined
+}

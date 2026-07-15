@@ -3,6 +3,7 @@ import { sp } from '../lib/theme'
 import { fmt } from '../lib/currency'
 import { DonutChart } from '../components/DonutChart'
 import { Logo } from '../components/Logo'
+import { BrandIcon, accountDomain } from '../components/BrandIcon'
 import { scoreAccounts } from '../lib/scoreAccounts'
 import { buildInsights } from '../lib/insights'
 import { InsightsCarousel } from '../components/InsightsCarousel'
@@ -140,7 +141,7 @@ export const Home = ({
           ) : (
             persoAccs.map(a => (
               <button key={a.id} onClick={onAcc} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', background: t.card, borderRadius: 14, padding: 14, marginBottom: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: `1px solid ${t.bo}`, cursor: 'pointer', textAlign: 'left' }}>
-                <LetterBadge acc={a} size={40} />
+                <BrandIcon domain={accountDomain(a)} size={40} rounded={20} fallback={<LetterBadge acc={a} size={40} />} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, ...sp('s', 700), color: t.tx, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.name}</div>
                   <div style={{ fontSize: 12, ...sp('s', 400), color: t.sub, marginTop: 2 }}>{a.type || 'Compte courant'}</div>
@@ -213,7 +214,7 @@ export const Home = ({
               ⭐ Meilleur choix disponible
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-              <LetterBadge acc={bestAcc} size={36} />
+              <BrandIcon domain={accountDomain(bestAcc)} size={36} rounded={18} fallback={<LetterBadge acc={bestAcc} size={36} />} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, ...sp('s', 700), color: t.tx,
                   whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>

@@ -1,4 +1,5 @@
 import { Icon } from '../components/Icon'
+import { BrandIcon, accountDomain } from '../components/BrandIcon'
 import { sp } from '../lib/theme'
 import { fmt, fmtS } from '../lib/currency'
 import type { Theme, AppData, Account } from '../types'
@@ -104,20 +105,16 @@ export const Comptes = ({ D, t, onEdit, onNew, onImport, onDeposit, onTransfer }
             >
               {/* Top: color dot + name + type */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div
-                  style={{
-                    width: 42,
-                    height: 42,
-                    borderRadius: 14,
-                    background: a.col + '22',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
-                >
-                  <div style={{ width: 14, height: 14, borderRadius: 7, background: a.col }} />
-                </div>
+                <BrandIcon
+                  domain={accountDomain(a)}
+                  size={42}
+                  rounded={14}
+                  fallback={
+                    <div style={{ width: 42, height: 42, borderRadius: 14, background: a.col + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <div style={{ width: 14, height: 14, borderRadius: 7, background: a.col }} />
+                    </div>
+                  }
+                />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 15, ...sp('s', 600), color: t.tx, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {a.name}
