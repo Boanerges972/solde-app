@@ -607,34 +607,35 @@ grant execute on function public.rpc_import_batch(uuid,text,jsonb) to authentica
 grant execute on function public.rpc_set_reserved(text,numeric) to authenticated;
 
 
+-- ─────────────────────────────────────────────────────────────────────────
+-- SECTION 5c — rpc_set_balance (override manuel du solde ; EditAccount)
+-- ─────────────────────────────────────────────────────────────────────────
+create or replace function public.rpc_set_balance(p_account_id text, p_balance numeric)
+returns jsonb language plpgsql security definer set search_path = pg_catalog, public as $$
+declare v_user_id uuid := auth.uid(); v_owner_id uuid;
+begin
+    if v_user_id is null then raise exception 'Authentication required' using errcode = '42501'; end if;
+    if not public.qdq_valid_money(p_balance) then raise exception 'balance invalid' using errcode = '22023'; end if;
+    select a.user_id into v_owner_id from public.accounts a where a.id = p_account_id for update;
+    if not found or v_owner_id <> v_user_id then raise exception 'Account not found or forbidden' using errcode = '42501'; end if;
+    update public.accounts set balance = p_balance, free = p_balance - coalesce(reserved, 0) where id = p_account_id;
+    return jsonb_build_object('success', true, 'account_id', p_account_id, 'balance', p_balance);
+end; $$;
+revoke all on function public.rpc_set_balance(text,numeric) from public, anon;
+grant execute on function public.rpc_set_balance(text,numeric) to authenticated;
+
+
 -- ============================================================================
--- SECTION 7 — DESTRUCTIF : verrouillage des soldes. NE PAS jouer avec la
--- migration initiale. PRÉREQUIS avant de l'activer (sinon casse la prod) :
---   1. Client 100 % basculé : useData (add/delete/transfer/deposit),
---      useOfflineSync (replay), ImportUniversal → RPC.
---   2. EditAccount.tsx:35 NE DOIT PLUS envoyer balance/free/reserved sur un
---      update nu → migrer vers rpc_set_reserved + update limité (name,short,
---      type,color). Sinon toute édition de compte est refusée en bloc.
---   3. Création de compte = INSERT (import "create&import") : garder une policy
---      INSERT owner sur accounts.
--- Après activation, le rollback par feature flag ne suffit plus.
+-- SECTION 7 — VERROUILLAGE DES SOLDES (APPLIQUÉ prod+staging 2026-07-15).
+-- Le client ne peut plus UPDATE balance/free/reserved/user_id/id ; seules les
+-- RPC (SECURITY DEFINER, exécutées comme owner) les modifient.
+-- La policy RLS `accounts_all` (ALL, user_id=auth.uid()) et les privilèges
+-- SELECT/INSERT/DELETE restent inchangés (compte créable/supprimable/lisible).
+-- PRÉREQUIS (faits) : EditAccount migré (solde via rpc_set_balance, update
+-- limité aux colonnes sûres) ; app 100% sur RPC (VITE_USE_RPC=true).
+-- Rollback : re-GRANT UPDATE ON accounts TO authenticated (redonne l'écriture
+-- directe). Tester avant : SET ROLE authenticated + update balance -> doit
+-- échouer ; rpc_set_balance -> doit passer.
 -- ============================================================================
--- alter table public.accounts enable row level security;
---
--- drop policy if exists accounts_owner_select on public.accounts;
--- create policy accounts_owner_select on public.accounts
---   for select to authenticated using (user_id = auth.uid());
---
--- drop policy if exists accounts_owner_insert on public.accounts;
--- create policy accounts_owner_insert on public.accounts
---   for insert to authenticated with check (user_id = auth.uid());
---
--- drop policy if exists accounts_owner_update on public.accounts;
--- create policy accounts_owner_update on public.accounts
---   for update to authenticated
---   using (user_id = auth.uid()) with check (user_id = auth.uid());
---
--- revoke update on table public.accounts from anon, authenticated;
--- grant update (name, short_name, type, color) on public.accounts to authenticated;
--- -- balance/free/reserved : modifiables UNIQUEMENT via RPC.
--- ============================================================================
+revoke update on public.accounts from authenticated;
+grant update (name, short_name, type, color, alert, alert_msg) on public.accounts to authenticated;
