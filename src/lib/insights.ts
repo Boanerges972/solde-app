@@ -1,5 +1,6 @@
 import type { Transaction } from '../types'
 import { fmt } from './currency'
+import { isoLocal, monthLocal, addDaysLocal } from './dates'
 
 export type InsightKind = 'category-trend' | 'biggest-week' | 'unusual'
 
@@ -25,9 +26,9 @@ export function buildInsights(txs: Transaction[], now: Date = new Date()): Insig
   const spent = txs.filter(t => t.amt < 0 && t.cat !== 'Virement interne')
   if (spent.length === 0) return out
 
-  const curMonth = now.toISOString().slice(0, 7)
+  const curMonth = monthLocal(now)
   const prev = new Date(now.getFullYear(), now.getMonth() - 1, 15)
-  const prevMonth = prev.toISOString().slice(0, 7)
+  const prevMonth = monthLocal(prev)
   const prevLabel = prev.toLocaleDateString('fr-FR', { month: 'long' })
 
   // 1) Variation par catégorie vs mois précédent (seuil ±15 %)
@@ -56,8 +57,8 @@ export function buildInsights(txs: Transaction[], now: Date = new Date()): Insig
   })
 
   // 2) Plus grosse dépense des 7 derniers jours
-  const weekAgo = new Date(now.getTime() - 7 * 86400000).toISOString().slice(0, 10)
-  const nowIso = now.toISOString().slice(0, 10)
+  const weekAgo = isoLocal(addDaysLocal(now, -7))
+  const nowIso = isoLocal(now)
   const week = spent.filter(t => dateOf(t) >= weekAgo && dateOf(t) <= nowIso)
   if (week.length > 0) {
     const biggest = week.reduce((a, b) => (Math.abs(b.amt) > Math.abs(a.amt) ? b : a))

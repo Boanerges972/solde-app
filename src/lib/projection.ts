@@ -1,4 +1,5 @@
 import type { Transaction } from '../types'
+import { isoLocal, addDaysLocal, isCalendarDate } from './dates'
 
 export interface ProjRecurring {
   name: string
@@ -11,20 +12,11 @@ export interface ProjPoint {
   balance: number
 }
 
-/** Date calendaire LOCALE au format YYYY-MM-DD.
- *  On n'utilise PAS toISOString() : il convertit en UTC. En Guyane (UTC−3),
- *  après 21 h locales, toISOString() renvoie déjà la date du LENDEMAIN, alors
- *  que getDate()/getMonth() — utilisés pour les échéances — restent en local.
- *  Les deux se contredisaient. `tx_date` est une date calendaire, on reste donc
- *  en local partout. */
-const iso = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-
-/** Jour calendaire local décalé de `n` jours. Passe par le calendrier plutôt
- *  que par `+ n * 86400000` : une arithmétique en millisecondes dérive d'une
- *  heure aux changements d'heure (l'app n'est pas réservée à la Guyane). */
-const addDays = (d: Date, n: number) =>
-  new Date(d.getFullYear(), d.getMonth(), d.getDate() + n, 12, 0, 0)
+// Dates calendaires LOCALES (voir lib/dates.ts) : toISOString() convertit en
+// UTC et ferait diverger l'étiquette d'un point de la date d'échéance lue en
+// local — en Guyane, tous les soirs après 21 h.
+const iso = isoLocal
+const addDays = addDaysLocal
 
 /** Fenêtre d'observation maximale des dépenses variables. */
 const WINDOW_DAYS = 90
@@ -44,8 +36,7 @@ function spanDays(oldest: string, now: Date): number {
   return Math.floor((nowMs - oldestMs) / 86400000) + 1
 }
 
-/** Date calendaire valide (évite qu'un champ vide ou 'today' passe). */
-const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s)
+const isDate = isCalendarDate
 
 /** Dernier jour du mois de `d` (28/29/30/31). */
 function lastDayOfMonth(d: Date): number {

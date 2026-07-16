@@ -1,11 +1,15 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { sp } from '../../lib/theme'
 import { fmt } from '../../lib/currency'
 import { CATS_E } from '../../lib/expenseCategories'
+import { fetchTxsSince } from '../../lib/fetchTxs'
+import { monthLocal, addMonths } from '../../lib/dates'
 import type { Theme, Transaction } from '../../types'
 
 interface Props {
   t: Theme
+  uid: string
+  /** Transactions de l'accueil — limitées à 50 : affichage d'attente seulement. */
   txs: Transaction[]
   onClose: () => void
 }
@@ -24,16 +28,33 @@ function monthStats(txs: Transaction[], month: string) {
   return { totalSpent, totalIncome, cats, top }
 }
 
-export const MonthlyReport = ({ t, txs, onClose }: Props) => {
+export const MonthlyReport = ({ t, uid, txs, onClose }: Props) => {
   const now = new Date()
-  const month = now.toISOString().slice(0, 7)
+  // Mois calendaires LOCAUX : toISOString() bascule sur le mois suivant en
+  // Guyane le dernier jour du mois après 21 h → rapport du mauvais mois.
+  const month = monthLocal(now)
   const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 15)
-  const prevMonth = prevDate.toISOString().slice(0, 7)
+  const prevMonth = addMonths(month, -1)
   const monthLabel = now.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
   const prevLabel = prevDate.toLocaleDateString('fr-FR', { month: 'long' })
 
-  const cur = useMemo(() => monthStats(txs, month), [txs, month])
-  const prev = useMemo(() => monthStats(txs, prevMonth), [txs, prevMonth])
+  // Le rapport compare deux mois COMPLETS : les 50 transactions de l'accueil
+  // les amputeraient (et un mois de plus de 50 opérations serait faux). On les
+  // charge, et on n'affiche les chiffres qu'une fois la fenêtre complète.
+  const [full, setFull] = useState<Transaction[] | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    if (!uid) return
+    ;(async () => {
+      const { txs: loaded, complete } = await fetchTxsSince(uid, `${prevMonth}-01`)
+      if (!cancelled && complete) setFull(loaded)
+    })()
+    return () => { cancelled = true }
+  }, [uid, prevMonth])
+
+  const src = full ?? txs
+  const cur = useMemo(() => monthStats(src, month), [src, month])
+  const prev = useMemo(() => monthStats(src, prevMonth), [src, prevMonth])
   const deltaPct = prev.totalSpent > 0 ? Math.round(((cur.totalSpent - prev.totalSpent) / prev.totalSpent) * 100) : null
 
   return (
