@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { db } from '../lib/supabase'
 import { saveAccounts, saveTransactions, loadAccounts, loadTransactions, enqueue } from '../lib/idb'
 import { applyOptimisticTx } from './useOfflineSync'
-import { newOpId, rpcAddTx, rpcDeleteTx, rpcTransfer, rpcDeleteTransfer } from '../lib/rpc'
+import { newOpId, isNetworkError, rpcAddTx, rpcDeleteTx, rpcTransfer, rpcDeleteTransfer } from '../lib/rpc'
 import type { AppData, Transaction, Account } from '../types'
 
 /** Notification navigateur quand une dépense fait franchir un seuil de budget. */
@@ -173,65 +173,66 @@ export function useData(uid: string | null) {
     amount: number | string; account_id: string
     group_id?: string | null; paid_by?: string | null
   }) => {
-    // ── Offline path ──────────────────────────────────────────
-    if (!navigator.onLine) {
-      const today = new Date().toISOString().slice(0, 10)
-      const offlineN = Math.abs(parseFloat(String(payload.amount)))
+    const n = Math.abs(parseFloat(String(payload.amount)))
+    const today = new Date().toISOString().slice(0, 10)
+    // UN SEUL operation_id pour cette dépense, quel que soit le chemin (envoi
+    // direct, mise en file hors-ligne, rejeu après échec réseau). C'est LUI qui
+    // garantit qu'un même geste ne débite jamais deux fois.
+    const opId = newOpId()
+
+    /** Met la dépense en file avec le MÊME opId + affiche la tx optimiste. */
+    const queueLocally = async (): Promise<boolean> => {
       const pendingId = await enqueue({
         action: 'addTx',
         payload: {
-          uid: uid!,
-          merchant: payload.merchant,
-          category: payload.category,
-          icon: payload.icon,
-          amount: offlineN,
-          account_id: payload.account_id,
-          tx_date: today,
-          group_id: payload.group_id || null,
-          paid_by: payload.paid_by || null,
-          // Clé d'idempotence figée dès la mise en file (réutilisée au replay).
-          operation_id: newOpId(),
+          uid: uid!, merchant: payload.merchant, category: payload.category,
+          icon: payload.icon, amount: n, account_id: payload.account_id,
+          tx_date: today, group_id: payload.group_id || null,
+          paid_by: payload.paid_by || null, operation_id: opId,
         },
         timestamp: Date.now(),
         retries: 0,
       })
-      if (pendingId === null) return { error: 'Stockage hors-ligne indisponible — réessayez en ligne.' }
+      if (pendingId === null) return false
       const fakeTx: Transaction = {
         id: `pending-${pendingId}`,
-        merchant: payload.merchant,
-        category: payload.category,
-        icon: payload.icon || '💳',
-        amount: -offlineN,
-        tx_date: today,
+        merchant: payload.merchant, category: payload.category,
+        icon: payload.icon || '💳', amount: -n, tx_date: today,
         account_id: payload.account_id,
-        group_id: payload.group_id || null,
-        paid_by: payload.paid_by || null,
-        acc: payload.account_id,
-        dt: 'today',
-        m: payload.merchant,
-        cat: payload.category,
-        ico: payload.icon || '💳',
-        amt: -offlineN,
-        isTransfer: false,
-        isPro: false,
-        isProPerso: false,
-        pending: true,
+        group_id: payload.group_id || null, paid_by: payload.paid_by || null,
+        acc: payload.account_id, dt: 'today', m: payload.merchant,
+        cat: payload.category, ico: payload.icon || '💳', amt: -n,
+        isTransfer: false, isPro: false, isProPerso: false, pending: true,
       }
       setData(prev => applyOptimisticTx(prev, fakeTx))
+      return true
+    }
+
+    // ── Hors-ligne : file d'attente ───────────────────────────
+    if (!navigator.onLine) {
+      if (!(await queueLocally())) return { message: 'Stockage hors-ligne indisponible — réessaie en ligne.' }
       return null
     }
-    // ── Online : RPC atomique (tx + solde + budget en une transaction) ──
-    const n = Math.abs(parseFloat(String(payload.amount)))
-    const today = new Date().toISOString().slice(0, 10)
-    const budget = data ? data.budget : 400
 
+    // ── En ligne : RPC atomique (tx + solde + budget en une transaction) ──
+    const budget = data ? data.budget : 400
     const { error } = await rpcAddTx({
-      operationId: newOpId(), accountId: payload.account_id,
+      operationId: opId, accountId: payload.account_id,
       merchant: payload.merchant, category: payload.category, icon: payload.icon,
       amount: -n, txDate: today, budget,
       groupId: payload.group_id || null, paidBy: payload.paid_by || null,
     })
-    if (error) return { message: error.message }
+
+    if (error) {
+      // La base a répondu (validation, droits, contrainte) : rien n'a été
+      // commité, on remonte l'erreur telle quelle.
+      if (!isNetworkError(error)) return { message: error.message }
+      // Réponse jamais arrivée : la RPC a PEUT-ÊTRE commité. Rejouer avec un
+      // nouvel id doublerait le débit. On met en file avec LE MÊME opId : le
+      // replay sera un no-op si le commit a eu lieu, sinon il passera.
+      if (!(await queueLocally())) return { message: error.message }
+      return null
+    }
 
     notifyBudget(data ? data.spent : 0, n, budget)
     await load()

@@ -5,6 +5,7 @@ import { server } from '../../__tests__/mocks/handlers'
 import { TEST_UID, BASE_URL } from '../../__tests__/mocks/db'
 import { useData } from '../useData'
 import { db } from '../../lib/supabase'
+import { loadQueue, removeFromQueue } from '../../lib/idb'
 
 const R = `${BASE_URL}/rest/v1`
 
@@ -21,8 +22,10 @@ Object.defineProperty(globalThis, 'Notification', {
   configurable: true,
 })
 
-beforeEach(() => {
+beforeEach(async () => {
   localStorage.clear()
+  // La file offline (IndexedDB) survit entre tests — on la vide.
+  for (const e of await loadQueue()) await removeFromQueue(e.id!)
   // Mock channel to return a full mock object so removeChannel works without errors
   const mockChannel: any = {
     on: function () { return this },
@@ -153,6 +156,47 @@ describe('useData — addTx', () => {
     })
 
     expect(err).toBeNull()
+  })
+
+  it('erreur MÉTIER (la base a répondu) → remontée, pas de mise en file', async () => {
+    server.use(
+      http.post(`${R}/rpc/rpc_add_tx`, () =>
+        HttpResponse.json({ message: 'amount invalid', code: '22023' }, { status: 400 })),
+    )
+    const { result } = renderHook(() => useData(TEST_UID))
+    await waitFor(() => expect(result.current.data).not.toBeNull(), { timeout: 5000 })
+
+    let res: any
+    await act(async () => {
+      res = await result.current.addTx({ merchant: 'X', category: 'Autre', amount: 10, account_id: 'acc-1' })
+    })
+
+    expect(res?.message).toContain('amount invalid')
+    expect(await loadQueue()).toHaveLength(0) // rien mis en file
+  })
+
+  it('réponse RÉSEAU perdue → mise en file avec le MÊME operation_id (pas de double débit)', async () => {
+    const sent: any[] = []
+    server.use(
+      http.post(`${R}/rpc/rpc_add_tx`, async ({ request }) => {
+        sent.push(await request.json())
+        return HttpResponse.error() // réponse jamais reçue — a peut-être commité
+      }),
+    )
+    const { result } = renderHook(() => useData(TEST_UID))
+    await waitFor(() => expect(result.current.data).not.toBeNull(), { timeout: 5000 })
+
+    let res: any
+    await act(async () => {
+      res = await result.current.addTx({ merchant: 'Carrefour', category: 'Courses', amount: 45, account_id: 'acc-1' })
+    })
+
+    // Pas d'erreur remontée : l'opération est prise en charge par la file.
+    expect(res).toBeNull()
+    const queue = await loadQueue()
+    expect(queue).toHaveLength(1)
+    // L'id envoyé à la RPC est CELUI persisté → le replay sera idempotent.
+    expect(queue[0].payload.operation_id).toBe(sent[0].p_operation_id)
   })
 })
 

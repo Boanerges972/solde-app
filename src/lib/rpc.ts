@@ -22,7 +22,18 @@ export function newOpId(): string {
   })
 }
 
-type RpcResult = { data: unknown; error: { message: string } | null }
+/** `code` est présent quand PostgreSQL/PostgREST a RÉPONDU (erreur métier :
+ *  validation, droits, contrainte). Son absence = la réponse n'est jamais
+ *  arrivée (réseau) — l'opération a PEUT-ÊTRE été commitée côté base. */
+export type RpcError = { message: string; code?: string }
+type RpcResult = { data: unknown; error: RpcError | null }
+
+/** Vrai si l'échec est réseau (réponse perdue) et non un refus de la base.
+ *  Dans ce cas il ne faut JAMAIS rejouer avec un nouvel operation_id : la
+ *  première tentative peut avoir commité → double débit. */
+export function isNetworkError(e: RpcError | null): boolean {
+  return !!e && !e.code
+}
 
 /** Dépense (amount<0) ou entrée (amount>0). amount SIGNÉ.
  *  groupId/paidBy : dépense de groupe — la RPC vérifie l'appartenance. */
