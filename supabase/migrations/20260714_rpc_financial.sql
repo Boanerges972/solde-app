@@ -24,6 +24,10 @@
 -- financial_ops. operation_id frais + persisté IDB au retry = même payload par
 -- construction, divergence impossible.
 --
+-- Dédup import : PAR MULTIPLICITÉ. Un simple `if exists` réduisait N tx
+-- réellement identiques (même jour/montant/libellé) à une seule → solde
+-- sous-compté. Voir SECTION 5.
+--
 -- Convention montant : négatif = dépense (→ weekly_budgets.spent), positif =
 -- entrée. balance TOUJOURS en DELTA, jamais SUM(tx) → préserve le solde initial.
 --
@@ -475,8 +479,6 @@ declare
     v_delta    numeric := 0;
     v_count    integer := 0;
     v_skipped  integer := 0;
-    v_amt      numeric;
-    v_row      jsonb;
 begin
     if v_user_id is null then
         raise exception 'Authentication required' using errcode = '42501';
@@ -510,34 +512,51 @@ begin
         raise exception 'Account not found or forbidden' using errcode = '42501';
     end if;
 
-    for v_row in select * from jsonb_array_elements(p_txs)
-    loop
-        v_amt := (v_row->>'amount')::numeric;
-        if not public.qdq_valid_money(v_amt) or v_amt = 0 then
-            raise exception 'imported amount invalid at row %', v_count using errcode = '22023';
-        end if;
-        if (v_row->>'tx_date') is null then
-            raise exception 'imported tx_date missing at row %', v_count using errcode = '22004';
-        end if;
-        -- DÉDUP : saute si une tx identique existe déjà sur ce compte
-        -- (même date + montant + libellé). Évite les doublons au ré-import.
-        -- Tradeoff assumé : 2 tx réellement identiques le même jour → 1 gardée.
-        if exists (
-            select 1 from public.transactions t
-             where t.account_id = p_account_id
-               and t.tx_date = (v_row->>'tx_date')::date
-               and t.amount = v_amt
-               and t.merchant is not distinct from (v_row->>'merchant')
-        ) then
-            v_skipped := v_skipped + 1;
-            continue;
-        end if;
+    -- Validation de TOUTES les lignes avant d'insérer quoi que ce soit.
+    if exists (
+        select 1 from jsonb_array_elements(p_txs) e
+         where (e->>'tx_date') is null
+            or not public.qdq_valid_money((e->>'amount')::numeric)
+            or (e->>'amount')::numeric = 0
+    ) then
+        raise exception 'imported row invalid (amount/tx_date)' using errcode = '22023';
+    end if;
+
+    -- DÉDUP PAR MULTIPLICITÉ (et non par simple existence). Un `if exists`
+    -- écraserait 3 cafés identiques le même jour en un seul → solde sous-compté.
+    -- On numérote les occurrences de chaque clé dans le fichier (rn) et on
+    -- n'insère que celles au-delà de ce qui existe déjà :
+    --   fichier 3x / base 1x           -> insère 2, ignore 1
+    --   ré-import : fichier 3x / base 3x -> insère 0, ignore 3
+    -- Le sous-select voit la table AU DÉBUT de l'instruction (snapshot) : il
+    -- n'inclut pas les lignes insérées ici — c'est rn qui compte l'intra-fichier.
+    with src as (
+        select e->>'merchant' as merchant,
+               e->>'category' as category,
+               coalesce(e->>'icon', '💳') as icon,
+               (e->>'amount')::numeric as amount,
+               (e->>'tx_date')::date as tx_date,
+               row_number() over (
+                   partition by (e->>'tx_date')::date, (e->>'amount')::numeric, e->>'merchant'
+                   order by ord
+               ) as rn
+          from jsonb_array_elements(p_txs) with ordinality as t(e, ord)
+    ), ins as (
         insert into public.transactions(merchant, category, icon, amount, account_id, tx_date, user_id)
-        values (v_row->>'merchant', v_row->>'category', coalesce(v_row->>'icon', '💳'),
-                v_amt, p_account_id, (v_row->>'tx_date')::date, v_user_id);
-        v_delta := v_delta + v_amt;
-        v_count := v_count + 1;
-    end loop;
+        select s.merchant, s.category, s.icon, s.amount, p_account_id, s.tx_date, v_user_id
+          from src s
+         where s.rn > (
+             select count(*) from public.transactions t
+              where t.account_id = p_account_id
+                and t.tx_date = s.tx_date
+                and t.amount = s.amount
+                and t.merchant is not distinct from s.merchant
+         )
+        returning amount
+    )
+    select count(*), coalesce(sum(amount), 0) into v_count, v_delta from ins;
+
+    v_skipped := jsonb_array_length(p_txs) - v_count;
 
     update public.accounts
        set balance = coalesce(balance, 0) + v_delta,
