@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { projectBalance, type ProjRecurring } from '../projection'
 import type { Transaction } from '../../types'
 
-const tx = (dt: string, amt: number, m = 'X'): Transaction =>
-  ({ id: Math.random().toString(), dt, amt, m, cat: 'Courses', ico: '🛒' } as Transaction)
+const tx = (date: string, amt: number, m = 'X'): Transaction =>
+  ({ id: Math.random().toString(), tx_date: date, dt: date, amt, m, cat: 'Courses', ico: '🛒' } as Transaction)
 
 const NOW = new Date('2026-07-15T12:00:00')
 
@@ -65,10 +65,13 @@ describe('projectBalance', () => {
     expect(pts[pts.length - 1].balance).toBe(500)
   })
 
-  it('gère les dt d\'affichage « today » / « yesterday »', () => {
-    // useData remplace la date par ces libellés : sans résolution, les bornes
-    // et le calcul de couverture se feraient sur du texte.
-    const txs = [tx('today', -10), tx('yesterday', -10)]
+  it('se base sur tx_date, pas sur le libellé d\'affichage dt', () => {
+    // useData pose dt='today'/'yesterday' pour l'UI. Se fier à dt ferait
+    // comparer des dates sur du texte ('t' > '2' passait par accident).
+    const txs = [
+      { ...tx('2026-07-15', -10), dt: 'today' } as Transaction,
+      { ...tx('2026-07-14', -10), dt: 'yesterday' } as Transaction,
+    ]
     const pts = projectBalance(500, [], txs, 10, NOW)
     // 20 € sur 2 jours couverts = 10 €/jour → 10 jours = 100 €
     expect(pts[pts.length - 1].balance).toBeCloseTo(400, 0)

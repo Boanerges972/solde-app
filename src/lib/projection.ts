@@ -16,14 +16,10 @@ const iso = (d: Date) => d.toISOString().slice(0, 10)
 /** Fenêtre d'observation maximale des dépenses variables. */
 const WINDOW_DAYS = 90
 
-/** `dt` porte parfois un libellé d'affichage ('today'/'yesterday') posé par
- *  useData au lieu d'une date ISO. On le ramène à une date avant toute
- *  comparaison — sinon le tri et les bornes se font sur du texte. */
-function resolveDt(dt: string, now: Date): string {
-  if (dt === 'today') return iso(now)
-  if (dt === 'yesterday') return iso(new Date(now.getTime() - 86400000))
-  return dt
-}
+/** Date réelle d'une transaction. On lit `tx_date` et NON `dt` : ce dernier est
+ *  un libellé d'affichage posé par useData ('today'/'yesterday'), qui ferait
+ *  comparer des dates sur du texte. */
+const dateOf = (t: Transaction) => t.tx_date || ''
 
 /** Nombre de jours couverts entre `oldest` (ISO) et `now`, bornes incluses. */
 function spanDays(oldest: string, now: Date): number {
@@ -57,7 +53,7 @@ function avgDailyVariable(txs: Transaction[], recurrings: ProjRecurring[], now: 
   const recNames = new Set(recurrings.map(r => r.name.trim().toLowerCase()))
 
   const inWindow = txs
-    .map(t => ({ t, d: resolveDt(t.dt, now) }))
+    .map(t => ({ t, d: dateOf(t) }))
     .filter(({ d }) => d >= from)
 
   const variable = inWindow.filter(({ t }) =>
