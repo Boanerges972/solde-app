@@ -56,6 +56,39 @@ describe('useData — load', () => {
     expect(result.current.error).toBeNull()
   })
 
+  it('une réponse LENTE et périmée n\'écrase pas une lecture plus récente', async () => {
+    // 1re lecture: comptes lents à répondre. 2e lecture (reload) : rapide.
+    // Sans versionnage, la 1re arriverait en dernier et écraserait la 2e.
+    let call = 0
+    server.use(
+      http.get(`${R}/accounts`, async () => {
+        call++
+        if (call === 1) {
+          await new Promise(r => setTimeout(r, 300))
+          return HttpResponse.json([
+            { id: 'acc-1', name: 'PERIME', short_name: 'OLD', balance: '1', type: 'Courant', color: '#000', reserved: '0', free: '1', user_id: TEST_UID },
+          ])
+        }
+        return HttpResponse.json([
+          { id: 'acc-1', name: 'FRAIS', short_name: 'NEW', balance: '2', type: 'Courant', color: '#000', reserved: '0', free: '2', user_id: TEST_UID },
+        ])
+      }),
+    )
+
+    const { result } = renderHook(() => useData(TEST_UID))
+    // Laisse la 1re lecture PARTIR (sa requête accounts est donc l'appel lent).
+    await act(async () => { await new Promise(r => setTimeout(r, 20)) })
+    // Puis 2e lecture pendant que la 1re est encore en vol : elle répond vite.
+    await act(async () => {
+      result.current.reload()
+      await new Promise(r => setTimeout(r, 500)) // laisse la 1re (lente) revenir
+    })
+
+    await waitFor(() => expect(result.current.data).not.toBeNull(), { timeout: 5000 })
+    // La donnée affichée est celle de la lecture la PLUS RÉCENTE.
+    expect(result.current.data?.accounts[0].name).toBe('FRAIS')
+  })
+
   it('stays null when uid is null', async () => {
     const { result } = renderHook(() => useData(null))
     // When uid is null, the hook's useEffect returns early without calling load(),

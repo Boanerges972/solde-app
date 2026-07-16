@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { db } from '../lib/supabase'
 import { saveAccounts, saveTransactions, loadAccounts, loadTransactions, enqueue } from '../lib/idb'
 import { applyOptimisticTx } from './useOfflineSync'
@@ -31,8 +31,16 @@ export function useData(uid: string | null) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  /** Numéro de la dernière lecture lancée. Les chargements ne sont pas
+   *  sérialisés (Realtime + reload explicite après chaque RPC) : sans ça, une
+   *  réponse ancienne arrivée en retard écraserait une plus récente, dans
+   *  l'état ET dans le cache IndexedDB. Toute réponse dont la génération n'est
+   *  plus la courante est jetée. */
+  const genRef = useRef(0)
+
   const load = useCallback(async () => {
     if (!uid) { setLoading(false); return }
+    const gen = ++genRef.current
     setLoading(true)
     try {
       const today = new Date().toISOString().slice(0, 10)
@@ -104,6 +112,10 @@ export function useData(uid: string | null) {
       const proMonthSpent = proMonthTxs.filter((tx: any) => parseFloat(tx.amount) < 0).reduce((s: number, tx: any) => s + Math.abs(parseFloat(tx.amount)), 0)
       const proMonthIncome = proMonthTxs.filter((tx: any) => parseFloat(tx.amount) > 0).reduce((s: number, tx: any) => s + parseFloat(tx.amount), 0)
 
+      // Une lecture plus récente a été lancée entre-temps : cette réponse est
+      // périmée. On la jette AVANT d'écrire quoi que ce soit (état ou cache).
+      if (gen !== genRef.current) return
+
       saveAccounts(accs)        // fire-and-forget — persist to IDB for offline use
       saveTransactions(txs)     // fire-and-forget — persist to IDB for offline use
       setData({
@@ -118,11 +130,16 @@ export function useData(uid: string | null) {
       })
       setError(null)
     } catch (e: any) {
+      // Même règle qu'en succès : une réponse périmée ne doit rien écraser,
+      // pas même un message d'erreur (sinon un échec ancien masquerait un
+      // chargement récent réussi).
+      if (gen !== genRef.current) return
       if (!navigator.onLine) {
         // Offline fallback: serve cached data from IndexedDB
         try {
           const cachedAccs = await loadAccounts()
           const cachedTxs = await loadTransactions()
+          if (gen !== genRef.current) return
           if (cachedAccs.length > 0) {
             const now = new Date()
             const wkFb = Math.ceil((Number(now) - Number(new Date(now.getFullYear(), 0, 1))) / 604800000)
@@ -151,22 +168,36 @@ export function useData(uid: string | null) {
         setError(e.message || 'Erreur')
       }
     }
-    setLoading(false)
+    // Ne pas éteindre le spinner si une lecture plus récente est en cours.
+    if (gen === genRef.current) setLoading(false)
   }, [uid])
 
   useEffect(() => {
     if (!uid) return
     load()
-    // Supabase Realtime — auto-refresh on any change
+
+    // Une seule RPC touche transactions + accounts + weekly_budgets : elle
+    // déclenche donc jusqu'à 3 événements Realtime. Sans coalescence, c'est 3
+    // rechargements complets (5 requêtes chacun) pour un seul geste. On attend
+    // une courte fenêtre pour n'en faire qu'un.
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const scheduleLoad = () => {
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(() => { timer = null; load() }, 150)
+    }
+
     const channel = db.channel('txdata-' + uid)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions', filter: 'user_id=eq.' + uid },
-        () => load())
+        scheduleLoad)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'accounts', filter: 'user_id=eq.' + uid },
-        () => load())
+        scheduleLoad)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'weekly_budgets', filter: 'user_id=eq.' + uid },
-        () => load())
+        scheduleLoad)
       .subscribe()
-    return () => { db.removeChannel(channel) }
+    return () => {
+      if (timer) clearTimeout(timer)
+      db.removeChannel(channel)
+    }
   }, [uid, load])
 
   const addTx = useCallback(async (payload: {
