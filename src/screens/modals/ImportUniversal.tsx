@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { db } from '../../lib/supabase'
 import { sp } from '../../lib/theme'
 import { fmt } from '../../lib/currency'
@@ -45,6 +45,8 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
   const [selected, setSelected] = useState<Record<number, boolean>>({})
   // accId '' = mode « créer un nouveau compte ». Sinon = importer dans ce compte.
   const [accId, setAccId] = useState('')
+  /** L'utilisateur a choisi la destination à la main → ne plus la présélectionner. */
+  const userPicked = useRef(false)
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState(0)
   const [err, setErr] = useState('')
@@ -64,12 +66,15 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
   // Présélection : compte correspondant à la banque importée. Si AUCUN compte
   // ne correspond → mode création (accId='') + nom pré-rempli. Évite d'importer
   // silencieusement dans un compte non lié (ex: Boursorama → Nickel).
+  // Re-joué si `accounts` change (chargement tardif), mais JAMAIS après un choix
+  // explicite de l'utilisateur — sinon sa sélection serait écrasée.
   useEffect(() => {
+    if (userPicked.current) return
     const m = matchAccount(accounts, bankDef)
     if (m) setAccId(m.id)
     else { setAccId(''); setNewAccName(prev => prev || bankDef.name) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bank])
+  }, [accounts, bank])
 
   const handleFiles = async (files: FileList | null | undefined) => {
     if (!files || files.length === 0) return
@@ -405,12 +410,12 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
                 <div style={{ fontSize: 11, ...sp('s', 600), color: t.sub, letterSpacing: .6, textTransform: 'uppercase', marginBottom: 8 }}>Importer dans</div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {accounts.map(a => (
-                    <button key={a.id} onClick={() => setAccId(a.id)} style={{ padding: '8px 13px', borderRadius: 10, border: 'none', cursor: 'pointer', background: accId === a.id ? a.col + '22' : t.el, outline: accId === a.id ? '1.5px solid ' + a.col + '55' : 'none' }}>
+                    <button key={a.id} onClick={() => { userPicked.current = true; setAccId(a.id) }} style={{ padding: '8px 13px', borderRadius: 10, border: 'none', cursor: 'pointer', background: accId === a.id ? a.col + '22' : t.el, outline: accId === a.id ? '1.5px solid ' + a.col + '55' : 'none' }}>
                       <span style={{ fontSize: 12, ...sp('o', 600), color: accId === a.id ? a.col : t.tx }}>{a.short}</span>
                     </button>
                   ))}
                   {/* Toujours proposer un nouveau compte (banque sans compte lié). */}
-                  <button onClick={() => { setAccId(''); setNewAccName(n => n || bankDef.name) }} style={{ padding: '8px 13px', borderRadius: 10, border: '1px dashed ' + (accId === '' ? bankDef.color : t.bo), cursor: 'pointer', background: accId === '' ? bankDef.color + '22' : 'transparent' }}>
+                  <button onClick={() => { userPicked.current = true; setAccId(''); setNewAccName(n => n || bankDef.name) }} style={{ padding: '8px 13px', borderRadius: 10, border: '1px dashed ' + (accId === '' ? bankDef.color : t.bo), cursor: 'pointer', background: accId === '' ? bankDef.color + '22' : 'transparent' }}>
                     <span style={{ fontSize: 12, ...sp('o', 600), color: accId === '' ? bankDef.color : t.sub }}>+ Nouveau</span>
                   </button>
                 </div>
