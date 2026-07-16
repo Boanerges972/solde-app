@@ -26,8 +26,15 @@ export const ResetModal = ({ t, uid, onClose, onDone }: Props) => {
         await db.from('group_members').delete().eq('user_id', uid)
       }
       // Vider le localStorage (sauf préférences UI)
+      // ATTENTION : toute clé de déverrouillage doit figurer ici. Garder
+      // 'qdq-pin-enabled' en supprimant l'empreinte enfermerait l'utilisateur
+      // dehors (verrou actif, aucun code ne correspond). 'qdq-pin-v2' est le
+      // nouveau format, 'qdq-pin-hash' l'ancien (encore présent tant que le
+      // code n'a pas été ressaisi). Idem 'qdq-biometric-credid' sans lequel
+      // 'qdq-bio-enabled' pointerait dans le vide.
       const keep = ['qdq-dark','qdq-profile','qdq-period','qdq-alert-threshold',
-        'qdq-lock-after','qdq-pin-enabled','qdq-pin-hash','qdq-bio-enabled']
+        'qdq-lock-after','qdq-pin-enabled','qdq-pin-v2','qdq-pin-hash',
+        'qdq-bio-enabled','qdq-biometric-credid']
       Object.keys(localStorage).forEach(k => {
         if (!keep.includes(k)) localStorage.removeItem(k)
       })

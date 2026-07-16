@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react'
 import { sp } from '../../lib/theme'
-import { bioAvailable, authenticateBiometric, checkPin } from '../../lib/pin'
+import { bioAvailable, authenticateBiometric, checkPin, pinLockMsRemaining } from '../../lib/pin'
+
+/** Délai d'attente en clair : « 45 s », « 5 min ». */
+const fmtWait = (ms: number): string => {
+  const s = Math.ceil(ms / 1000)
+  return s < 60 ? `${s} s` : `${Math.ceil(s / 60)} min`
+}
 import type { Theme } from '../../types'
 
 interface Props { t: Theme; onUnlock: () => void }
@@ -30,8 +36,12 @@ export const LockScreen = ({ t, onUnlock }: Props) => {
       const ok = await checkPin(np)
       if (ok) { onUnlock() }
       else {
-        setShake(true); setMsg('Code incorrect')
-        setTimeout(() => { setPin(''); setShake(false); setMsg('') }, 700)
+        // Après trop d'essais, checkPin refuse SANS vérifier : le dire, sinon
+        // « Code incorrect » sur un code juste serait incompréhensible.
+        const waitMs = pinLockMsRemaining()
+        setShake(true)
+        setMsg(waitMs > 0 ? `Trop d'essais — réessaie dans ${fmtWait(waitMs)}` : 'Code incorrect')
+        setTimeout(() => { setPin(''); setShake(false); setMsg('') }, waitMs > 0 ? 2000 : 700)
       }
     }
   }
