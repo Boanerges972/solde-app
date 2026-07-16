@@ -65,17 +65,21 @@ describe('useData — load', () => {
   })
 })
 
+/** Intercepte une RPC et capture son corps. Renvoie un getter du dernier appel. */
+function captureRpc(fn: string, response: unknown = { success: true }) {
+  const calls: any[] = []
+  server.use(
+    http.post(`${R}/rpc/${fn}`, async ({ request }) => {
+      calls.push(await request.json())
+      return HttpResponse.json(response, { status: 200 })
+    }),
+  )
+  return calls
+}
+
 describe('useData — addDeposit', () => {
-  it('inserts transaction with positive amount (not negated)', async () => {
-    let insertedAmount: number | null = null
-    server.use(
-      http.post(`${R}/transactions`, async ({ request }) => {
-        const body = await request.json() as any
-        insertedAmount = body.amount
-        return HttpResponse.json([], { status: 201 })
-      }),
-    )
-
+  it('appelle rpc_add_tx avec un montant POSITIF (entrée, non nié)', async () => {
+    const calls = captureRpc('rpc_add_tx')
     const { result } = renderHook(() => useData(TEST_UID))
     await waitFor(() => expect(result.current.data).not.toBeNull(), { timeout: 5000 })
 
@@ -86,45 +90,15 @@ describe('useData — addDeposit', () => {
       })
     })
 
-    expect(insertedAmount).toBe(500)
-  })
-
-  it('patches account balance upward (bal + amount)', async () => {
-    let patchedBalance: number | null = null
-    server.use(
-      http.patch(`${R}/accounts`, async ({ request }) => {
-        const body = await request.json() as any
-        patchedBalance = body.balance
-        return HttpResponse.json([], { status: 200 })
-      }),
-    )
-
-    const { result } = renderHook(() => useData(TEST_UID))
-    await waitFor(() => expect(result.current.data).not.toBeNull(), { timeout: 5000 })
-
-    await act(async () => {
-      await result.current.addDeposit({
-        merchant: 'Salaire', category: 'Salaire', icon: '💼',
-        amount: 500, account_id: 'acc-1',
-      })
-    })
-
-    // acc-1 bal=1000 + deposit 500 = 1500
-    expect(patchedBalance).toBe(1500)
+    expect(calls).toHaveLength(1)
+    expect(calls[0].p_amount).toBe(500)
+    expect(calls[0].p_account_id).toBe('acc-1')
   })
 })
 
 describe('useData — addTx', () => {
-  it('patches account balance downward (bal - amount)', async () => {
-    let patchedBalance: number | null = null
-    server.use(
-      http.patch(`${R}/accounts`, async ({ request }) => {
-        const body = await request.json() as any
-        patchedBalance = body.balance
-        return HttpResponse.json([], { status: 200 })
-      }),
-    )
-
+  it('appelle rpc_add_tx avec un montant NÉGATIF (dépense)', async () => {
+    const calls = captureRpc('rpc_add_tx')
     const { result } = renderHook(() => useData(TEST_UID))
     await waitFor(() => expect(result.current.data).not.toBeNull(), { timeout: 5000 })
 
@@ -135,104 +109,84 @@ describe('useData — addTx', () => {
       })
     })
 
-    // acc-1 bal=1000 - expense 45 = 955
-    expect(patchedBalance).toBe(955)
+    expect(calls[0].p_amount).toBe(-45)
+    expect(calls[0].p_merchant).toBe('Carrefour')
   })
 
-  it('returns null error on success', async () => {
+  it('transmet un operation_id (idempotence) et le budget', async () => {
+    const calls = captureRpc('rpc_add_tx')
+    const { result } = renderHook(() => useData(TEST_UID))
+    await waitFor(() => expect(result.current.data).not.toBeNull(), { timeout: 5000 })
+
+    await act(async () => {
+      await result.current.addTx({ merchant: 'X', category: 'Autre', amount: 10, account_id: 'acc-1' })
+    })
+
+    expect(calls[0].p_operation_id).toMatch(/^[0-9a-f-]{36}$/i)
+    expect(typeof calls[0].p_budget).toBe('number')
+  })
+
+  it('propage group_id / paid_by (dépense de groupe)', async () => {
+    const calls = captureRpc('rpc_add_tx')
+    const { result } = renderHook(() => useData(TEST_UID))
+    await waitFor(() => expect(result.current.data).not.toBeNull(), { timeout: 5000 })
+
+    await act(async () => {
+      await result.current.addTx({
+        merchant: 'Resto', category: 'Restaurant', amount: 60, account_id: 'acc-1',
+        group_id: 'grp-1', paid_by: 'user-2',
+      })
+    })
+
+    expect(calls[0].p_group_id).toBe('grp-1')
+    expect(calls[0].p_paid_by).toBe('user-2')
+  })
+
+  it('retourne null en cas de succès', async () => {
+    captureRpc('rpc_add_tx')
     const { result } = renderHook(() => useData(TEST_UID))
     await waitFor(() => expect(result.current.data).not.toBeNull(), { timeout: 5000 })
 
     let err: any = 'not-called'
     await act(async () => {
-      err = await result.current.addTx({
-        merchant: 'Test', category: 'Autre',
-        amount: 10, account_id: 'acc-1',
-      })
+      err = await result.current.addTx({ merchant: 'Test', category: 'Autre', amount: 10, account_id: 'acc-1' })
     })
 
     expect(err).toBeNull()
   })
-
-  it('inserts transaction with negative amount (negated)', async () => {
-    let insertedAmount: number | null = null
-    server.use(
-      http.post(`${R}/transactions`, async ({ request }) => {
-        const body = await request.json() as any
-        insertedAmount = body.amount
-        return HttpResponse.json([], { status: 201 })
-      }),
-    )
-
-    const { result } = renderHook(() => useData(TEST_UID))
-    await waitFor(() => expect(result.current.data).not.toBeNull(), { timeout: 5000 })
-
-    await act(async () => {
-      await result.current.addTx({
-        merchant: 'Carrefour', category: 'Courses',
-        amount: 45, account_id: 'acc-1',
-      })
-    })
-
-    expect(insertedAmount).toBe(-45)
-  })
 })
 
 describe('useData — deleteTx', () => {
-  it('reverses account balance (undoes the original deduction)', async () => {
-    let patchedBalance: number | null = null
-    server.use(
-      http.patch(`${R}/accounts`, async ({ request }) => {
-        const body = await request.json() as any
-        patchedBalance = body.balance
-        return HttpResponse.json([], { status: 200 })
-      }),
-    )
-
+  it('appelle rpc_delete_tx avec l\'id numérique', async () => {
+    const calls = captureRpc('rpc_delete_tx')
     const { result } = renderHook(() => useData(TEST_UID))
     await waitFor(() => expect(result.current.data).not.toBeNull(), { timeout: 5000 })
 
     await act(async () => {
-      // tx-1: amount mapped to amt=-45.5 on acc-1 (bal=1000)
-      // newBal = acc.bal - tx.amt = 1000 - (-45.5) = 1045.5
-      await result.current.deleteTx('tx-1')
+      await result.current.deleteTx('123')
     })
 
-    expect(patchedBalance).toBe(1045.5)
+    expect(calls[0].p_transaction_id).toBe(123)
   })
 
-  it('calls DELETE on the transaction', async () => {
-    let deletedId: string | null = null
-    server.use(
-      http.delete(`${R}/transactions`, ({ request }) => {
-        const url = new URL(request.url)
-        deletedId = url.searchParams.get('id')?.replace('eq.', '') ?? null
-        return HttpResponse.json([], { status: 200 })
-      }),
-    )
-
+  it('refuse une tx encore en file offline (id « pending-N ») sans appeler la RPC', async () => {
+    const calls = captureRpc('rpc_delete_tx')
     const { result } = renderHook(() => useData(TEST_UID))
     await waitFor(() => expect(result.current.data).not.toBeNull(), { timeout: 5000 })
 
+    let res: any
     await act(async () => {
-      await result.current.deleteTx('tx-1')
+      res = await result.current.deleteTx('pending-3')
     })
 
-    expect(deletedId).toBe('tx-1')
+    expect(calls).toHaveLength(0)
+    expect(res?.message).toMatch(/synchronis/i)
   })
 })
 
 describe('useData — addTransfer', () => {
-  it('creates one debit and one credit transaction', async () => {
-    const postedAmounts: number[] = []
-    server.use(
-      http.post(`${R}/transactions`, async ({ request }) => {
-        const body = await request.json() as any
-        postedAmounts.push(body.amount)
-        return HttpResponse.json([], { status: 201 })
-      }),
-    )
-
+  it('appelle rpc_transfer (une seule opération atomique, pas 2 inserts)', async () => {
+    const calls = captureRpc('rpc_transfer')
     const { result } = renderHook(() => useData(TEST_UID))
     await waitFor(() => expect(result.current.data).not.toBeNull(), { timeout: 5000 })
 
@@ -240,8 +194,10 @@ describe('useData — addTransfer', () => {
       await result.current.addTransfer({ fromId: 'acc-1', toId: 'acc-2', amount: 200 })
     })
 
-    expect(postedAmounts).toContain(-200) // debit from acc-1
-    expect(postedAmounts).toContain(200)  // credit to acc-2
+    expect(calls).toHaveLength(1)
+    expect(calls[0].p_from_account_id).toBe('acc-1')
+    expect(calls[0].p_to_account_id).toBe('acc-2')
+    expect(calls[0].p_amount).toBe(200)
   })
 
   it('returns error for same-account transfer', async () => {

@@ -1,5 +1,5 @@
 import type { ParsedTx } from './ofx'
-import { parseAmountFR } from './amount'
+import { parseAmountFR, splitCsvLine } from './amount'
 
 const CM_CATS: Record<string, string[]> = {
   'Courses':['CARREFOUR','LEADER PRICE','CASINO','LECLERC','INTERMARCHE','LIDL','ALDI','MONOPRIX','SUPERMARCHE','MARCHE'],
@@ -40,7 +40,8 @@ export function parseCM(text: string): ParsedTx[] {
   const txs: ParsedTx[]=[];
 
   // Detect format from header row
-  const header=lines[0]?lines[0].split(';').map(stripQuotes).map(h=>h.toLowerCase()):[];
+  // splitCsvLine : un libellé quoté contenant ';' ne doit pas décaler les colonnes.
+  const header=lines[0]?splitCsvLine(lines[0]).map(stripQuotes).map(h=>h.toLowerCase()):[];
   // Format A: Date;Valeur;Montant;Libellé;Solde (5 cols, signed amount at col 2)
   // Format B: Date;DateValeur;Débit;Crédit;Libellé;Solde (6 cols, separate debit/credit)
   // Format C: Date;DateValeur;Montant;Libellé;Référence;IBAN;Solde;Catégorie (8 cols)
@@ -54,7 +55,7 @@ export function parseCM(text: string): ParsedTx[] {
   const catIdx=header.findIndex(h=>h.includes('catégor')||h.includes('categor'));
 
   for(let i=1;i<lines.length;i++){
-    const cols=lines[i].split(';').map(stripQuotes);
+    const cols=splitCsvLine(lines[i]).map(stripQuotes);
     if(cols.length<3)continue;
 
     const dateRaw=cols[0];

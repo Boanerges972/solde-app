@@ -2,8 +2,28 @@ import { useState, useEffect, useCallback } from 'react'
 import { db } from '../lib/supabase'
 import { saveAccounts, saveTransactions, loadAccounts, loadTransactions, enqueue } from '../lib/idb'
 import { applyOptimisticTx } from './useOfflineSync'
-import { USE_RPC, newOpId, rpcAddTx, rpcDeleteTx, rpcTransfer, rpcDeleteTransfer } from '../lib/rpc'
+import { newOpId, rpcAddTx, rpcDeleteTx, rpcTransfer, rpcDeleteTransfer } from '../lib/rpc'
 import type { AppData, Transaction, Account } from '../types'
+
+/** Notification navigateur quand une dépense fait franchir un seuil de budget. */
+function notifyBudget(prevSpent: number, added: number, budget: number) {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
+  if (!(budget > 0)) return
+  const threshold = parseInt(localStorage.getItem('qdq-alert-threshold') || '80')
+  const prevPct = (prevSpent / budget) * 100
+  const newPct = ((prevSpent + added) / budget) * 100
+  if (newPct >= 100 && prevPct < 100) {
+    new Notification('QDQ — Budget dépassé !', {
+      body: 'Tu as dépensé ' + Math.round(newPct) + '% de ton budget cette semaine.',
+      icon: '/icons/icon-192.png',
+    })
+  } else if (newPct >= threshold && prevPct < threshold) {
+    new Notification('QDQ — Alerte budget', {
+      body: Math.round(newPct) + '% du budget utilisé. Il reste ' + Math.round(budget - prevSpent - added) + '€.',
+      icon: '/icons/icon-192.png',
+    })
+  }
+}
 
 export function useData(uid: string | null) {
   const [data, setData] = useState<AppData | null>(null)
@@ -200,112 +220,48 @@ export function useData(uid: string | null) {
       setData(prev => applyOptimisticTx(prev, fakeTx))
       return null
     }
-    // ── Online path ───────────────────────────────────────────
+    // ── Online : RPC atomique (tx + solde + budget en une transaction) ──
     const n = Math.abs(parseFloat(String(payload.amount)))
-    const wk = Math.ceil((Number(new Date()) - Number(new Date(new Date().getFullYear(), 0, 1))) / 604800000)
     const today = new Date().toISOString().slice(0, 10)
+    const budget = data ? data.budget : 400
 
-    // Chemin RPC : solde + budget gérés atomiquement côté base.
-    if (USE_RPC) {
-      const budget = data ? data.budget : 400
-      const { error } = await rpcAddTx({
-        operationId: newOpId(), accountId: payload.account_id,
-        merchant: payload.merchant, category: payload.category, icon: payload.icon,
-        amount: -n, txDate: today, budget,
-      })
-      if (!error) {
-        // Notification budget (calcul client, inchangé).
-        const threshold = parseInt(localStorage.getItem('qdq-alert-threshold') || '80')
-        const prevPct = data ? (data.spent / budget * 100) : 0
-        const newPct = ((data ? data.spent : 0) + n) / budget * 100
-        if (Notification.permission === 'granted') {
-          if (newPct >= 100 && prevPct < 100) {
-            new Notification('QDQ — Budget dépassé !', { body: 'Tu as dépensé ' + Math.round(newPct) + '% de ton budget cette semaine.', icon: '/icons/icon-192.png' })
-          } else if (newPct >= threshold && prevPct < threshold) {
-            new Notification('QDQ — Alerte budget', { body: Math.round(newPct) + '% du budget utilisé. Il reste ' + Math.round(budget - (data ? data.spent : 0) - n) + '€.', icon: '/icons/icon-192.png' })
-          }
-        }
-        await load()
-      }
-      return error ? { message: error.message } : null
-    }
-
-    // ── Chemin legacy (flag off) ──────────────────────────────
-    const { error: e } = await db.from('transactions').insert({
-      user_id: uid, merchant: payload.merchant, category: payload.category,
-      icon: payload.icon, amount: -n, account_id: payload.account_id,
-      tx_date: today,
-      group_id: payload.group_id || null, paid_by: payload.paid_by || null,
+    const { error } = await rpcAddTx({
+      operationId: newOpId(), accountId: payload.account_id,
+      merchant: payload.merchant, category: payload.category, icon: payload.icon,
+      amount: -n, txDate: today, budget,
+      groupId: payload.group_id || null, paidBy: payload.paid_by || null,
     })
-    if (!e) {
-      const newSpent = (data ? data.spent : 0) + n
-      const budget = data ? data.budget : 400
-      await db.from('weekly_budgets').upsert({
-        user_id: uid, week_number: wk, year: new Date().getFullYear(),
-        budget, spent: parseFloat(newSpent.toFixed(2)),
-        user_name: data ? data.user : 'Utilisateur',
-      }, { onConflict: 'user_id,week_number,year' })
-      // Update account balance
-      const acc = data && data.accounts ? data.accounts.find(a => a.id === payload.account_id) : null
-      if (acc) {
-        const newBal = parseFloat((acc.bal - n).toFixed(2))
-        await db.from('accounts').update({ balance: newBal, free: newBal }).eq('id', acc.id).eq('user_id', uid)
-      }
-      // Browser notification if budget crossed
-      const threshold = parseInt(localStorage.getItem('qdq-alert-threshold') || '80')
-      const prevPct = data ? (data.spent / budget * 100) : 0
-      const newPct = newSpent / budget * 100
-      if (Notification.permission === 'granted') {
-        if (newPct >= 100 && prevPct < 100) {
-          new Notification('QDQ — Budget dépassé !', { body: 'Tu as dépensé ' + Math.round(newPct) + '% de ton budget cette semaine.', icon: '/icons/icon-192.png' })
-        } else if (newPct >= threshold && prevPct < threshold) {
-          new Notification('QDQ — Alerte budget', { body: Math.round(newPct) + '% du budget utilisé. Il reste ' + Math.round(budget - newSpent) + '€.', icon: '/icons/icon-192.png' })
-        }
-      }
-      await load()
-    }
-    return e
+    if (error) return { message: error.message }
+
+    notifyBudget(data ? data.spent : 0, n, budget)
+    await load()
+    return null
   }, [uid, data, load])
 
   const deleteTx = useCallback(async (txId: string): Promise<{ message: string } | null> => {
     const tx = data?.txs?.find(t => t.id === txId)
 
-    // Chemin RPC : virement → delete_transfer (2 jambes) ; sinon delete_tx.
-    if (USE_RPC) {
-      const transferId = (tx as unknown as { transfer_id?: string } | undefined)?.transfer_id
-      let res
-      if (tx?.isTransfer && transferId) {
-        res = await rpcDeleteTransfer({ operationId: newOpId(), transferId })
-      } else {
-        // Une tx encore en file offline (id « pending-N ») n'existe pas en base.
-        const rowId = Number(txId)
-        if (!Number.isInteger(rowId)) {
-          return { message: 'Transaction pas encore synchronisée — réessaie une fois en ligne.' }
-        }
-        res = await rpcDeleteTx({ operationId: newOpId(), transactionId: rowId })
+    // Virement → delete_transfer (2 jambes) ; sinon delete_tx.
+    const transferId = (tx as unknown as { transfer_id?: string } | undefined)?.transfer_id
+    let res
+    if (tx?.isTransfer && transferId) {
+      res = await rpcDeleteTransfer({ operationId: newOpId(), transferId })
+    } else {
+      // Une tx encore en file offline (id « pending-N ») n'existe pas en base.
+      const rowId = Number(txId)
+      if (!Number.isInteger(rowId)) {
+        return { message: 'Transaction pas encore synchronisée — réessaie une fois en ligne.' }
       }
-      if (res.error) {
-        console.error('[deleteTx] RPC échec', res.error)
-        await load() // resynchronise l'UI : la tx réapparaît si non supprimée
-        return { message: res.error.message }
-      }
-      await load()
-      return null
+      res = await rpcDeleteTx({ operationId: newOpId(), transactionId: rowId })
     }
-
-    await db.from('transactions').delete().eq('id', txId)
-    if (tx && data?.accounts) {
-      const acc = data.accounts.find(a => a.id === tx.account_id)
-      if (acc) {
-        // tx.amt est négatif pour les dépenses → soustraire l'inverse restaure le solde
-        const newBal = parseFloat((acc.bal - tx.amt).toFixed(2))
-        await db.from('accounts').update({ balance: newBal, free: newBal })
-          .eq('id', acc.id).eq('user_id', uid)
-      }
+    if (res.error) {
+      console.error('[deleteTx] RPC échec', res.error)
+      await load() // resynchronise l'UI : la tx réapparaît si non supprimée
+      return { message: res.error.message }
     }
     await load()
     return null
-  }, [uid, data, load])
+  }, [data, load])
 
   // ── Virement interne ────────────────────────────────────────
   // Insère 2 transactions liées (catégorie="Virement interne")
@@ -320,59 +276,14 @@ export function useData(uid: string | null) {
     const toAcc = data?.accounts?.find(a => a.id === toId)
     if (!fromAcc || !toAcc) return { error: 'Compte introuvable' }
 
-    // Chemin RPC : virement atomique (2 lignes + 2 soldes).
-    if (USE_RPC) {
-      const { error } = await rpcTransfer({
-        operationId: newOpId(), fromAccountId: fromId, toAccountId: toId,
-        amount: n, txDate: today, note,
-      })
-      if (!error) await load()
-      return { error: error ? error.message : null }
-    }
-
-    try {
-      const r1 = await db.from('transactions').insert({
-        user_id: uid,
-        merchant: note || ('Virement vers ' + toAcc.name),
-        category: 'Virement interne',
-        icon: '🔄',
-        amount: -n,
-        account_id: fromId,
-        tx_date: today,
-      })
-      if (r1.error) throw r1.error
-
-      const r2 = await db.from('transactions').insert({
-        user_id: uid,
-        merchant: note || ('Virement depuis ' + fromAcc.name),
-        category: 'Virement interne',
-        icon: '🔄',
-        amount: +n,
-        account_id: toId,
-        tx_date: today,
-      })
-      if (r2.error) throw r2.error
-
-      // Mettre à jour les soldes
-      const u1 = await db.from('accounts').update({
-        balance: parseFloat((fromAcc.bal - n).toFixed(2)),
-        free: parseFloat((fromAcc.bal - n).toFixed(2)),
-      }).eq('id', fromId).eq('user_id', uid)
-      if (u1.error) throw u1.error
-
-      const u2 = await db.from('accounts').update({
-        balance: parseFloat((toAcc.bal + n).toFixed(2)),
-        free: parseFloat((toAcc.bal + n).toFixed(2)),
-      }).eq('id', toId).eq('user_id', uid)
-      if (u2.error) throw u2.error
-
-      // PAS de mise à jour weekly_budget → ne fausse pas les stats
-      await load()
-      return { error: null }
-    } catch (e: any) {
-      return { error: e.message || 'Erreur lors du virement' }
-    }
-  }, [uid, data, load])
+    // Virement atomique : 2 lignes + 2 soldes dans une seule transaction.
+    const { error } = await rpcTransfer({
+      operationId: newOpId(), fromAccountId: fromId, toAccountId: toId,
+      amount: n, txDate: today, note,
+    })
+    if (!error) await load()
+    return { error: error ? error.message : null }
+  }, [data, load])
 
   const addDeposit = useCallback(async (payload: {
     merchant: string; category: string; icon?: string
@@ -381,34 +292,16 @@ export function useData(uid: string | null) {
     const n = Math.abs(parseFloat(String(payload.amount)))
     const today = new Date().toISOString().slice(0, 10)
 
-    // Chemin RPC : entrée (amount>0), solde géré côté base.
-    if (USE_RPC) {
-      const { error } = await rpcAddTx({
-        operationId: newOpId(), accountId: payload.account_id,
-        merchant: payload.merchant, category: payload.category,
-        icon: payload.icon || '💰', amount: n, txDate: today,
-      })
-      if (!error) await load()
-      return error ? { message: error.message } : null
-    }
-
-    const { error: e } = await db.from('transactions').insert({
-      user_id: uid, merchant: payload.merchant, category: payload.category,
-      icon: payload.icon || '💰', amount: n,
-      account_id: payload.account_id,
-      tx_date: today,
+    // Entrée (amount>0) : solde géré côté base, budget non impacté.
+    const { error } = await rpcAddTx({
+      operationId: newOpId(), accountId: payload.account_id,
+      merchant: payload.merchant, category: payload.category,
+      icon: payload.icon || '💰', amount: n, txDate: today,
     })
-    if (!e) {
-      const acc = data?.accounts?.find(a => a.id === payload.account_id)
-      if (acc) {
-        const newBal = parseFloat((acc.bal + n).toFixed(2))
-        await db.from('accounts').update({ balance: newBal, free: newBal })
-          .eq('id', acc.id).eq('user_id', uid)
-      }
-      await load()
-    }
-    return e
-  }, [uid, data, load])
+    if (error) return { message: error.message }
+    await load()
+    return null
+  }, [load])
 
   return { data, loading, error, reload: load, addTx, deleteTx, addTransfer, addDeposit }
 }

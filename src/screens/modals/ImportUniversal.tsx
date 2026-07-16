@@ -8,7 +8,7 @@ import { hashAB, getStoredHashes, saveHashes, parseNickelPDF } from '../../lib/p
 import type { ParsedTx } from '../../lib/parsers/index'
 import { iconForCat } from '../../lib/parsers/categories'
 import { matchRule, type MerchantRule } from '../../lib/merchantRules'
-import { USE_RPC, newOpId, rpcImportBatch } from '../../lib/rpc'
+import { newOpId, rpcImportBatch } from '../../lib/rpc'
 import type { Theme, Account } from '../../types'
 
 interface Props {
@@ -130,28 +130,13 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
         })
       }
 
-      // Deduplication: fetch existing transactions for this account
-      const { data: existing } = await db
-        .from('transactions')
-        .select('tx_date,amount,merchant')
-        .eq('account_id', accId)
-        .eq('user_id', uid)
-
-      const existingHashes = new Set(
-        (existing ?? []).map((tx: { tx_date: string; amount: string | number; merchant: string }) =>
-          `${tx.tx_date}|${parseFloat(String(tx.amount)).toFixed(2)}|${tx.merchant}`
-        )
-      )
-
-      const fresh = allParsed.filter(tx =>
-        !existingHashes.has(`${tx.dt}|${tx.amount.toFixed(2)}|${tx.merchant}`)
-      )
-      const dupCount = allParsed.length - fresh.length
-      setSkipped(dupCount)
-
+      // PAS de déduplication ici : à ce stade la destination n'est pas encore
+      // choisie. Filtrer contre le compte présélectionné ferait disparaître des
+      // lignes qui n'existent pas sur le compte finalement retenu. La dédup est
+      // faite par rpc_import_batch, sur le compte RÉEL, et renvoie `skipped`.
       const sel: Record<number, boolean> = {}
-      fresh.forEach((_, i) => { sel[i] = true })
-      setTxs(fresh)
+      allParsed.forEach((_, i) => { sel[i] = true })
+      setTxs(allParsed)
       setSelected(sel)
       setStep('preview')
     } catch (e: unknown) {
@@ -180,52 +165,19 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
       setErr('Session expirée — déconnecte-toi puis reconnecte-toi, et relance l\'import.')
       setLoading(false); return
     }
-    // Chemin RPC : N insert + UN delta atomiques (préserve le solde initial).
-    if (USE_RPC) {
-      const { data, error } = await rpcImportBatch({
-        operationId: newOpId(), accountId: accId,
-        txs: toImport.map(tx => ({
-          merchant: tx.merchant, category: tx.category, icon: tx.icon,
-          amount: tx.amount, tx_date: tx.dt,
-        })),
-      })
-      if (error) { setErr(friendlyDbError(error.message)); setLoading(false); return }
-      const r = data as { imported?: number; skipped?: number } | null
-      setImportSummary({ imported: r?.imported ?? 0, skipped: r?.skipped ?? 0 })
-      setProgress(100)
-      if (isNickel && pendingHashes.length) {
-        saveHashes(uid, [...getStoredHashes(uid), ...pendingHashes])
-      }
-      setLoading(false); setStep('done')
-      setTimeout(() => { onImported(); onClose() }, 1500)
-      return
-    }
-
-    let done = 0
-    for (const tx of toImport) {
-      const { error } = await db.from('transactions').insert({
-        user_id: uid, merchant: tx.merchant, category: tx.category,
-        icon: tx.icon, amount: tx.amount, account_id: accId,
-        tx_date: tx.dt, group_id: null, paid_by: null,
-      })
-      if (error) {
-        setErr(friendlyDbError(error.message) + (done > 0 ? ` (${done} transaction${done > 1 ? 's' : ''} déjà importée${done > 1 ? 's' : ''})` : ''))
-        setLoading(false); return
-      }
-      done++
-      setProgress(Math.round(done / toImport.length * 100))
-    }
-    // Recalculate account balance (legacy — BUG : écrase le solde initial ;
-    // remplacé par le delta atomique de rpc_import_batch quand USE_RPC).
-    const { data: allTxs } = await db
-      .from('transactions').select('amount')
-      .eq('account_id', accId).eq('user_id', uid)
-    if (allTxs?.length) {
-      const newBal = allTxs.reduce((s, tx) => s + parseFloat(String(tx.amount)), 0)
-      await db.from('accounts')
-        .update({ balance: parseFloat(newBal.toFixed(2)), free: parseFloat(newBal.toFixed(2)) })
-        .eq('id', accId).eq('user_id', uid)
-    }
+    // N insert + UN SEUL delta, atomiques. La dédup est faite ici, sur le
+    // compte réellement choisi, et renvoie le nombre de lignes ignorées.
+    const { data, error } = await rpcImportBatch({
+      operationId: newOpId(), accountId: accId,
+      txs: toImport.map(tx => ({
+        merchant: tx.merchant, category: tx.category, icon: tx.icon,
+        amount: tx.amount, tx_date: tx.dt,
+      })),
+    })
+    if (error) { setErr(friendlyDbError(error.message)); setLoading(false); return }
+    const r = data as { imported?: number; skipped?: number } | null
+    setImportSummary({ imported: r?.imported ?? 0, skipped: r?.skipped ?? 0 })
+    setProgress(100)
     if (isNickel && pendingHashes.length) {
       saveHashes(uid, [...getStoredHashes(uid), ...pendingHashes])
     }
@@ -241,50 +193,34 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
       setLoading(false); return
     }
     const toImport = txs.filter((_, i) => selected[i])
-    const bal = parseFloat(toImport.reduce((s, tx) => s + tx.amount, 0).toFixed(2))
+    // Sans ligne sélectionnée on créerait un compte vide pour rien.
+    if (!toImport.length) { setCreateErr('Sélectionne au moins une transaction'); setLoading(false); return }
+
     const newId = newAccName.trim().toLowerCase().replace(/\s+/g, '_') + '_' + uid.slice(0, 6) + '_' + Math.random().toString(36).slice(2, 6)
-    // Sous RPC : compte créé à 0, le delta est appliqué par rpc_import_batch.
-    const initBal = USE_RPC ? 0 : bal
+    // Compte créé à 0 : le solde vient du delta appliqué par rpc_import_batch.
     const { error } = await db.from('accounts').insert({
       id: newId, name: newAccName.trim(), short_name: newAccName.trim().slice(0, 4),
-      balance: initBal, free: initBal, type: newAccType, color: newAccColor, user_id: uid, reserved: 0,
+      balance: 0, free: 0, type: newAccType, color: newAccColor, user_id: uid, reserved: 0,
     })
     if (error) { setCreateErr(friendlyDbError(error.message)); setLoading(false); return }
 
-    if (USE_RPC) {
-      const { data: impData, error: impErr } = await rpcImportBatch({
-        operationId: newOpId(), accountId: newId,
-        txs: toImport.map(tx => ({
-          merchant: tx.merchant, category: tx.category, icon: tx.icon,
-          amount: tx.amount, tx_date: tx.dt,
-        })),
-      })
-      if (impErr) { setCreateErr(friendlyDbError(impErr.message) + ' (compte créé, import échoué)'); setLoading(false); return }
-      const r = impData as { imported?: number; skipped?: number } | null
-      setImportSummary({ imported: r?.imported ?? 0, skipped: r?.skipped ?? 0 })
-      setProgress(100)
-      if (isNickel && pendingHashes.length) {
-        saveHashes(uid, [...getStoredHashes(uid), ...pendingHashes])
-      }
-      setLoading(false); setStep('done')
-      setTimeout(() => { onImported(); onClose() }, 1500)
-      return
+    const { data: impData, error: impErr } = await rpcImportBatch({
+      operationId: newOpId(), accountId: newId,
+      txs: toImport.map(tx => ({
+        merchant: tx.merchant, category: tx.category, icon: tx.icon,
+        amount: tx.amount, tx_date: tx.dt,
+      })),
+    })
+    if (impErr) {
+      // Création + import ne sont pas une seule transaction : on annule le
+      // compte tout juste créé pour ne pas laisser un compte vide en base.
+      await db.from('accounts').delete().eq('id', newId).eq('user_id', uid)
+      setCreateErr(friendlyDbError(impErr.message))
+      setLoading(false); return
     }
-
-    let done = 0
-    for (const tx of toImport) {
-      const { error: txErr } = await db.from('transactions').insert({
-        user_id: uid, merchant: tx.merchant, category: tx.category,
-        icon: tx.icon, amount: tx.amount, account_id: newId,
-        tx_date: tx.dt, group_id: null, paid_by: null,
-      })
-      if (txErr) {
-        setCreateErr(friendlyDbError(txErr.message) + ` (compte créé, ${done}/${toImport.length} transactions importées)`)
-        setLoading(false); return
-      }
-      done++
-      setProgress(Math.round(done / toImport.length * 100))
-    }
+    const r = impData as { imported?: number; skipped?: number } | null
+    setImportSummary({ imported: r?.imported ?? 0, skipped: r?.skipped ?? 0 })
+    setProgress(100)
     if (isNickel && pendingHashes.length) {
       saveHashes(uid, [...getStoredHashes(uid), ...pendingHashes])
     }

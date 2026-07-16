@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { db } from '../lib/supabase'
 import { loadQueue, removeFromQueue, updateQueueEntry } from '../lib/idb'
-import { USE_RPC, newOpId, rpcAddTx } from '../lib/rpc'
+import { newOpId, rpcAddTx } from '../lib/rpc'
 import type { AppData, Transaction } from '../types'
 
 export interface OfflineSyncState {
@@ -58,61 +57,27 @@ export function useOfflineSync(
     syncingRef.current = true
     setIsSyncing(true)
     try {
-
-      // Fetch current account balances from Supabase
-      const { data: accRows, error: accErr } = await db.from('accounts').select('id, balance').eq('user_id', uid)
-      if (accErr) throw accErr
-      const balMap: Record<string, number> = {}
-      for (const a of (accRows || [])) {
-        balMap[a.id] = parseFloat(a.balance)
-      }
-
       for (const entry of pending) {
         try {
           const p = entry.payload
           const n = Math.abs(p.amount)
 
-          // Chemin RPC : insert + solde + budget atomiques et IDEMPOTENTS.
-          // operation_id figé à la mise en file → un replay après crash ne
-          // crée pas de doublon (financial_ops rejette le 2e appel).
-          if (USE_RPC) {
-            // Entrée héritée (mise en file avant l'ajout d'operation_id) : on
-            // en génère un et on le PERSISTE avant l'appel. Sans ça, chaque
-            // retry utiliserait un id neuf → l'idempotence ne protège plus.
-            let opId = p.operation_id
-            if (!opId) {
-              opId = newOpId()
-              await updateQueueEntry({ ...entry, payload: { ...p, operation_id: opId } })
-            }
-            const { error } = await rpcAddTx({
-              operationId: opId,
-              accountId: p.account_id, merchant: p.merchant, category: p.category,
-              icon: p.icon, amount: -n, txDate: p.tx_date,
-            })
-            if (error) throw new Error(error.message)
-            await removeFromQueue(entry.id!)
-            continue
+          // Replay via RPC : insert + solde + budget atomiques et IDEMPOTENTS.
+          // Entrée héritée (mise en file avant l'ajout d'operation_id) : on en
+          // génère un et on le PERSISTE avant l'appel. Sans ça, chaque retry
+          // utiliserait un id neuf → l'idempotence ne protège plus.
+          let opId = p.operation_id
+          if (!opId) {
+            opId = newOpId()
+            await updateQueueEntry({ ...entry, payload: { ...p, operation_id: opId } })
           }
-
-          // ── Chemin legacy (flag off) — non idempotent ──────────
-          // Insert transaction
-          const { error } = await db.from('transactions').insert({
-            user_id: p.uid, merchant: p.merchant, category: p.category,
-            icon: p.icon, amount: -n, account_id: p.account_id,
-            tx_date: p.tx_date, group_id: p.group_id || null, paid_by: p.paid_by || null,
+          const { error } = await rpcAddTx({
+            operationId: opId,
+            accountId: p.account_id, merchant: p.merchant, category: p.category,
+            icon: p.icon, amount: -n, txDate: p.tx_date,
+            groupId: p.group_id || null, paidBy: p.paid_by || null,
           })
-          if (error) throw error
-
-          // Update account balance
-          if (balMap[p.account_id] !== undefined) {
-            const newBal = parseFloat((balMap[p.account_id] - n).toFixed(2))
-            const { error: balErr } = await db.from('accounts')
-              .update({ balance: newBal, free: newBal })
-              .eq('id', p.account_id).eq('user_id', uid)
-            if (balErr) throw balErr
-            balMap[p.account_id] = newBal
-          }
-
+          if (error) throw new Error(error.message)
           await removeFromQueue(entry.id!)
         } catch (err) {
           console.error('[syncQueue] replay failed for entry', entry.id, err)

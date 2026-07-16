@@ -1,16 +1,16 @@
 // ── RPC financières transactionnelles ────────────────────────────────────
 // Câblage client des RPC Postgres (migration 20260714_rpc_financial.sql).
-// Derrière un feature flag : tant que VITE_USE_RPC ≠ 'true', l'app garde les
-// anciens chemins d'écriture (rollback = couper le flag).
+// SEULE voie d'écriture des soldes : depuis la Section 7 de la migration, le
+// client n'a plus le privilège d'UPDATE sur accounts.balance/free/reserved.
+// Il n'y a donc PAS de chemin de repli — un feature flag ne serait pas un
+// rollback valide (il produirait des écritures partielles : tx insérée, solde
+// refusé). Rollback réel = revert du client ET re-GRANT des privilèges.
 //
 // Chaque écriture financière porte un operation_id (uuid). Généré une seule
 // fois par opération logique ; RÉUTILISÉ tel quel au retry (online ou replay
 // offline) → l'idempotence côté base (financial_ops) empêche tout doublon.
 
 import { db } from './supabase'
-
-/** Flag global : RPC actives seulement si VITE_USE_RPC='true'. */
-export const USE_RPC = import.meta.env.VITE_USE_RPC === 'true'
 
 /** Nouvel operation_id. crypto.randomUUID dispo en contexte sécurisé (HTTPS/PWA). */
 export function newOpId(): string {
@@ -24,15 +24,18 @@ export function newOpId(): string {
 
 type RpcResult = { data: unknown; error: { message: string } | null }
 
-/** Dépense (amount<0) ou entrée (amount>0). amount SIGNÉ. */
+/** Dépense (amount<0) ou entrée (amount>0). amount SIGNÉ.
+ *  groupId/paidBy : dépense de groupe — la RPC vérifie l'appartenance. */
 export function rpcAddTx(p: {
   operationId: string; accountId: string; merchant: string; category: string
   icon?: string; amount: number; txDate: string; budget?: number
+  groupId?: string | null; paidBy?: string | null
 }): Promise<RpcResult> {
   return db.rpc('rpc_add_tx', {
     p_operation_id: p.operationId, p_account_id: p.accountId,
     p_merchant: p.merchant, p_category: p.category, p_icon: p.icon ?? null,
     p_amount: p.amount, p_tx_date: p.txDate, p_budget: p.budget ?? 400,
+    p_group_id: p.groupId ?? null, p_paid_by: p.paidBy ?? null,
   }) as unknown as Promise<RpcResult>
 }
 
