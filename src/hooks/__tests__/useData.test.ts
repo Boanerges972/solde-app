@@ -171,7 +171,9 @@ describe('useData — addTx', () => {
       res = await result.current.addTx({ merchant: 'X', category: 'Autre', amount: 10, account_id: 'acc-1' })
     })
 
-    expect(res?.message).toContain('amount invalid')
+    // Message TRADUIT, jamais le brut PostgreSQL.
+    expect(res?.message).toMatch(/montant invalide/i)
+    expect(res?.message).not.toContain('amount invalid')
     expect(await loadQueue()).toHaveLength(0) // rien mis en file
   })
 

@@ -3,6 +3,7 @@ import { db } from '../lib/supabase'
 import { saveAccounts, saveTransactions, loadAccounts, loadTransactions, enqueue } from '../lib/idb'
 import { applyOptimisticTx } from './useOfflineSync'
 import { newOpId, isNetworkError, rpcAddTx, rpcDeleteTx, rpcTransfer, rpcDeleteTransfer } from '../lib/rpc'
+import { friendlyError } from '../lib/errors'
 import type { AppData, Transaction, Account } from '../types'
 
 /** Notification navigateur quand une dépense fait franchir un seuil de budget. */
@@ -227,11 +228,11 @@ export function useData(uid: string | null) {
     if (error) {
       // La base a répondu (validation, droits, contrainte) : rien n'a été
       // commité, on remonte l'erreur telle quelle.
-      if (!isNetworkError(error)) return { message: error.message }
+      if (!isNetworkError(error)) return { message: friendlyError(error) }
       // Réponse jamais arrivée : la RPC a PEUT-ÊTRE commité. Rejouer avec un
       // nouvel id doublerait le débit. On met en file avec LE MÊME opId : le
       // replay sera un no-op si le commit a eu lieu, sinon il passera.
-      if (!(await queueLocally())) return { message: error.message }
+      if (!(await queueLocally())) return { message: friendlyError(error) }
       return null
     }
 
@@ -259,7 +260,7 @@ export function useData(uid: string | null) {
     if (res.error) {
       console.error('[deleteTx] RPC échec', res.error)
       await load() // resynchronise l'UI : la tx réapparaît si non supprimée
-      return { message: res.error.message }
+      return { message: friendlyError(res.error) }
     }
     await load()
     return null
@@ -285,7 +286,7 @@ export function useData(uid: string | null) {
       amount: n, txDate: today, note,
     })
     if (error) {
-      if (!isNetworkError(error)) return { error: error.message }
+      if (!isNetworkError(error)) return { error: friendlyError(error) }
       // Réponse perdue : le virement a peut-être été commité. On le met en file
       // avec LE MÊME opId → le rejeu sera un no-op si c'est déjà fait.
       const queued = await enqueue({
@@ -297,7 +298,7 @@ export function useData(uid: string | null) {
         timestamp: Date.now(),
         retries: 0,
       })
-      if (queued === null) return { error: error.message }
+      if (queued === null) return { error: friendlyError(error) }
       return { error: null, queued: true }
     }
     await load()
@@ -319,7 +320,7 @@ export function useData(uid: string | null) {
       icon: payload.icon || '💰', amount: n, txDate: today,
     })
     if (error) {
-      if (!isNetworkError(error)) return { message: error.message }
+      if (!isNetworkError(error)) return { message: friendlyError(error) }
       // Réponse perdue : mise en file avec LE MÊME opId (rejeu idempotent).
       const queued = await enqueue({
         op: {
@@ -332,7 +333,7 @@ export function useData(uid: string | null) {
         timestamp: Date.now(),
         retries: 0,
       })
-      if (queued === null) return { message: error.message }
+      if (queued === null) return { message: friendlyError(error) }
       return null
     }
     await load()

@@ -9,6 +9,7 @@ import type { ParsedTx } from '../../lib/parsers/index'
 import { iconForCat } from '../../lib/parsers/categories'
 import { matchRule, type MerchantRule } from '../../lib/merchantRules'
 import { newOpId, isNetworkError, rpcImportBatch } from '../../lib/rpc'
+import { friendlyError } from '../../lib/errors'
 import { enqueue } from '../../lib/idb'
 import type { Theme, Account } from '../../types'
 
@@ -30,6 +31,33 @@ const eq = (x: string, y: string) => !!x && x === y
 /** Sous-chaîne, seulement si les deux font ≥3 car. — évite qu'un compte nommé
  *  « A » matche « Crédit Agricole ». */
 const sub = (x: string, y: string) => x.length >= 3 && y.length >= 3 && (x.includes(y) || y.includes(x))
+
+const txKey = (tx: ParsedTx) => `${tx.dt}|${tx.amount.toFixed(2)}|${tx.merchant}`
+
+/** Fusionne les lignes de plusieurs fichiers d'un même import.
+ *  Deux relevés peuvent SE CHEVAUCHER (mêmes opérations dans les deux). On
+ *  garde, pour chaque clé (date|montant|libellé), le nombre MAX d'occurrences
+ *  vu dans UN SEUL fichier :
+ *   - somme      -> un chevauchement doublerait les lignes ;
+ *   - une seule  -> 3 cafés identiques le même jour seraient réduits à 1 et le
+ *                   solde serait sous-compté (la banque en a bien débité 3).
+ *  Exporté pour test. */
+export function mergeParsedFiles(perFile: ParsedTx[][]): ParsedTx[] {
+  const best = new Map<string, ParsedTx[]>()
+  for (const file of perFile) {
+    const groups = new Map<string, ParsedTx[]>()
+    for (const tx of file) {
+      const k = txKey(tx)
+      const g = groups.get(k)
+      if (g) g.push(tx); else groups.set(k, [tx])
+    }
+    for (const [k, g] of groups) {
+      const cur = best.get(k)
+      if (!cur || g.length > cur.length) best.set(k, g)
+    }
+  }
+  return [...best.values()].flat()
+}
 
 /** Cherche le compte existant correspondant à la banque importée (par nom/id). */
 export function matchAccount(accounts: Account[], bankDef: { id: string; name: string }): Account | undefined {
@@ -83,7 +111,7 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
     if (!files || files.length === 0) return
     setErr(''); setLoading(true); setFileCount(files.length); setDupFileNames([])
     try {
-      let allParsed: ParsedTx[] = []
+      const perFile: ParsedTx[][] = []
       const dups: string[] = []
       const freshHashes: string[] = []
       const storedHashes = isNickel ? new Set(getStoredHashes(uid)) : null
@@ -98,30 +126,23 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
             continue
           }
           freshHashes.push(hash)
-          const parsed = await parseNickelPDF(ab)
-          allParsed = [...allParsed, ...parsed]
+          perFile.push(await parseNickelPDF(ab))
         } else {
-          const parsed = await detectAndParseFile(file, bank)
-          allParsed = [...allParsed, ...parsed]
+          perFile.push(await detectAndParseFile(file, bank))
         }
       }
       setDupFileNames(dups)
       setPendingHashes(freshHashes)
+
+      // Fusion des fichiers : gère le chevauchement SANS écraser les vraies
+      // occurrences multiples d'une même opération (cf. mergeParsedFiles).
+      let allParsed = mergeParsedFiles(perFile)
 
       if (!allParsed.length) {
         setErr('Aucune transaction trouvée. Vérifie le format du fichier.')
         setLoading(false)
         return
       }
-
-      // Dedup between files (same date+amount+merchant)
-      const seen = new Set<string>()
-      allParsed = allParsed.filter(tx => {
-        const key = `${tx.dt}|${tx.amount.toFixed(2)}|${tx.merchant}`
-        if (seen.has(key)) return false
-        seen.add(key)
-        return true
-      })
 
       // Règles apprises : la catégorie de l'utilisateur prime sur la détection par mots-clés
       const { data: ruleRows } = await db.from('merchant_rules').select('id,pattern,category').eq('user_id', uid)
@@ -148,11 +169,6 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
     setLoading(false)
   }
 
-  /** Traduit les erreurs Supabase cryptiques en message actionnable. */
-  const friendlyDbError = (msg: string): string =>
-    /row-level security|JWT|token|expired/i.test(msg)
-      ? 'Session expirée — déconnecte-toi puis reconnecte-toi, et relance l\'import.'
-      : msg
 
   /** Vérifie que la session est encore valide avant d'écrire en base. */
   const sessionAlive = async (): Promise<boolean> => {
@@ -177,14 +193,14 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
     }))
     const { data, error } = await rpcImportBatch({ operationId: opId, accountId: accId, txs: rows })
     if (error) {
-      if (!isNetworkError(error)) { setErr(friendlyDbError(error.message)); setLoading(false); return }
+      if (!isNetworkError(error)) { setErr(friendlyError(error)); setLoading(false); return }
       // Réponse perdue : l'import a peut-être été commité. File d'attente avec
       // LE MÊME opId → le rejeu ne réimportera pas une seconde fois.
       const queued = await enqueue({
         op: { kind: 'import', operation_id: opId, uid, account_id: accId, txs: rows },
         timestamp: Date.now(), retries: 0,
       })
-      if (queued === null) { setErr(friendlyDbError(error.message)); setLoading(false); return }
+      if (queued === null) { setErr(friendlyError(error)); setLoading(false); return }
       setImportSummary(null); setQueuedImport(true)
       setLoading(false); setStep('done')
       setTimeout(() => { onImported(); onClose() }, 1800)
@@ -217,7 +233,7 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
       id: newId, name: newAccName.trim(), short_name: newAccName.trim().slice(0, 4),
       balance: 0, free: 0, type: newAccType, color: newAccColor, user_id: uid, reserved: 0,
     })
-    if (error) { setCreateErr(friendlyDbError(error.message)); setLoading(false); return }
+    if (error) { setCreateErr(friendlyError(error)); setLoading(false); return }
 
     const { data: impData, error: impErr } = await rpcImportBatch({
       operationId: newOpId(), accountId: newId,
@@ -230,7 +246,7 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
       // Création + import ne sont pas une seule transaction : on annule le
       // compte tout juste créé pour ne pas laisser un compte vide en base.
       await db.from('accounts').delete().eq('id', newId).eq('user_id', uid)
-      setCreateErr(friendlyDbError(impErr.message))
+      setCreateErr(friendlyError(impErr))
       setLoading(false); return
     }
     const r = impData as { imported?: number; skipped?: number } | null

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { db } from '../../lib/supabase'
 import { rpcSetBalance } from '../../lib/rpc'
+import { friendlyError } from '../../lib/errors'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { sp } from '../../lib/theme'
 import { fmt } from '../../lib/currency'
@@ -39,17 +40,17 @@ export const EditAccount = ({ account, isNew, t, uid, onClose, onSaved }: Props)
         id: accId, name: name.trim(), short_name: name.trim().slice(0, 4),
         balance, free: balance, type, color: col, user_id: uid, reserved: 0,
       })
-      if (error) { setSaving(false); setErr(error.message); return }
+      if (error) { setSaving(false); setErr(friendlyError(error)); return }
     } else {
       // Colonnes éditables uniquement — balance/free NE passent PLUS en direct
       // (interdites côté client après Section 7 ; override du solde via RPC).
       const { error: uErr } = await db.from('accounts')
         .update({ name: name.trim(), short_name: name.trim().slice(0, 4), type, color: col })
         .eq('id', account!.id)
-      if (uErr) { setSaving(false); setErr(uErr.message); return }
+      if (uErr) { setSaving(false); setErr(friendlyError(uErr)); return }
       if (balance !== account!.bal) {
         const { error: bErr } = await rpcSetBalance({ accountId: account!.id, balance })
-        if (bErr) { setSaving(false); setErr(bErr.message); return }
+        if (bErr) { setSaving(false); setErr(friendlyError(bErr)); return }
       }
     }
     setSaving(false)
