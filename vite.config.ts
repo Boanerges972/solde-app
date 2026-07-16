@@ -13,6 +13,12 @@ export default defineConfig({
       filename: 'sw.ts',
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // pdfjs (~470 Ko) ne sert QU'À l'import de relevés PDF Nickel. Le
+        // précacher l'imposait à l'installation de la PWA à tout le monde.
+        // Il reste chargé à la demande (import dynamique dans parsers/nickel.ts).
+        // Aucune perte hors-ligne : son worker (.mjs, 1,2 Mo) n'a jamais été
+        // précaché — l'import PDF a toujours nécessité le réseau.
+        globIgnores: ['**/pdf-*.js', '**/pdf.worker*.js', '**/pdf.worker*.mjs'],
       },
       manifest: {
         name: 'QDQ — Qui Dépense Quoi',
