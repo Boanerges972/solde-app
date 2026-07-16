@@ -14,6 +14,12 @@ export interface Insight {
 
 const monthKey = (d: string) => d.slice(0, 7)
 
+/** Date réelle d'une transaction. On lit `tx_date`, JAMAIS `dt` : ce dernier
+ *  est un champ calculé d'affichage posé par useData, qui vaut 'today' /
+ *  'yesterday' pour les 2 derniers jours. Comparer `dt` à une date excluait
+ *  silencieusement les opérations les plus récentes de tous les calculs. */
+const dateOf = (t: Transaction) => t.tx_date || ''
+
 export function buildInsights(txs: Transaction[], now: Date = new Date()): Insight[] {
   const out: Insight[] = []
   const spent = txs.filter(t => t.amt < 0 && t.cat !== 'Virement interne')
@@ -27,7 +33,7 @@ export function buildInsights(txs: Transaction[], now: Date = new Date()): Insig
   // 1) Variation par catégorie vs mois précédent (seuil ±15 %)
   const byCatMonth: Record<string, Record<string, number>> = {}
   spent.forEach(t => {
-    const mk = monthKey(t.dt)
+    const mk = monthKey(dateOf(t))
     if (mk !== curMonth && mk !== prevMonth) return
     const cat = t.cat || 'Autre'
     byCatMonth[cat] = byCatMonth[cat] || {}
@@ -52,7 +58,7 @@ export function buildInsights(txs: Transaction[], now: Date = new Date()): Insig
   // 2) Plus grosse dépense des 7 derniers jours
   const weekAgo = new Date(now.getTime() - 7 * 86400000).toISOString().slice(0, 10)
   const nowIso = now.toISOString().slice(0, 10)
-  const week = spent.filter(t => t.dt >= weekAgo && t.dt <= nowIso)
+  const week = spent.filter(t => dateOf(t) >= weekAgo && dateOf(t) <= nowIso)
   if (week.length > 0) {
     const biggest = week.reduce((a, b) => (Math.abs(b.amt) > Math.abs(a.amt) ? b : a))
     out.push({
@@ -68,11 +74,11 @@ export function buildInsights(txs: Transaction[], now: Date = new Date()): Insig
   // 3) Dépense inhabituelle ce mois (> 2× la moyenne historique de sa catégorie)
   const histByCat: Record<string, number[]> = {}
   spent.forEach(t => {
-    if (monthKey(t.dt) === curMonth) return
+    if (monthKey(dateOf(t)) === curMonth) return
     const cat = t.cat || 'Autre'
     ;(histByCat[cat] = histByCat[cat] || []).push(Math.abs(t.amt))
   })
-  const curTxs = spent.filter(t => monthKey(t.dt) === curMonth)
+  const curTxs = spent.filter(t => monthKey(dateOf(t)) === curMonth)
   for (const t of curTxs) {
     const hist = histByCat[t.cat || 'Autre']
     if (!hist || hist.length < 3) continue

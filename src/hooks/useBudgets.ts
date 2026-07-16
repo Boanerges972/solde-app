@@ -10,6 +10,10 @@ export function useBudgets(uid: string | null) {
     const { data } = await db.from('category_budgets').select('*').eq('user_id', uid).order('category')
     setBudgets(((data || []) as any[]).map(b => ({
       id: b.id, category: b.category, amount: parseFloat(b.amount), rollover: !!b.rollover,
+      // Mois de création : le report ne peut pas commencer AVANT que le budget
+      // existe, sinon un budget créé aujourd'hui hériterait de mois de report
+      // fictif tirés de l'historique des transactions.
+      createdMonth: (b.created_at || '').slice(0, 7) || undefined,
     })))
   }, [uid])
 

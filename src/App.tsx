@@ -243,7 +243,7 @@ export default function App() {
         {showBankPicker && <BankPicker t={t} onClose={() => setShowBankPicker(false)} onPick={(b: string) => { setShowBankPicker(false); setImportBank(b); setShowImport(true); }} />}
         {showTransfer && data && <TransferEntry D={data} t={t} onClose={() => setShowTransfer(false)} onTransfer={addTransfer} />}
         {showRecurring && data && <RecurringManager t={t} accounts={data.accounts} recurrings={recurrings || []} allHistory={allHistory || []} onAdd={addRecurring} onDelete={deleteRecurring} onUpdate={updateRecurring} onClose={() => setShowRecurring(false)} />}
-        {showBudgets && data && <BudgetsScreen t={t} txs={data.txs} budgets={budgets} onSave={saveBudget} onDelete={deleteBudget} onClose={() => setShowBudgets(false)} />}
+        {showBudgets && data && session && <BudgetsScreen t={t} uid={session.user.id} txs={data.txs} budgets={budgets} onSave={saveBudget} onDelete={deleteBudget} onClose={() => setShowBudgets(false)} />}
         {showGoals && <GoalsScreen t={t} goals={goals} onAdd={addGoal} onDeposit={depositGoal} onDelete={deleteGoal} onClose={() => setShowGoals(false)} />}
         {showRules && <RulesScreen t={t} rules={merchantRules} onDelete={deleteRule} onClose={() => setShowRules(false)} />}
         {showReport && data && <MonthlyReport t={t} txs={data.txs} onClose={() => setShowReport(false)} />}

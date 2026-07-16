@@ -11,7 +11,20 @@ export interface ProjPoint {
   balance: number
 }
 
-const iso = (d: Date) => d.toISOString().slice(0, 10)
+/** Date calendaire LOCALE au format YYYY-MM-DD.
+ *  On n'utilise PAS toISOString() : il convertit en UTC. En Guyane (UTC−3),
+ *  après 21 h locales, toISOString() renvoie déjà la date du LENDEMAIN, alors
+ *  que getDate()/getMonth() — utilisés pour les échéances — restent en local.
+ *  Les deux se contredisaient. `tx_date` est une date calendaire, on reste donc
+ *  en local partout. */
+const iso = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+/** Jour calendaire local décalé de `n` jours. Passe par le calendrier plutôt
+ *  que par `+ n * 86400000` : une arithmétique en millisecondes dérive d'une
+ *  heure aux changements d'heure (l'app n'est pas réservée à la Guyane). */
+const addDays = (d: Date, n: number) =>
+  new Date(d.getFullYear(), d.getMonth(), d.getDate() + n, 12, 0, 0)
 
 /** Fenêtre d'observation maximale des dépenses variables. */
 const WINDOW_DAYS = 90
@@ -21,13 +34,18 @@ const WINDOW_DAYS = 90
  *  comparer des dates sur du texte. */
 const dateOf = (t: Transaction) => t.tx_date || ''
 
-/** Nombre de jours couverts entre `oldest` (ISO) et `now`, bornes incluses. */
+/** Nombre de jours couverts entre `oldest` (YYYY-MM-DD) et `now`, bornes
+ *  incluses. Comparaison de dates calendaires : on les lit en UTC des deux
+ *  côtés pour que la soustraction ne dépende pas du fuseau. */
 function spanDays(oldest: string, now: Date): number {
   const oldestMs = Date.parse(oldest + 'T00:00:00Z')
   const nowMs = Date.parse(iso(now) + 'T00:00:00Z')
   if (Number.isNaN(oldestMs) || Number.isNaN(nowMs)) return WINDOW_DAYS
   return Math.floor((nowMs - oldestMs) / 86400000) + 1
 }
+
+/** Date calendaire valide (évite qu'un champ vide ou 'today' passe). */
+const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s)
 
 /** Dernier jour du mois de `d` (28/29/30/31). */
 function lastDayOfMonth(d: Date): number {
@@ -49,12 +67,16 @@ function dueDay(day: number, d: Date): number {
  *  dépense quotidienne d'un facteur 3 et rendrait la projection trop
  *  optimiste — exactement là où le risque de découvert compte le plus. */
 function avgDailyVariable(txs: Transaction[], recurrings: ProjRecurring[], now: Date): number {
-  const from = iso(new Date(now.getTime() - WINDOW_DAYS * 86400000))
+  const from = iso(addDays(now, -WINDOW_DAYS))
+  const today = iso(now)
   const recNames = new Set(recurrings.map(r => r.name.trim().toLowerCase()))
 
+  // Bornée des DEUX côtés : une opération datée dans le futur (import erroné,
+  // saisie fautive) gonflerait le total et, en devenant la « plus ancienne »,
+  // ramènerait la couverture à 1 jour — la dépense quotidienne exploserait.
   const inWindow = txs
     .map(t => ({ t, d: dateOf(t) }))
-    .filter(({ d }) => d >= from)
+    .filter(({ d }) => isDate(d) && d >= from && d <= today)
 
   const variable = inWindow.filter(({ t }) =>
     t.amt < 0
@@ -84,7 +106,7 @@ export function projectBalance(
   const points: ProjPoint[] = []
   let bal = balance
   for (let i = 0; i <= horizon; i++) {
-    const d = new Date(now.getTime() + i * 86400000)
+    const d = addDays(now, i)
     if (i > 0) {
       bal -= daily
       const dayOfMonth = d.getDate()

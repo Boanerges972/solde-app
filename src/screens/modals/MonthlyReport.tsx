@@ -11,7 +11,9 @@ interface Props {
 }
 
 function monthStats(txs: Transaction[], month: string) {
-  const inMonth = txs.filter(tx => tx.dt.slice(0, 7) === month && tx.cat !== 'Virement interne')
+  // tx_date et NON dt : ce dernier vaut 'today'/'yesterday' (libellé
+  // d'affichage) et excluait donc les opérations récentes du rapport.
+  const inMonth = txs.filter(tx => (tx.tx_date || '').slice(0, 7) === month && tx.cat !== 'Virement interne')
   const spent = inMonth.filter(tx => tx.amt < 0)
   const totalSpent = spent.reduce((s, tx) => s + Math.abs(tx.amt), 0)
   const totalIncome = inMonth.filter(tx => tx.amt > 0).reduce((s, tx) => s + tx.amt, 0)
@@ -112,7 +114,7 @@ export const MonthlyReport = ({ t, txs, onClose }: Props) => {
                 <span style={{ width: 18, color: t.muted }}>{i + 1}.</span>
                 <span style={{ fontSize: 14 }}>{tx.ico || '💸'}</span>
                 <span style={{ flex: 1, color: t.tx, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.m}</span>
-                <span style={{ color: t.muted, fontSize: 10.5 }}>{new Date(tx.dt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
+                <span style={{ color: t.muted, fontSize: 10.5 }}>{new Date(tx.tx_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
                 <span style={{ width: 70, textAlign: 'right', ...sp('m', 600), color: t.dangerText }}>{fmt(Math.abs(tx.amt))}</span>
               </div>
             ))}

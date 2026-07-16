@@ -15,10 +15,13 @@ function esc(v: string): string {
   return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s
 }
 
-/** CSV point-virgule (Excel FR) des transactions. */
+/** CSV point-virgule (Excel FR) des transactions.
+ *  Date = `tx_date` et NON `dt` : ce dernier est un libellé d'affichage posé
+ *  par useData, qui vaut 'today'/'yesterday' pour les 2 derniers jours — les
+ *  exports contenaient donc ces mots à la place de la date. */
 export function buildCsv(txs: Transaction[]): string {
   const rows = txs.map(t =>
-    [t.dt, esc(t.m || ''), esc(t.cat || ''), t.amt.toFixed(2), t.acc || ''].join(';'))
+    [t.tx_date || '', esc(t.m || ''), esc(t.cat || ''), t.amt.toFixed(2), t.acc || ''].join(';'))
   return [HEADER.join(';'), ...rows].join('\n')
 }
 
@@ -39,7 +42,7 @@ export function downloadCsv(txs: Transaction[], filename = 'qdq-transactions.csv
 /** Télécharge les transactions en .xlsx. */
 export function downloadXlsx(txs: Transaction[], filename = 'qdq-transactions.xlsx') {
   const data = txs.map(t => ({
-    Date: t.dt, Marchand: neutralizeFormula(t.m || ''), 'Catégorie': neutralizeFormula(t.cat || ''),
+    Date: t.tx_date || '', Marchand: neutralizeFormula(t.m || ''), 'Catégorie': neutralizeFormula(t.cat || ''),
     Montant: t.amt, Compte: neutralizeFormula(t.acc || ''),
   }))
   const ws = XLSX.utils.json_to_sheet(data)

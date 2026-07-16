@@ -1,12 +1,15 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { sp } from '../../lib/theme'
 import { fmt } from '../../lib/currency'
 import { CATS_E } from '../../lib/expenseCategories'
-import { budgetProgress, type CategoryBudget } from '../../lib/budgets'
+import { db } from '../../lib/supabase'
+import { budgetProgress, rolloverStartMonth, type CategoryBudget } from '../../lib/budgets'
 import type { Theme, Transaction } from '../../types'
 
 interface Props {
   t: Theme
+  uid: string
+  /** Transactions de l'écran d'accueil : suffisantes pour le mois courant. */
   txs: Transaction[]
   budgets: CategoryBudget[]
   onSave: (category: string, amount: number, rollover: boolean) => Promise<unknown>
@@ -14,15 +17,53 @@ interface Props {
   onClose: () => void
 }
 
-export const BudgetsScreen = ({ t, txs, budgets, onSave, onDelete, onClose }: Props) => {
+export const BudgetsScreen = ({ t, uid, txs, budgets, onSave, onDelete, onClose }: Props) => {
   const [adding, setAdding] = useState(false)
   const [cat, setCat] = useState('')
   const [amount, setAmount] = useState('')
   const [rollover, setRollover] = useState(false)
   const [saving, setSaving] = useState(false)
+  /** Historique complet de la fenêtre de report (null = pas encore chargé). */
+  const [histTxs, setHistTxs] = useState<Transaction[] | null>(null)
 
-  const month = new Date().toISOString().slice(0, 7)
-  const progress = useMemo(() => budgetProgress(budgets, txs, month), [budgets, txs, month])
+  const now = new Date()
+  const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+
+  // Le report se calcule sur PLUSIEURS mois : les transactions de l'accueil
+  // sont limitées aux 50 dernières, ce qui ferait lire `spent = 0` sur les mois
+  // anciens et gonflerait le report — et le rendrait dépendant de l'activité
+  // récente. On charge donc explicitement la période nécessaire.
+  const rollStart = useMemo(() => {
+    const starts = budgets.map(b => rolloverStartMonth(b, month)).filter(Boolean) as string[]
+    return starts.length ? starts.reduce((a, b) => (a < b ? a : b)) : null
+  }, [budgets, month])
+
+  useEffect(() => {
+    let cancelled = false
+    if (!rollStart || !uid) { setHistTxs(null); return }
+    ;(async () => {
+      const { data } = await db.from('transactions')
+        .select('amount,tx_date,category')
+        .eq('user_id', uid)
+        .gte('tx_date', `${rollStart}-01`)
+      if (cancelled) return
+      setHistTxs(((data || []) as any[]).map(r => ({
+        amt: parseFloat(r.amount), tx_date: r.tx_date, cat: r.category,
+      })) as Transaction[])
+    })()
+    return () => { cancelled = true }
+  }, [rollStart, uid])
+
+  const progress = useMemo(() => {
+    // Tant que l'historique de la fenêtre n'est pas chargé, le report est
+    // DÉSACTIVÉ : le calculer sur les 50 tx de l'accueil lirait `spent = 0`
+    // sur les mois anciens et afficherait un report gonflé. Le mois courant,
+    // lui, est correct dans les deux cas. Mieux vaut un report qui apparaît
+    // une seconde plus tard qu'un report faux.
+    const ready = histTxs !== null || rollStart === null
+    const bs = ready ? budgets : budgets.map(b => ({ ...b, rollover: false }))
+    return budgetProgress(bs, histTxs ?? txs, month)
+  }, [budgets, histTxs, txs, month, rollStart])
   const usedCats = new Set(budgets.map(b => b.category))
   const availableCats = CATS_E.filter(c => !usedCats.has(c.n) && c.n !== 'Salaire' && c.n !== 'Remboursement')
 

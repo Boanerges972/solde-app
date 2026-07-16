@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { buildInsights } from '../insights'
 import type { Transaction } from '../../types'
 
-const tx = (dt: string, amt: number, cat = 'Courses', m = 'Carrefour'): Transaction =>
-  ({ id: Math.random().toString(), dt, amt, cat, m, ico: '🛒' } as Transaction)
+const tx = (date: string, amt: number, cat = 'Courses', m = 'Carrefour'): Transaction =>
+  ({ id: Math.random().toString(), tx_date: date, dt: date, amt, cat, m, ico: '🛒' } as Transaction)
 
 const NOW = new Date('2026-07-15T12:00:00')
 

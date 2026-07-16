@@ -1,12 +1,15 @@
 import { describe, it, expect } from 'vitest'
-import { spentForCategory, budgetProgress, type CategoryBudget } from '../budgets'
+import { spentForCategory, budgetProgress, rolloverStartMonth, type CategoryBudget } from '../budgets'
 import type { Transaction } from '../../types'
 
 const tx = (date: string, amt: number, cat = 'Courses'): Transaction =>
   ({ id: Math.random().toString(), tx_date: date, dt: date, amt, cat, m: 'X', ico: '🛒' } as Transaction)
 
-const budget = (category: string, amount: number, rollover = false): CategoryBudget =>
-  ({ id: category, category, amount, rollover })
+/** createdMonth pilote la fenêtre de report : chaque test le fixe au mois où
+ *  son scénario commence. Par défaut le mois précédent (2026-06) pour les cas
+ *  simples. L'absence de createdMonth est testée à part (aucun report). */
+const budget = (category: string, amount: number, rollover = false, createdMonth = '2026-06'): CategoryBudget =>
+  ({ id: category, category, amount, rollover, createdMonth })
 
 describe('spentForCategory', () => {
   it('somme uniquement la bonne catégorie et le bon mois, valeur positive', () => {
@@ -71,7 +74,7 @@ describe('budgetProgress', () => {
 
   it('rollover à cheval sur l’année (2026-01 → prev 2025-12)', () => {
     const txs = [tx('2025-12-10', -40)]
-    const prog = budgetProgress([budget('Courses', 100, true)], txs, '2026-01')
+    const prog = budgetProgress([budget('Courses', 100, true, '2025-12')], txs, '2026-01')
     expect(prog[0].effective).toBe(160)
   })
 
@@ -82,7 +85,7 @@ describe('budgetProgress', () => {
     // (max(0, 100 - spent(juillet))) et plafonnait à 200 : tout report
     // antérieur était perdu.
     const txs = [tx('2026-05-10', -5, 'Loisirs')]
-    const prog = budgetProgress([budget('Courses', 100, true)], txs, '2026-08')
+    const prog = budgetProgress([budget('Courses', 100, true, '2026-05')], txs, '2026-08')
     expect(prog[0].effective).toBe(400)
   })
 
@@ -91,7 +94,7 @@ describe('budgetProgress', () => {
     // juin : effectif 140, dépensé 40 → report 100
     // juillet : effectif 200
     const txs = [tx('2026-05-10', -60), tx('2026-06-10', -40)]
-    const prog = budgetProgress([budget('Courses', 100, true)], txs, '2026-07')
+    const prog = budgetProgress([budget('Courses', 100, true, '2026-05')], txs, '2026-07')
     expect(prog[0].effective).toBe(200)
   })
 
@@ -100,8 +103,42 @@ describe('budgetProgress', () => {
     // juin : eff 200, dépensé 250 (dépassement) → report 0
     // juillet : eff 100 (nominal seul)
     const txs = [tx('2026-05-10', -5, 'Loisirs'), tx('2026-06-10', -250)]
-    const prog = budgetProgress([budget('Courses', 100, true)], txs, '2026-07')
+    const prog = budgetProgress([budget('Courses', 100, true, '2026-05')], txs, '2026-07')
     expect(prog[0].effective).toBe(100)
+  })
+
+  it('SANS date de création, aucun report n\'est inventé', () => {
+    // On ne peut pas deviner depuis quand reporter : remonter au plus ancien
+    // mois des transactions ferait hériter un budget créé hier de mois de
+    // report fictif, et le rendrait dépendant de l'activité récente.
+    const txs = [tx('2026-06-05', -60), tx('2026-07-05', -10)]
+    const b: CategoryBudget = { id: 'c', category: 'Courses', amount: 100, rollover: true }
+    const prog = budgetProgress([b], txs, '2026-07')
+    expect(prog[0].effective).toBe(100)
+  })
+
+  it('le report ne démarre pas AVANT la création du budget', () => {
+    // Budget créé en juillet : le surplus de juin ne lui appartient pas.
+    const txs = [tx('2026-06-05', -10), tx('2026-07-05', -10)]
+    const prog = budgetProgress([budget('Courses', 100, true, '2026-07')], txs, '2026-07')
+    expect(prog[0].effective).toBe(100)
+  })
+
+  it('le report démarre au mois de création', () => {
+    // Créé en juin, rien dépensé en juin → juillet hérite de 100.
+    const txs = [tx('2026-07-05', -10)]
+    const prog = budgetProgress([budget('Courses', 100, true, '2026-06')], txs, '2026-07')
+    expect(prog[0].effective).toBe(200)
+  })
+
+  it('rolloverStartMonth borne à 24 mois même pour un budget très ancien', () => {
+    const b = budget('Courses', 100, true, '2010-01')
+    expect(rolloverStartMonth(b, '2026-07')).toBe('2024-08') // 24 mois inclus
+  })
+
+  it('rolloverStartMonth = null sans rollover ou sans date de création', () => {
+    expect(rolloverStartMonth(budget('Courses', 100, false, '2025-01'), '2026-07')).toBeNull()
+    expect(rolloverStartMonth({ id: 'c', category: 'Courses', amount: 100, rollover: true }, '2026-07')).toBeNull()
   })
 
   it('sans rollover, le mois précédent est ignoré', () => {

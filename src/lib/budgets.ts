@@ -5,6 +5,8 @@ export interface CategoryBudget {
   category: string
   amount: number
   rollover: boolean
+  /** Mois de création (YYYY-MM). Le report ne peut pas démarrer avant. */
+  createdMonth?: string
 }
 
 export type BudgetStatus = 'ok' | 'warn' | 'over'
@@ -38,17 +40,6 @@ export function spentForCategory(txs: Transaction[], category: string, month: st
     .reduce((s, t) => s + Math.abs(t.amt), 0)
 }
 
-/** Mois le plus ancien présent dans les transactions (YYYY-MM), ou null. */
-function firstTxMonth(txs: Transaction[]): string | null {
-  let min: string | null = null
-  for (const t of txs) {
-    const m = (t.tx_date || '').slice(0, 7)
-    if (!/^\d{4}-\d{2}$/.test(m)) continue
-    if (min === null || m < min) min = m
-  }
-  return min
-}
-
 /** Budget effectif d'un mois = montant nominal + report CUMULÉ.
  *
  *  L'ancien calcul faisait `max(0, amount - spent(mois-1))` : il ne reprenait
@@ -56,11 +47,29 @@ function firstTxMonth(txs: Transaction[]): string | null {
  *  Trois mois sans dépense donnaient 2× le budget au lieu de 4×.
  *  Ici le report se propage : effective(m) = amount + max(0, effective(m-1) −
  *  spent(m-1)), en remontant jusqu'au premier mois connu (borné). */
+export function rolloverStartMonth(b: CategoryBudget, month: string): string | null {
+  if (!b.rollover || !b.createdMonth) return null
+  // Borne basse : la création du budget, jamais avant (sinon on inventerait du
+  // report), et au plus MAX_ROLLOVER_MONTHS en arrière.
+  let floor = month
+  for (let i = 0; i < MAX_ROLLOVER_MONTHS - 1; i++) floor = prevMonth(floor)
+  return b.createdMonth > floor ? b.createdMonth : floor
+}
+
+/** ⚠️ CONTRAT : `txs` DOIT couvrir tout [rolloverStartMonth(b, month), month].
+ *  Un historique tronqué ferait lire `spent = 0` sur les mois manquants et
+ *  gonflerait le report. BudgetsScreen charge explicitement cette période au
+ *  lieu de réutiliser les 50 dernières transactions de l'écran d'accueil. */
 export function effectiveBudget(b: CategoryBudget, txs: Transaction[], month: string): number {
   if (!b.rollover) return b.amount
 
-  const start = firstTxMonth(txs)
-  if (!start || start >= month) return b.amount // aucun mois antérieur connu
+  // Sans date de création on ne peut PAS deviner d'où partir : remonter au plus
+  // ancien mois des transactions ferait hériter un budget créé hier de mois de
+  // report inventés, et le résultat dépendrait de l'activité récente plutôt
+  // que du budget. Dans le doute : pas de report.
+  const start = rolloverStartMonth(b, month)
+  if (!start) return b.amount
+  if (start >= month) return b.amount // budget créé ce mois-ci : rien à reporter
 
   // Chaîne des mois, du plus ancien jusqu'à `month`.
   const months: string[] = []

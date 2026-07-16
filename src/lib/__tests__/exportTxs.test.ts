@@ -2,8 +2,19 @@ import { describe, it, expect } from 'vitest'
 import { buildCsv } from '../exportTxs'
 import type { Transaction } from '../../types'
 
-const tx = (dt: string, amt: number, m: string, cat = 'Courses'): Transaction =>
-  ({ id: '1', dt, amt, m, cat, ico: '🛒', acc: 'acc1' } as Transaction)
+const tx = (date: string, amt: number, m: string, cat = 'Courses'): Transaction =>
+  ({ id: '1', tx_date: date, dt: date, amt, m, cat, ico: '🛒', acc: 'acc1' } as Transaction)
+
+describe('buildCsv — la date exportée est la vraie date', () => {
+  it('exporte tx_date, jamais le libellé d\'affichage « today »', () => {
+    // useData pose dt='today' pour les opérations du jour : l'export écrivait
+    // donc « today » dans la colonne Date du CSV/Excel de l'utilisateur.
+    const t = { ...tx('2026-07-15', -10, 'Carrefour'), dt: 'today' } as Transaction
+    const csv = buildCsv([t])
+    expect(csv).toContain('2026-07-15;')
+    expect(csv).not.toContain('today')
+  })
+})
 
 describe('buildCsv', () => {
   it('en-tête + une ligne par transaction, séparateur point-virgule', () => {
