@@ -235,17 +235,36 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
     })
     if (error) { setCreateErr(friendlyError(error)); setLoading(false); return }
 
+    // opId et lignes sortis de l'appel : en cas de perte réseau, la mise en
+    // file doit réutiliser EXACTEMENT le même operation_id.
+    const impOpId = newOpId()
+    const rows = toImport.map(tx => ({
+      merchant: tx.merchant, category: tx.category, icon: tx.icon,
+      amount: tx.amount, tx_date: tx.dt,
+    }))
     const { data: impData, error: impErr } = await rpcImportBatch({
-      operationId: newOpId(), accountId: newId,
-      txs: toImport.map(tx => ({
-        merchant: tx.merchant, category: tx.category, icon: tx.icon,
-        amount: tx.amount, tx_date: tx.dt,
-      })),
+      operationId: impOpId, accountId: newId, txs: rows,
     })
     if (impErr) {
-      // Création + import ne sont pas une seule transaction : on annule le
-      // compte tout juste créé pour ne pas laisser un compte vide en base.
-      await db.from('accounts').delete().eq('id', newId).eq('user_id', uid)
+      if (isNetworkError(impErr)) {
+        // Réponse perdue : l'import a PEUT-ÊTRE commité. Surtout ne pas
+        // supprimer le compte (il contiendrait déjà les transactions). On met
+        // l'import en file avec le MÊME opId → le rejeu sera un no-op s'il a
+        // déjà eu lieu, sinon il passera. Le compte reste, c'est le bon état.
+        const queued = await enqueue({
+          op: { kind: 'import', operation_id: impOpId, uid, account_id: newId, txs: rows },
+          timestamp: Date.now(), retries: 0,
+        })
+        if (queued !== null) {
+          setImportSummary(null); setQueuedImport(true)
+          setLoading(false); setStep('done')
+          setTimeout(() => { onImported(); onClose() }, 1800)
+          return
+        }
+      } else {
+        // La base a REFUSÉ : rien n'a été commité, le compte serait vide.
+        await db.from('accounts').delete().eq('id', newId).eq('user_id', uid)
+      }
       setCreateErr(friendlyError(impErr))
       setLoading(false); return
     }

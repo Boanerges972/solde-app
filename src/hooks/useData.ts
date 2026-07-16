@@ -38,9 +38,25 @@ export function useData(uid: string | null) {
    *  plus la courante est jetée. */
   const genRef = useRef(0)
 
+  /** uid courant, lisible depuis une lecture déjà en vol. */
+  const uidRef = useRef(uid)
+  useEffect(() => {
+    if (uidRef.current !== uid) {
+      uidRef.current = uid
+      // Changement d'utilisateur (dont déconnexion) : toute lecture en cours
+      // devient périmée. On invalide et on vide l'état — sinon les données du
+      // compte précédent resteraient affichées le temps du rechargement.
+      genRef.current++
+      setData(null)
+    }
+  }, [uid])
+
   const load = useCallback(async () => {
     if (!uid) { setLoading(false); return }
     const gen = ++genRef.current
+    // uid capturé : une lecture lancée pour un utilisateur ne doit jamais
+    // écrire si l'utilisateur a changé entre-temps (déconnexion).
+    const forUid = uid
     setLoading(true)
     try {
       const today = new Date().toISOString().slice(0, 10)
@@ -112,9 +128,10 @@ export function useData(uid: string | null) {
       const proMonthSpent = proMonthTxs.filter((tx: any) => parseFloat(tx.amount) < 0).reduce((s: number, tx: any) => s + Math.abs(parseFloat(tx.amount)), 0)
       const proMonthIncome = proMonthTxs.filter((tx: any) => parseFloat(tx.amount) > 0).reduce((s: number, tx: any) => s + parseFloat(tx.amount), 0)
 
-      // Une lecture plus récente a été lancée entre-temps : cette réponse est
-      // périmée. On la jette AVANT d'écrire quoi que ce soit (état ou cache).
-      if (gen !== genRef.current) return
+      // Réponse périmée (lecture plus récente lancée) OU utilisateur changé
+      // depuis : on jette AVANT d'écrire quoi que ce soit. Écrire ici mettrait
+      // les données de l'ancien compte dans l'état ET dans le cache hors-ligne.
+      if (gen !== genRef.current || uidRef.current !== forUid) return
 
       saveAccounts(accs)        // fire-and-forget — persist to IDB for offline use
       saveTransactions(txs)     // fire-and-forget — persist to IDB for offline use
@@ -133,13 +150,13 @@ export function useData(uid: string | null) {
       // Même règle qu'en succès : une réponse périmée ne doit rien écraser,
       // pas même un message d'erreur (sinon un échec ancien masquerait un
       // chargement récent réussi).
-      if (gen !== genRef.current) return
+      if (gen !== genRef.current || uidRef.current !== forUid) return
       if (!navigator.onLine) {
         // Offline fallback: serve cached data from IndexedDB
         try {
           const cachedAccs = await loadAccounts()
           const cachedTxs = await loadTransactions()
-          if (gen !== genRef.current) return
+          if (gen !== genRef.current || uidRef.current !== forUid) return
           if (cachedAccs.length > 0) {
             const now = new Date()
             const wkFb = Math.ceil((Number(now) - Number(new Date(now.getFullYear(), 0, 1))) / 604800000)
@@ -169,7 +186,7 @@ export function useData(uid: string | null) {
       }
     }
     // Ne pas éteindre le spinner si une lecture plus récente est en cours.
-    if (gen === genRef.current) setLoading(false)
+    if (gen === genRef.current && uidRef.current === forUid) setLoading(false)
   }, [uid])
 
   useEffect(() => {

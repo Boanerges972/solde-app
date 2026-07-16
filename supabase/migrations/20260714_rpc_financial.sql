@@ -100,7 +100,17 @@ commit;
 -- ─────────────────────────────────────────────────────────────────────────
 -- SECTION 2 — rpc_add_tx (dépense OU entrée ; chemin perso, sans groupe)
 -- ─────────────────────────────────────────────────────────────────────────
-create or replace function public.rpc_add_tx(
+-- p_group_id/p_paid_by : dépense de groupe. SECURITY DEFINER contourne la RLS,
+-- l'appartenance au groupe est donc vérifiée EXPLICITEMENT ci-dessous.
+-- NB : `drop` obligatoire — ajouter des paramètres crée une SURCHARGE et non un
+-- remplacement ; deux signatures rendraient l'appel PostgREST ambigu. Le drop et
+-- le create sont dans la même transaction (aucune fenêtre sans fonction), et les
+-- clients déjà déployés (8 arguments nommés) résolvent la nouvelle signature via
+-- les valeurs par défaut.
+-- Cible l'ANCIENNE signature (8 paramètres) : c'est elle qu'il faut retirer.
+drop function if exists public.rpc_add_tx(uuid,text,text,text,text,numeric,date,numeric);
+
+create function public.rpc_add_tx(
     p_operation_id uuid,
     p_account_id   text,
     p_merchant     text,
@@ -108,7 +118,9 @@ create or replace function public.rpc_add_tx(
     p_icon         text,
     p_amount       numeric,
     p_tx_date      date,
-    p_budget       numeric default 400
+    p_budget       numeric default 400,
+    p_group_id     uuid    default null,
+    p_paid_by      uuid    default null
 )
 returns jsonb
 language plpgsql
@@ -137,6 +149,21 @@ begin
     if p_tx_date is null then
         raise exception 'tx_date is required' using errcode = '22004';
     end if;
+
+    -- Contrôles groupe (la RLS ne s'applique pas dans une fonction DEFINER).
+    if p_group_id is not null and not exists (
+        select 1 from public.group_members gm
+         where gm.group_id = p_group_id and gm.user_id = v_user_id
+    ) then
+        raise exception 'Not a member of this group' using errcode = '42501';
+    end if;
+    if p_paid_by is not null and p_paid_by <> v_user_id and (p_group_id is null or not exists (
+        select 1 from public.group_members gm
+         where gm.group_id = p_group_id and gm.user_id = p_paid_by
+    )) then
+        raise exception 'paid_by must be a member of the group' using errcode = '42501';
+    end if;
+
     -- Semaine/année calculées SERVEUR depuis tx_date (pas de contrôle client).
     v_week := public.qdq_week(p_tx_date);
     v_year := extract(year from p_tx_date)::int;
@@ -163,10 +190,10 @@ begin
 
     insert into public.transactions(
         merchant, category, icon, amount, account_id, tx_date,
-        user_id, operation_id, week_number, year)
+        user_id, operation_id, week_number, year, group_id, paid_by)
     values (
         p_merchant, p_category, coalesce(p_icon, '💳'), p_amount, p_account_id,
-        p_tx_date, v_user_id, p_operation_id, v_week, v_year)
+        p_tx_date, v_user_id, p_operation_id, v_week, v_year, p_group_id, p_paid_by)
     returning id into v_tx_id;
 
     update public.accounts
@@ -233,8 +260,10 @@ begin
         raise exception 'Transaction not found or forbidden' using errcode = '42501';
     end if;
 
-    -- Une jambe de virement ne se supprime pas seule → rpc_delete_transfer.
-    if v_tx.transfer_id is not null then
+    -- Une jambe de virement ne se supprime JAMAIS seule. Les virements créés
+    -- par l'ancien chemin ont transfer_id NULL : on se rabat sur la catégorie,
+    -- sinon on n'annulerait qu'un côté (argent créé/détruit).
+    if v_tx.transfer_id is not null or v_tx.category = 'Virement interne' then
         raise exception 'Use rpc_delete_transfer for internal transfers' using errcode = '22023';
     end if;
     if not public.qdq_valid_money(v_tx.amount) then
@@ -611,14 +640,14 @@ $$;
 -- ─────────────────────────────────────────────────────────────────────────
 -- SECTION 6 — Droits d'exécution (additif)
 -- ─────────────────────────────────────────────────────────────────────────
-revoke all on function public.rpc_add_tx(uuid,text,text,text,text,numeric,date,numeric) from public, anon;
+revoke all on function public.rpc_add_tx(uuid,text,text,text,text,numeric,date,numeric,uuid,uuid) from public, anon;
 revoke all on function public.rpc_delete_tx(uuid,integer) from public, anon;
 revoke all on function public.rpc_transfer(uuid,text,text,numeric,date,text) from public, anon;
 revoke all on function public.rpc_delete_transfer(uuid,uuid) from public, anon;
 revoke all on function public.rpc_import_batch(uuid,text,jsonb) from public, anon;
 revoke all on function public.rpc_set_reserved(text,numeric) from public, anon;
 
-grant execute on function public.rpc_add_tx(uuid,text,text,text,text,numeric,date,numeric) to authenticated;
+grant execute on function public.rpc_add_tx(uuid,text,text,text,text,numeric,date,numeric,uuid,uuid) to authenticated;
 grant execute on function public.rpc_delete_tx(uuid,integer) to authenticated;
 grant execute on function public.rpc_transfer(uuid,text,text,numeric,date,text) to authenticated;
 grant execute on function public.rpc_delete_transfer(uuid,uuid) to authenticated;

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { entryToOp } from '../useOfflineSync'
-import type { PendingEntry } from '../../lib/idb'
+import type { PendingEntry, PendingOp } from '../../lib/idb'
 
 const UID = 'user-1'
 
@@ -62,6 +62,26 @@ describe('entryToOp — conversion des entrées de file', () => {
 
   it('entrée illisible → null (sera purgée)', () => {
     expect(entryToOp({ id: 5, timestamp: 0, retries: 0 } as PendingEntry)).toBeNull()
+  })
+
+  it('un operation_id figé sur une entrée legacy SURVIT à un échec de replay', () => {
+    // Régression : le catch réécrivait l'entrée d'origine (legacy, sans `op`)
+    // par-dessus la version persistée → l'id était reperdu → la tentative
+    // suivante en générait un neuf → doublon si le 1er appel avait commité.
+    const legacy: PendingEntry = {
+      id: 8, action: 'addTx',
+      payload: { uid: UID, merchant: 'X', category: 'Autre', amount: 10, account_id: 'acc-1', tx_date: '2026-07-15' },
+      timestamp: 0, retries: 0,
+    }
+    // Ce que fait le replay : fige l'id et persiste CETTE version.
+    const ready = { ...entryToOp(legacy)!, operation_id: 'op-fige' } as PendingOp
+    const current: PendingEntry = { ...legacy, op: ready, action: undefined, payload: undefined }
+    // Puis l'appel échoue → on réécrit `current` (pas `legacy`) avec retries+1.
+    const afterFailure: PendingEntry = { ...current, retries: current.retries + 1 }
+
+    // La tentative suivante doit retrouver LE MÊME id.
+    expect(entryToOp(afterFailure)?.operation_id).toBe('op-fige')
+    expect(afterFailure.payload).toBeUndefined() // le legacy ne réapparaît pas
   })
 
   it('porte les virements et les imports', () => {

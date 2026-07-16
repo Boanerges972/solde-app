@@ -155,7 +155,10 @@ export async function removeFromQueue(id: number): Promise<void> {
   } catch (e) { console.error('[IDB] removeFromQueue failed:', e) }
 }
 
-export async function updateQueueEntry(entry: PendingEntry): Promise<void> {
+/** Renvoie true si l'écriture est CONFIRMÉE. L'appelant doit le vérifier avant
+ *  de rejouer une opération : rejouer avec un operation_id non persisté ferait
+ *  perdre l'idempotence au retry suivant (→ doublon). */
+export async function updateQueueEntry(entry: PendingEntry): Promise<boolean> {
   try {
     const db = await openDB()
     await new Promise<void>((resolve, reject) => {
@@ -164,5 +167,6 @@ export async function updateQueueEntry(entry: PendingEntry): Promise<void> {
       req.onsuccess = () => resolve()
       req.onerror = () => reject(req.error)
     })
-  } catch (e) { console.error('[IDB] updateQueueEntry failed:', e) }
+    return true
+  } catch (e) { console.error('[IDB] updateQueueEntry failed:', e); return false }
 }

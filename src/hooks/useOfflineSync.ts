@@ -107,17 +107,26 @@ export function useOfflineSync(
     setIsSyncing(true)
     try {
       for (const entry of pending) {
+        // Version RÉELLEMENT persistée de l'entrée. Si on fige un operation_id
+        // ci-dessous, c'est celle-ci qu'il faut réécrire en cas d'échec : sinon
+        // le catch remettrait l'entrée d'origine (sans op) par-dessus et l'id
+        // serait reperdu → la tentative suivante en générerait un neuf → doublon.
+        let current: PendingEntry = entry
         try {
           const op = entryToOp(entry)
           if (!op) { await removeFromQueue(entry.id!); continue } // entrée illisible
 
           // Entrée héritée sans operation_id : on en génère un et on le PERSISTE
-          // AVANT l'appel. Sans ça chaque retry utiliserait un id neuf →
-          // l'idempotence ne protégerait plus (doublon).
+          // AVANT l'appel. Si la persistance n'est pas confirmée, on NE rejoue
+          // PAS — mieux vaut réessayer plus tard que perdre l'idempotence.
           let ready = op
           if (!ready.operation_id) {
             ready = { ...op, operation_id: newOpId() }
-            await updateQueueEntry({ ...entry, op: ready, action: undefined, payload: undefined })
+            current = { ...entry, op: ready, action: undefined, payload: undefined }
+            if (!(await updateQueueEntry(current))) {
+              console.error('[syncQueue] operation_id non persisté, replay reporté', entry.id)
+              continue
+            }
           }
 
           const error = await replayOp(ready)
@@ -125,7 +134,7 @@ export function useOfflineSync(
           await removeFromQueue(entry.id!)
         } catch (err) {
           console.error('[syncQueue] replay failed for entry', entry.id, err)
-          const updated = { ...entry, retries: entry.retries + 1 }
+          const updated = { ...current, retries: current.retries + 1 }
           if (updated.retries >= 3) updated.failed = true
           await updateQueueEntry(updated)
         }
