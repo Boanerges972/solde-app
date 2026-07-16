@@ -267,17 +267,30 @@ export function useData(uid: string | null) {
     return e
   }, [uid, data, load])
 
-  const deleteTx = useCallback(async (txId: string) => {
+  const deleteTx = useCallback(async (txId: string): Promise<{ message: string } | null> => {
     const tx = data?.txs?.find(t => t.id === txId)
 
     // Chemin RPC : virement → delete_transfer (2 jambes) ; sinon delete_tx.
     if (USE_RPC) {
       const transferId = (tx as unknown as { transfer_id?: string } | undefined)?.transfer_id
-      const res = tx?.isTransfer && transferId
-        ? await rpcDeleteTransfer({ operationId: newOpId(), transferId })
-        : await rpcDeleteTx({ operationId: newOpId(), transactionId: Number(txId) })
-      if (!res.error) await load()
-      return
+      let res
+      if (tx?.isTransfer && transferId) {
+        res = await rpcDeleteTransfer({ operationId: newOpId(), transferId })
+      } else {
+        // Une tx encore en file offline (id « pending-N ») n'existe pas en base.
+        const rowId = Number(txId)
+        if (!Number.isInteger(rowId)) {
+          return { message: 'Transaction pas encore synchronisée — réessaie une fois en ligne.' }
+        }
+        res = await rpcDeleteTx({ operationId: newOpId(), transactionId: rowId })
+      }
+      if (res.error) {
+        console.error('[deleteTx] RPC échec', res.error)
+        await load() // resynchronise l'UI : la tx réapparaît si non supprimée
+        return { message: res.error.message }
+      }
+      await load()
+      return null
     }
 
     await db.from('transactions').delete().eq('id', txId)
@@ -291,6 +304,7 @@ export function useData(uid: string | null) {
       }
     }
     await load()
+    return null
   }, [uid, data, load])
 
   // ── Virement interne ────────────────────────────────────────

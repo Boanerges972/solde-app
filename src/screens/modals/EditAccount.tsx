@@ -26,8 +26,11 @@ export const EditAccount = ({ account, isNew, t, uid, onClose, onSaved }: Props)
 
   const save = async () => {
     if (!name.trim()) { setErr('Donne un nom'); return }
-    const balance = parseFloat(String(bal).replace(',', '.').replace(/\s/g, ''))
-    if (isNaN(balance)) { setErr('Solde invalide (ex: -983.50 ou 1560.75)'); return }
+    const raw = parseFloat(String(bal).replace(',', '.').replace(/\s/g, ''))
+    if (isNaN(raw) || !isFinite(raw)) { setErr('Solde invalide (ex: -983.50 ou 1560.75)'); return }
+    // Arrondi 2 décimales : rpc_set_balance rejette toute autre échelle, et la
+    // création doit suivre la même règle (sinon créer 10.999 puis l'éditer casse).
+    const balance = Math.round(raw * 100) / 100
     setSaving(true)
     let accId = account?.id ?? ''
     if (isNew) {

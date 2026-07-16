@@ -24,13 +24,18 @@ interface Props {
 /** Normalise pour comparaison : minuscules, sans accents ni séparateurs. */
 const norm = (s: string) => (s || '').toLowerCase().normalize('NFD').replace(/[^a-z0-9]/g, '')
 
+/** Égalité stricte (non vide). */
+const eq = (x: string, y: string) => !!x && x === y
+/** Sous-chaîne, seulement si les deux font ≥3 car. — évite qu'un compte nommé
+ *  « A » matche « Crédit Agricole ». */
+const sub = (x: string, y: string) => x.length >= 3 && y.length >= 3 && (x.includes(y) || y.includes(x))
+
 /** Cherche le compte existant correspondant à la banque importée (par nom/id). */
-function matchAccount(accounts: Account[], bankDef: { id: string; name: string }): Account | undefined {
+export function matchAccount(accounts: Account[], bankDef: { id: string; name: string }): Account | undefined {
   const bId = norm(bankDef.id), bName = norm(bankDef.name)
   return accounts.find(a => {
     const aId = norm(a.id), aName = norm(a.name || '')
-    return (!!aName && (aName.includes(bName) || bName.includes(aName)))
-        || (!!aId && (aId.includes(bId) || bId.includes(aId)))
+    return eq(aName, bName) || eq(aId, bId) || sub(aName, bName) || sub(aId, bId)
   })
 }
 

@@ -76,8 +76,16 @@ export function useOfflineSync(
           // operation_id figé à la mise en file → un replay après crash ne
           // crée pas de doublon (financial_ops rejette le 2e appel).
           if (USE_RPC) {
+            // Entrée héritée (mise en file avant l'ajout d'operation_id) : on
+            // en génère un et on le PERSISTE avant l'appel. Sans ça, chaque
+            // retry utiliserait un id neuf → l'idempotence ne protège plus.
+            let opId = p.operation_id
+            if (!opId) {
+              opId = newOpId()
+              await updateQueueEntry({ ...entry, payload: { ...p, operation_id: opId } })
+            }
             const { error } = await rpcAddTx({
-              operationId: p.operation_id || newOpId(),
+              operationId: opId,
               accountId: p.account_id, merchant: p.merchant, category: p.category,
               icon: p.icon, amount: -n, txDate: p.tx_date,
             })
