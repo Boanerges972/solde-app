@@ -183,12 +183,13 @@ export function useData(uid: string | null) {
     /** Met la dépense en file avec le MÊME opId + affiche la tx optimiste. */
     const queueLocally = async (): Promise<boolean> => {
       const pendingId = await enqueue({
-        action: 'addTx',
-        payload: {
-          uid: uid!, merchant: payload.merchant, category: payload.category,
-          icon: payload.icon, amount: n, account_id: payload.account_id,
-          tx_date: today, group_id: payload.group_id || null,
-          paid_by: payload.paid_by || null, operation_id: opId,
+        op: {
+          kind: 'add_tx', operation_id: opId, uid: uid!,
+          account_id: payload.account_id, merchant: payload.merchant,
+          category: payload.category, icon: payload.icon,
+          amount: -n, // signé : dépense
+          tx_date: today, budget: data ? data.budget : 400,
+          group_id: payload.group_id || null, paid_by: payload.paid_by || null,
         },
         timestamp: Date.now(),
         retries: 0,
@@ -278,13 +279,30 @@ export function useData(uid: string | null) {
     if (!fromAcc || !toAcc) return { error: 'Compte introuvable' }
 
     // Virement atomique : 2 lignes + 2 soldes dans une seule transaction.
+    const opId = newOpId()
     const { error } = await rpcTransfer({
-      operationId: newOpId(), fromAccountId: fromId, toAccountId: toId,
+      operationId: opId, fromAccountId: fromId, toAccountId: toId,
       amount: n, txDate: today, note,
     })
-    if (!error) await load()
-    return { error: error ? error.message : null }
-  }, [data, load])
+    if (error) {
+      if (!isNetworkError(error)) return { error: error.message }
+      // Réponse perdue : le virement a peut-être été commité. On le met en file
+      // avec LE MÊME opId → le rejeu sera un no-op si c'est déjà fait.
+      const queued = await enqueue({
+        op: {
+          kind: 'transfer', operation_id: opId, uid: uid!,
+          from_account_id: fromId, to_account_id: toId,
+          amount: n, tx_date: today, note,
+        },
+        timestamp: Date.now(),
+        retries: 0,
+      })
+      if (queued === null) return { error: error.message }
+      return { error: null, queued: true }
+    }
+    await load()
+    return { error: null }
+  }, [uid, data, load])
 
   const addDeposit = useCallback(async (payload: {
     merchant: string; category: string; icon?: string
@@ -294,15 +312,32 @@ export function useData(uid: string | null) {
     const today = new Date().toISOString().slice(0, 10)
 
     // Entrée (amount>0) : solde géré côté base, budget non impacté.
+    const opId = newOpId()
     const { error } = await rpcAddTx({
-      operationId: newOpId(), accountId: payload.account_id,
+      operationId: opId, accountId: payload.account_id,
       merchant: payload.merchant, category: payload.category,
       icon: payload.icon || '💰', amount: n, txDate: today,
     })
-    if (error) return { message: error.message }
+    if (error) {
+      if (!isNetworkError(error)) return { message: error.message }
+      // Réponse perdue : mise en file avec LE MÊME opId (rejeu idempotent).
+      const queued = await enqueue({
+        op: {
+          kind: 'add_tx', operation_id: opId, uid: uid!,
+          account_id: payload.account_id, merchant: payload.merchant,
+          category: payload.category, icon: payload.icon || '💰',
+          amount: n, // signé : entrée (positif)
+          tx_date: today,
+        },
+        timestamp: Date.now(),
+        retries: 0,
+      })
+      if (queued === null) return { message: error.message }
+      return null
+    }
     await load()
     return null
-  }, [load])
+  }, [uid, load])
 
   return { data, loading, error, reload: load, addTx, deleteTx, addTransfer, addDeposit }
 }

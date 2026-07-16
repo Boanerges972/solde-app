@@ -196,7 +196,9 @@ describe('useData — addTx', () => {
     const queue = await loadQueue()
     expect(queue).toHaveLength(1)
     // L'id envoyé à la RPC est CELUI persisté → le replay sera idempotent.
-    expect(queue[0].payload.operation_id).toBe(sent[0].p_operation_id)
+    expect(queue[0].op?.operation_id).toBe(sent[0].p_operation_id)
+    // Montant SIGNÉ dans l'outbox (négatif = dépense).
+    expect(queue[0].op).toMatchObject({ kind: 'add_tx', amount: -45 })
   })
 })
 

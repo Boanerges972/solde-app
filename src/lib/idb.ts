@@ -3,22 +3,66 @@ import type { Account, Transaction } from '../types'
 const DB_NAME = 'qdq-offline'
 const DB_VERSION = 1
 
+/** Opération financière en attente d'envoi (outbox).
+ *  `operation_id` est figé à la mise en file et réutilisé à chaque tentative :
+ *  c'est lui qui rend le rejeu idempotent côté base (financial_ops).
+ *  `amount` est SIGNÉ (négatif = dépense) — contrairement au format legacy. */
+export type PendingOp =
+  | {
+      kind: 'add_tx'
+      operation_id: string
+      uid: string
+      account_id: string
+      merchant: string
+      category: string
+      icon?: string
+      amount: number // signé
+      tx_date: string
+      budget?: number
+      group_id?: string | null
+      paid_by?: string | null
+    }
+  | {
+      kind: 'transfer'
+      operation_id: string
+      uid: string
+      from_account_id: string
+      to_account_id: string
+      amount: number // positif
+      tx_date: string
+      note?: string
+    }
+  | {
+      kind: 'import'
+      operation_id: string
+      uid: string
+      account_id: string
+      txs: { merchant: string; category: string; icon?: string; amount: number; tx_date: string }[]
+    }
+
+/** Format legacy des entrées mises en file AVANT l'outbox : uniquement des
+ *  dépenses, `amount` stocké POSITIF et nié au moment du replay. Conservé pour
+ *  ne pas perdre (ni inverser le signe) des entrées déjà en attente. */
+export interface LegacyPendingPayload {
+  uid: string
+  merchant: string
+  category: string
+  icon?: string
+  amount: number // POSITIF — dépense
+  account_id: string
+  tx_date: string
+  group_id?: string | null
+  paid_by?: string | null
+  operation_id?: string
+}
+
 export interface PendingEntry {
   id?: number
-  action: 'addTx'
-  payload: {
-    uid: string
-    merchant: string
-    category: string
-    icon?: string
-    amount: number
-    account_id: string
-    tx_date: string
-    group_id?: string | null
-    paid_by?: string | null
-    // operation_id généré à la mise en file, réutilisé au replay (idempotence).
-    operation_id?: string
-  }
+  /** Nouveau format (outbox). Absent sur les entrées legacy. */
+  op?: PendingOp
+  /** Legacy — ne plus écrire ; lu et converti au replay. */
+  action?: 'addTx'
+  payload?: LegacyPendingPayload
   timestamp: number
   retries: number
   failed?: boolean

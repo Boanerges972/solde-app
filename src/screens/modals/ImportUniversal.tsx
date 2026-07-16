@@ -8,7 +8,8 @@ import { hashAB, getStoredHashes, saveHashes, parseNickelPDF } from '../../lib/p
 import type { ParsedTx } from '../../lib/parsers/index'
 import { iconForCat } from '../../lib/parsers/categories'
 import { matchRule, type MerchantRule } from '../../lib/merchantRules'
-import { newOpId, rpcImportBatch } from '../../lib/rpc'
+import { newOpId, isNetworkError, rpcImportBatch } from '../../lib/rpc'
+import { enqueue } from '../../lib/idb'
 import type { Theme, Account } from '../../types'
 
 interface Props {
@@ -59,6 +60,8 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
   const [newAccColor, setNewAccColor] = useState('#10E8C0')
   const [createErr, setCreateErr] = useState('')
   const [importSummary, setImportSummary] = useState<{ imported: number; skipped: number } | null>(null)
+  /** Import mis en file (réponse réseau perdue) — partira à la reconnexion. */
+  const [queuedImport, setQueuedImport] = useState(false)
 
   const bankDef = SUPPORTED_BANKS.find(b => b.id === bank) ?? SUPPORTED_BANKS[SUPPORTED_BANKS.length - 1]
   const isNickel = bankDef.id === 'nickel'
@@ -167,14 +170,26 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
     }
     // N insert + UN SEUL delta, atomiques. La dédup est faite ici, sur le
     // compte réellement choisi, et renvoie le nombre de lignes ignorées.
-    const { data, error } = await rpcImportBatch({
-      operationId: newOpId(), accountId: accId,
-      txs: toImport.map(tx => ({
-        merchant: tx.merchant, category: tx.category, icon: tx.icon,
-        amount: tx.amount, tx_date: tx.dt,
-      })),
-    })
-    if (error) { setErr(friendlyDbError(error.message)); setLoading(false); return }
+    const opId = newOpId()
+    const rows = toImport.map(tx => ({
+      merchant: tx.merchant, category: tx.category, icon: tx.icon,
+      amount: tx.amount, tx_date: tx.dt,
+    }))
+    const { data, error } = await rpcImportBatch({ operationId: opId, accountId: accId, txs: rows })
+    if (error) {
+      if (!isNetworkError(error)) { setErr(friendlyDbError(error.message)); setLoading(false); return }
+      // Réponse perdue : l'import a peut-être été commité. File d'attente avec
+      // LE MÊME opId → le rejeu ne réimportera pas une seconde fois.
+      const queued = await enqueue({
+        op: { kind: 'import', operation_id: opId, uid, account_id: accId, txs: rows },
+        timestamp: Date.now(), retries: 0,
+      })
+      if (queued === null) { setErr(friendlyDbError(error.message)); setLoading(false); return }
+      setImportSummary(null); setQueuedImport(true)
+      setLoading(false); setStep('done')
+      setTimeout(() => { onImported(); onClose() }, 1800)
+      return
+    }
     const r = data as { imported?: number; skipped?: number } | null
     setImportSummary({ imported: r?.imported ?? 0, skipped: r?.skipped ?? 0 })
     setProgress(100)
@@ -410,11 +425,15 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
         {step === 'done' && (
           <div style={{ textAlign: 'center', paddingTop: 60 }}>
             <div style={{ fontSize: 56, marginBottom: 16 }}>✅</div>
-            <div style={{ fontSize: 18, ...sp('s', 700), color: t.tx }}>Import terminé !</div>
+            <div style={{ fontSize: 18, ...sp('s', 700), color: t.tx }}>
+              {queuedImport ? 'Import en attente' : 'Import terminé !'}
+            </div>
             <div style={{ fontSize: 13, ...sp('o'), color: t.sub, marginTop: 8 }}>
-              {importSummary
-                ? `${importSummary.imported} transaction${importSummary.imported > 1 ? 's' : ''} ajoutée${importSummary.imported > 1 ? 's' : ''}`
-                : `${Object.values(selected).filter(Boolean).length} transactions importées`}
+              {queuedImport
+                ? 'Réseau indisponible — l\'import partira automatiquement à la reconnexion.'
+                : importSummary
+                  ? `${importSummary.imported} transaction${importSummary.imported > 1 ? 's' : ''} ajoutée${importSummary.imported > 1 ? 's' : ''}`
+                  : `${Object.values(selected).filter(Boolean).length} transactions importées`}
             </div>
             {importSummary && importSummary.skipped > 0 && (
               <div style={{ fontSize: 12, ...sp('o'), color: t.amber, marginTop: 6 }}>
