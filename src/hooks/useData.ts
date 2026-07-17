@@ -4,6 +4,7 @@ import { saveAccounts, saveTransactions, loadAccounts, loadTransactions, enqueue
 import { applyOptimisticTx } from './useOfflineSync'
 import { newOpId, isNetworkError, rpcAddTx, rpcDeleteTx, rpcTransfer, rpcDeleteTransfer } from '../lib/rpc'
 import { friendlyError } from '../lib/errors'
+import { isoLocal, addDaysLocal } from '../lib/dates'
 import type { AppData, Transaction, Account } from '../types'
 
 /** Notification navigateur quand une dépense fait franchir un seuil de budget. */
@@ -59,12 +60,15 @@ export function useData(uid: string | null) {
     const forUid = uid
     setLoading(true)
     try {
-      const today = new Date().toISOString().slice(0, 10)
-      const yest = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
-      const wk = Math.ceil((Number(new Date()) - Number(new Date(new Date().getFullYear(), 0, 1))) / 604800000)
+      // Dates calendaires LOCALES partout (cf. lib/dates.ts) : toISOString()
+      // bascule au lendemain en Guyane après 21 h — les libellés « aujourd'hui »
+      // et les bornes du mois seraient décalés.
       const now = new Date()
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
-      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
+      const today = isoLocal(now)
+      const yest = isoLocal(addDaysLocal(now, -1))
+      const wk = Math.ceil((Number(now) - Number(new Date(now.getFullYear(), 0, 1))) / 604800000)
+      const monthStart = isoLocal(new Date(now.getFullYear(), now.getMonth(), 1))
+      const monthEnd = isoLocal(new Date(now.getFullYear(), now.getMonth() + 1, 0))
       const [r1, r2, r3, r4, r5] = await Promise.all([
         db.from('accounts').select('*').eq('user_id', uid).order('type'),
         db.from('transactions').select('*').eq('user_id', uid).order('tx_date', { ascending: false }).limit(50),
@@ -223,7 +227,9 @@ export function useData(uid: string | null) {
     group_id?: string | null; paid_by?: string | null
   }) => {
     const n = Math.abs(parseFloat(String(payload.amount)))
-    const today = new Date().toISOString().slice(0, 10)
+    // isoLocal, PAS toISOString : en Guyane (UTC−3) après 21 h, toISOString
+    // renvoie la date du LENDEMAIN — la dépense serait datée de demain.
+    const today = isoLocal(new Date())
     // UN SEUL operation_id pour cette dépense, quel que soit le chemin (envoi
     // direct, mise en file hors-ligne, rejeu après échec réseau). C'est LUI qui
     // garantit qu'un même geste ne débite jamais deux fois.
@@ -322,7 +328,9 @@ export function useData(uid: string | null) {
   }) => {
     const n = Math.abs(parseFloat(String(amount)))
     if (!n || !fromId || !toId || fromId === toId) return { error: 'Données invalides' }
-    const today = new Date().toISOString().slice(0, 10)
+    // isoLocal, PAS toISOString : en Guyane (UTC−3) après 21 h, toISOString
+    // renvoie la date du LENDEMAIN — la dépense serait datée de demain.
+    const today = isoLocal(new Date())
     const fromAcc = data?.accounts?.find(a => a.id === fromId)
     const toAcc = data?.accounts?.find(a => a.id === toId)
     if (!fromAcc || !toAcc) return { error: 'Compte introuvable' }
@@ -358,7 +366,9 @@ export function useData(uid: string | null) {
     amount: number | string; account_id: string
   }) => {
     const n = Math.abs(parseFloat(String(payload.amount)))
-    const today = new Date().toISOString().slice(0, 10)
+    // isoLocal, PAS toISOString : en Guyane (UTC−3) après 21 h, toISOString
+    // renvoie la date du LENDEMAIN — la dépense serait datée de demain.
+    const today = isoLocal(new Date())
 
     // Entrée (amount>0) : solde géré côté base, budget non impacté.
     const opId = newOpId()

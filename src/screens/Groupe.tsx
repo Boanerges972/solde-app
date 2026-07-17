@@ -4,6 +4,7 @@ import { Icon } from '../components/Icon'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { sp } from '../lib/theme'
 import { fmt, fmtS } from '../lib/currency'
+import { isoLocal } from '../lib/dates'
 import type { Theme, Transaction, Group, Member } from '../types'
 
 const CAT_COMMUNE = [
@@ -55,7 +56,7 @@ export const Groupe = ({ t, uid, group, members, createGroup, joinGroup, leaveGr
     await db.from('transactions').insert({
       user_id: uid, merchant: addNote || addCat, category: addCat,
       icon: cat.ico, amount: -n, account_id: null,
-      tx_date: new Date().toISOString().slice(0, 10),
+      tx_date: isoLocal(new Date()),
       group_id: group!.id, paid_by: addPaid,
     })
     setSaving(false)
@@ -70,7 +71,7 @@ export const Groupe = ({ t, uid, group, members, createGroup, joinGroup, leaveGr
     await db.from('transactions').insert({
       user_id: uid, merchant: 'Remboursement', category: 'Remboursement',
       icon: '💸', amount: amount, account_id: null,
-      tx_date: new Date().toISOString().slice(0, 10),
+      tx_date: isoLocal(new Date()),
       group_id: group!.id, paid_by: fromId,
     })
     if (reload) reload()

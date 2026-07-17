@@ -27,6 +27,8 @@ export const BudgetsScreen = ({ t, uid, txs, budgets, onSave, onDelete, onClose 
   /** Fenêtre chargée, indexée par sa clé. `complete: false` = chargement
    *  incomplet (erreur) → on ne calcule aucun report dessus. */
   const [hist, setHist] = useState<{ key: string; txs: Transaction[]; complete: boolean } | null>(null)
+  /** Incrémenté par « Réessayer » : force un rechargement de la fenêtre. */
+  const [reloadKey, setReloadKey] = useState(0)
 
   const month = monthLocal(new Date())
 
@@ -41,7 +43,7 @@ export const BudgetsScreen = ({ t, uid, txs, budgets, onSave, onDelete, onClose 
     return `${start}-01`
   }, [budgets, month])
 
-  const key = `${uid}|${since}`
+  const key = `${uid}|${since}|${reloadKey}`
 
   useEffect(() => {
     let cancelled = false
@@ -58,15 +60,15 @@ export const BudgetsScreen = ({ t, uid, txs, budgets, onSave, onDelete, onClose 
   }, [key, uid, since])
 
   const ready = hist !== null && hist.key === key && hist.complete
+  const failed = hist !== null && hist.key === key && !hist.complete
 
-  const progress = useMemo(() => {
-    // Tant que la fenêtre n'est pas chargée COMPLÈTEMENT, le report est
-    // désactivé : le calculer sur un historique partiel (50 tx de l'accueil, ou
-    // pire une réponse en erreur lue comme liste vide) afficherait le report
-    // maximal. Mieux vaut un report qui apparaît une seconde plus tard.
-    const bs = ready ? budgets : budgets.map(b => ({ ...b, rollover: false }))
-    return budgetProgress(bs, ready ? hist!.txs : txs, month)
-  }, [budgets, hist, ready, txs, month])
+  // Aucun montant n'est affiché tant que la fenêtre n'est pas complète. Les
+  // 50 transactions de l'accueil ne sont PAS un repli financier acceptable :
+  // un mois de plus de 50 opérations serait sous-compté et l'utilisateur
+  // croirait voir un budget valide.
+  const progress = useMemo(
+    () => (ready ? budgetProgress(budgets, hist!.txs, month) : []),
+    [budgets, hist, ready, month])
   const usedCats = new Set(budgets.map(b => b.category))
   const availableCats = CATS_E.filter(c => !usedCats.has(c.n) && c.n !== 'Salaire' && c.n !== 'Remboursement')
 
@@ -125,7 +127,27 @@ export const BudgetsScreen = ({ t, uid, txs, budgets, onSave, onDelete, onClose 
           </div>
         )}
 
-        {progress.length === 0 && !adding && (
+        {!ready && !failed && (
+          <div style={{ textAlign: 'center', padding: '32px 0', color: t.sub, fontSize: 13, ...sp('o') }}>
+            Chargement de l'historique…
+          </div>
+        )}
+
+        {failed && (
+          <div role="alert" style={{ textAlign: 'center', padding: '24px 16px', color: t.sub, fontSize: 13, ...sp('o') }}>
+            <div style={{ fontSize: 32, marginBottom: 8 }}>⚠️</div>
+            Historique incomplet — les montants ne sont pas affichés pour ne pas
+            en montrer de faux.
+            <div style={{ marginTop: 12 }}>
+              <button onClick={() => setReloadKey(k => k + 1)}
+                style={{ padding: '8px 16px', borderRadius: 10, border: '1px solid ' + t.bo, background: t.el, cursor: 'pointer', ...sp('o', 600), fontSize: 13, color: t.tx }}>
+                Réessayer
+              </button>
+            </div>
+          </div>
+        )}
+
+        {ready && progress.length === 0 && !adding && (
           <div style={{ textAlign: 'center', padding: '32px 0', color: t.sub, fontSize: 13, ...sp('o') }}>
             <div style={{ fontSize: 32, marginBottom: 8 }}>🎯</div>
             Aucun budget par catégorie.<br />Clique « + Budget » pour commencer.

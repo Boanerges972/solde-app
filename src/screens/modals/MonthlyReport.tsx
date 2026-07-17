@@ -9,8 +9,6 @@ import type { Theme, Transaction } from '../../types'
 interface Props {
   t: Theme
   uid: string
-  /** Transactions de l'accueil — limitées à 50 : affichage d'attente seulement. */
-  txs: Transaction[]
   onClose: () => void
 }
 
@@ -28,7 +26,7 @@ function monthStats(txs: Transaction[], month: string) {
   return { totalSpent, totalIncome, cats, top }
 }
 
-export const MonthlyReport = ({ t, uid, txs, onClose }: Props) => {
+export const MonthlyReport = ({ t, uid, onClose }: Props) => {
   const now = new Date()
   // Mois calendaires LOCAUX : toISOString() bascule sur le mois suivant en
   // Guyane le dernier jour du mois après 21 h → rapport du mauvais mois.
@@ -38,21 +36,27 @@ export const MonthlyReport = ({ t, uid, txs, onClose }: Props) => {
   const monthLabel = now.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
   const prevLabel = prevDate.toLocaleDateString('fr-FR', { month: 'long' })
 
-  // Le rapport compare deux mois COMPLETS : les 50 transactions de l'accueil
-  // les amputeraient (et un mois de plus de 50 opérations serait faux). On les
-  // charge, et on n'affiche les chiffres qu'une fois la fenêtre complète.
+  // Le rapport compare deux mois COMPLETS. Les 50 transactions de l'accueil ne
+  // sont PAS un repli acceptable : elles amputeraient les totaux, et un rapport
+  // faux qu'on peut imprimer est pire que pas de rapport. On n'affiche donc
+  // aucun chiffre tant que la fenêtre n'est pas chargée entièrement.
+  const [state, setState] = useState<'loading' | 'ok' | 'error'>('loading')
   const [full, setFull] = useState<Transaction[] | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
+
   useEffect(() => {
     let cancelled = false
     if (!uid) return
+    setState('loading'); setFull(null) // invalide avant de recharger
     ;(async () => {
       const { txs: loaded, complete } = await fetchTxsSince(uid, `${prevMonth}-01`)
-      if (!cancelled && complete) setFull(loaded)
+      if (cancelled) return
+      if (complete) { setFull(loaded); setState('ok') } else setState('error')
     })()
     return () => { cancelled = true }
-  }, [uid, prevMonth])
+  }, [uid, prevMonth, reloadKey])
 
-  const src = full ?? txs
+  const src = full ?? []
   const cur = useMemo(() => monthStats(src, month), [src, month])
   const prev = useMemo(() => monthStats(src, prevMonth), [src, prevMonth])
   const deltaPct = prev.totalSpent > 0 ? Math.round(((cur.totalSpent - prev.totalSpent) / prev.totalSpent) * 100) : null
@@ -74,8 +78,10 @@ export const MonthlyReport = ({ t, uid, txs, onClose }: Props) => {
 
         <div className="qdq-report-actions" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: t.sub, cursor: 'pointer', fontSize: 14, ...sp('o') }}>Fermer</button>
-          <button onClick={() => window.print()}
-            style={{ padding: '8px 16px', borderRadius: 10, border: 'none', background: t.primary, color: '#fff', fontSize: 13, ...sp('o', 600), cursor: 'pointer' }}>
+          {/* Impression bloquée hors 'ok' : un rapport tronqué qu'on peut
+              imprimer est pire que pas de rapport. */}
+          <button onClick={() => window.print()} disabled={state !== 'ok'}
+            style={{ padding: '8px 16px', borderRadius: 10, border: 'none', background: state === 'ok' ? t.primary : t.el, color: state === 'ok' ? '#fff' : t.sub, fontSize: 13, ...sp('o', 600), cursor: state === 'ok' ? 'pointer' : 'not-allowed' }}>
             🖨️ Imprimer / PDF
           </button>
         </div>
@@ -84,6 +90,28 @@ export const MonthlyReport = ({ t, uid, txs, onClose }: Props) => {
           Rapport mensuel — {monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}
         </div>
         <div style={{ fontSize: 11, ...sp('o'), color: t.sub, marginBottom: 20 }}>Généré par QDQ · {now.toLocaleDateString('fr-FR')}</div>
+
+        {state === 'loading' && (
+          <div style={{ textAlign: 'center', padding: '40px 0', color: t.sub, fontSize: 13, ...sp('o') }}>
+            Chargement des deux mois…
+          </div>
+        )}
+
+        {state === 'error' && (
+          <div role="alert" style={{ textAlign: 'center', padding: '32px 16px', color: t.sub, fontSize: 13, ...sp('o') }}>
+            <div style={{ fontSize: 32, marginBottom: 8 }}>⚠️</div>
+            Historique incomplet — aucun chiffre n'est affiché pour ne pas en
+            montrer de faux.
+            <div style={{ marginTop: 12 }}>
+              <button onClick={() => setReloadKey(k => k + 1)}
+                style={{ padding: '8px 16px', borderRadius: 10, border: '1px solid ' + t.bo, background: t.el, cursor: 'pointer', ...sp('o', 600), fontSize: 13, color: t.tx }}>
+                Réessayer
+              </button>
+            </div>
+          </div>
+        )}
+
+        {state === 'ok' && <>
 
         {/* Synthèse */}
         <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
@@ -141,6 +169,8 @@ export const MonthlyReport = ({ t, uid, txs, onClose }: Props) => {
             ))}
           </>
         )}
+
+        </>}
       </div>
     </div>
   )

@@ -2,6 +2,15 @@ import { describe, it, expect } from 'vitest'
 import { isoLocal, monthLocal, addDaysLocal, addMonths, isCalendarDate } from '../dates'
 
 describe('isoLocal / monthLocal — calendrier LOCAL, jamais UTC', () => {
+  // vitest.config.ts fixe TZ=America/Cayenne (UTC−3). Sans fuseau décalé, ces
+  // tests passeraient AUSSI avec l'implémentation fautive : ils ne prouveraient
+  // rien. On vérifie donc d'abord que le décalage est bien actif.
+  it('le fuseau de test est décalé (sinon ces tests ne prouvent rien)', () => {
+    const soir = new Date(2026, 6, 15, 22, 30)
+    expect(soir.toISOString().slice(0, 10)).toBe('2026-07-16') // l'ancien bug
+    expect(isoLocal(soir)).toBe('2026-07-15')                  // le correctif
+  })
+
   it('un soir tardif reste le MÊME jour (toISOString basculerait au lendemain)', () => {
     // C'est le bug : en Guyane (UTC−3), 22 h locales = 01 h UTC le lendemain.
     // toISOString() aurait renvoyé 2026-07-16.

@@ -246,7 +246,7 @@ export default function App() {
         {showBudgets && data && session && <BudgetsScreen t={t} uid={session.user.id} txs={data.txs} budgets={budgets} onSave={saveBudget} onDelete={deleteBudget} onClose={() => setShowBudgets(false)} />}
         {showGoals && <GoalsScreen t={t} goals={goals} onAdd={addGoal} onDeposit={depositGoal} onDelete={deleteGoal} onClose={() => setShowGoals(false)} />}
         {showRules && <RulesScreen t={t} rules={merchantRules} onDelete={deleteRule} onClose={() => setShowRules(false)} />}
-        {showReport && data && session && <MonthlyReport t={t} uid={session.user.id} txs={data.txs} onClose={() => setShowReport(false)} />}
+        {showReport && data && session && <MonthlyReport t={t} uid={session.user.id} onClose={() => setShowReport(false)} />}
         {showSearch && data && <SearchScreen t={t} allTxs={data.txs} accounts={data.accounts} onClose={() => setShowSearch(false)} onDelete={deleteTx} />}
         {showReset && session && <ResetModal t={t} uid={session.user.id} onClose={() => setShowReset(false)} onDone={() => { reload(); setShowReset(false); }} />}
         {locked && <LockScreen t={t} onUnlock={() => setLocked(false)} />}
