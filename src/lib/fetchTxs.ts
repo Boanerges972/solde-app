@@ -28,7 +28,20 @@ export async function fetchTxsSince(uid: string, sinceDate: string): Promise<TxW
   let lastDate: string | null = null
   let lastId: number | null = null
 
-  for (let guard = 0; guard < 200; guard++) {
+  // Nombre attendu, mesuré côté serveur. Il sert de preuve d'exhaustivité :
+  // une insertion antidatée concurrente (le replay de l'outbox, par exemple)
+  // atterrit AVANT le curseur et serait manquée sans jamais être détectée — la
+  // pagination keyset résiste aux décalages, pas à ça. Si le compte final ne
+  // correspond pas, on renvoie `complete:false` : aucun report ne sera calculé
+  // sur une fenêtre dont on ne peut pas prouver qu'elle est entière.
+  const { count, error: countErr } = await db
+    .from('transactions')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', uid)
+    .gte('tx_date', sinceDate)
+  if (countErr) { console.error('[fetchTxsSince] count', countErr); return { txs: out, complete: false } }
+
+  for (let guard = 0; guard < 500; guard++) {
     let q = db
       .from('transactions')
       .select('id,amount,tx_date,category,merchant,account_id,icon')
@@ -49,7 +62,15 @@ export async function fetchTxsSince(uid: string, sinceDate: string): Promise<TxW
     if (error) { console.error('[fetchTxsSince]', error); return { txs: out, complete: false } }
 
     const page = (data || []) as Record<string, unknown>[]
-    if (page.length === 0) return { txs: out, complete: true }
+    // SEULE une page vide prouve l'épuisement. `page.length < PAGE` ne prouve
+    // rien : PostgREST plafonne silencieusement une réponse à son `max_rows`,
+    // qui peut être inférieur à PAGE — on s'arrêterait alors sur un historique
+    // tronqué en le déclarant complet.
+    if (page.length === 0) {
+      const complete = count === null || out.length === count
+      if (!complete) console.error('[fetchTxsSince] fenêtre incomplète', { attendu: count, lu: out.length })
+      return { txs: out, complete }
+    }
 
     out.push(...page.map(r => ({
       id: String(r.id),
@@ -68,8 +89,8 @@ export async function fetchTxsSince(uid: string, sinceDate: string): Promise<TxW
     if (nextDate === lastDate && nextId === lastId) return { txs: out, complete: false }
     lastDate = nextDate
     lastId = nextId
-
-    if (page.length < PAGE) return { txs: out, complete: true }
+    // Pas de sortie sur `page.length < PAGE` : voir ci-dessus, elle mentirait.
+    // On boucle jusqu'à une page vide, au prix d'une requête supplémentaire.
   }
   return { txs: out, complete: false } // garde-fou atteint
 }

@@ -10,15 +10,13 @@ import type { Theme, Transaction } from '../../types'
 interface Props {
   t: Theme
   uid: string
-  /** Transactions de l'écran d'accueil : suffisantes pour le mois courant. */
-  txs: Transaction[]
   budgets: CategoryBudget[]
   onSave: (category: string, amount: number, rollover: boolean) => Promise<unknown>
   onDelete: (id: string) => Promise<void>
   onClose: () => void
 }
 
-export const BudgetsScreen = ({ t, uid, txs, budgets, onSave, onDelete, onClose }: Props) => {
+export const BudgetsScreen = ({ t, uid, budgets, onSave, onDelete, onClose }: Props) => {
   const [adding, setAdding] = useState(false)
   const [cat, setCat] = useState('')
   const [amount, setAmount] = useState('')
