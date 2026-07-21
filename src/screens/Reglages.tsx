@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Icon } from '../components/Icon'
+import { BankSyncSettings } from '../components/BankSyncSettings'
 import { sp } from '../lib/theme'
 import { pushSupported, subscribePush, unsubscribePush, isPushSubscribed, updatePushPrefs, type PushPrefs } from '../lib/push'
 import type { Theme, Profile } from '../types'
@@ -162,6 +163,7 @@ export const Settings = ({ t, user, onLogout, profile, onProfile, onSecurity, on
 
     <NotifSettings t={t} />
     <PushSettings t={t} uid={user.id} />
+    <BankSyncSettings t={t} uid={user.id} />
 
     {/* ── PRÉLÈVEMENTS + GROUPE ── */}
     <div style={{ marginBottom: 10 }}>
