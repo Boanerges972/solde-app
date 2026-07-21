@@ -236,10 +236,11 @@ export default function App() {
       paddingTop: isDesktop ? 0 : 'env(safe-area-inset-top,0px)',
     }}>
       {isDesktop && <Sidebar tab={tab} onTab={id => setTab(id)} onAdd={() => setShowEntry(true)} t={t} />}
-      <div style={{ flex: 1, maxWidth: isDesktop ? 1100 : undefined, margin: isDesktop ? '0 auto' : undefined, width: '100%',
-        // Desktop : colonne de hauteur viewport pour que SEUL <main> défile.
-        // Sinon <main height:100vh> sous StatusBar dépasse l'écran → double
-        // scroll et impossibilité de remonter en haut.
+      <div style={{ flex: 1, width: '100%',
+        // Desktop : colonne PLEINE LARGEUR de hauteur viewport dont SEUL <main>
+        // défile. Le centrage à 1100px est reporté DANS <main> (cf. plus bas) :
+        // sinon la zone scrollable ne fait que 1100px et la molette sur les
+        // bandes latérales ne défile rien.
         height: isDesktop ? '100vh' : undefined,
         display: isDesktop ? 'flex' : undefined, flexDirection: isDesktop ? 'column' : undefined,
         overflow: isDesktop ? 'hidden' : undefined }}>
@@ -249,7 +250,7 @@ export default function App() {
         <main style={{ flex: isDesktop ? 1 : undefined, minHeight: isDesktop ? 0 : undefined,
           height: isDesktop ? undefined : 'calc(100vh - 64px - env(safe-area-inset-top,0px))',
           overflowY: 'auto', paddingBottom: isDesktop ? 24 : 'calc(84px + env(safe-area-inset-bottom,0px))' }}>
-          <div key={tab}>{renderMain()}</div>
+          <div key={tab} style={{ maxWidth: isDesktop ? 1100 : undefined, margin: isDesktop ? '0 auto' : undefined }}>{renderMain()}</div>
         </main>
         {showEntry && data && <ExpEntry D={data} t={t} onClose={() => setShowEntry(false)} onSave={async (p: { merchant: string; category: string } & Record<string, unknown>) => { const r = await addTx(p as never); if (p.merchant && p.merchant !== p.category) learnRule(p.merchant, p.category); return r; }} group={group} members={members} uid={session.user.id} recurrings={recurrings || []} allHistory={allHistory || []} />}
         {editBudget && data && <EditBudget D={data} t={t} uid={session.user.id} onClose={() => setEditBudget(false)} onSaved={reload} defaultPeriod={localStorage.getItem('qdq-period') || 'week'} />}
