@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QDQ — Politique de confidentialité</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; max-width: 720px;
+         margin: 0 auto; padding: 40px 24px 80px; color: #1a1a2e; background: #fff; }
+  @media (prefers-color-scheme: dark) { body { color: #e8e8f0; background: #12121a; } }
+  h1 { font-size: 26px; margin-bottom: 4px; }
+  h2 { font-size: 17px; margin-top: 32px; }
+  .sub { color: #6b7280; font-size: 13px; margin-bottom: 8px; }
+  a { color: #4f46e5; }
+  code { font-size: 13px; }
+</style>
+</head>
+<body>
+  <h1>QDQ — Politique de confidentialité</h1>
+  <div class="sub">Qui Dépense Quoi · application personnelle de gestion de finances · dernière mise à jour : 21 juillet 2026</div>
+
+  <h2>Responsable du traitement</h2>
+  <p>QDQ est une application personnelle développée et utilisée par un particulier
+     pour le suivi de ses propres finances. Contact :
+     <a href="mailto:lory.budoc@hotmail.com">lory.budoc@hotmail.com</a>.</p>
+
+  <h2>Données traitées</h2>
+  <p>QDQ traite les données financières de l'utilisateur : comptes, soldes,
+     opérations, budgets et objectifs. Ces données sont saisies manuellement,
+     importées depuis des relevés (CSV/PDF), ou récupérées en <strong>lecture
+     seule</strong> auprès des banques via un agrégateur agréé (voir ci-dessous).</p>
+
+  <h2>Agrégation bancaire (DSP2)</h2>
+  <p>La connexion aux comptes bancaires s'effectue via <strong>Enable Banking</strong>,
+     prestataire de services d'information sur les comptes (AISP) agréé au titre
+     de la DSP2. L'authentification a lieu <strong>directement sur le site de la
+     banque</strong> (redirection + authentification forte). QDQ ne voit, ne
+     stocke et ne manipule <strong>jamais</strong> les identifiants bancaires ;
+     il ne reçoit qu'un jeton d'accès en lecture seule. Le consentement, d'une
+     durée maximale de 180 jours, est renouvelable et révocable à tout moment.</p>
+
+  <h2>Hébergement</h2>
+  <p>Les données applicatives sont stockées dans une base <strong>Supabase</strong>
+     (PostgreSQL) protégée par authentification et cloisonnement par utilisateur.
+     L'application est hébergée sur <strong>Vercel</strong>. Aucune donnée n'est
+     revendue ni transmise à des fins publicitaires.</p>
+
+  <h2>Notifications</h2>
+  <p>Avec le consentement de l'utilisateur, QDQ peut envoyer des notifications
+     push (rappels de prélèvement, dépassements de budget, résumés). Elles se
+     désactivent depuis les réglages.</p>
+
+  <h2>Sécurité</h2>
+  <p>Accès protégé par authentification, code PIN (dérivation PBKDF2) et/ou
+     authentification biométrique (WebAuthn). Les écritures financières passent
+     par des procédures serveur contrôlées.</p>
+
+  <h2>Vos droits</h2>
+  <p>L'utilisateur peut à tout moment consulter, exporter et supprimer ses
+     données depuis l'application, révoquer un consentement bancaire, ou demander
+     la suppression complète de son compte via l'adresse de contact ci-dessus.</p>
+</body>
+</html>
