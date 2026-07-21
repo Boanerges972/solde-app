@@ -64,8 +64,7 @@ export const BankSyncSettings = ({ t, uid }: { t: Theme; uid: string }) => {
       const r = await syncLink(link_id)
       const parts = [`${r.imported} importée${r.imported > 1 ? 's' : ''}`]
       if (r.skipped) parts.push(`${r.skipped} déjà connue${r.skipped > 1 ? 's' : ''}`)
-      if (r.ecart != null && Math.abs(r.ecart) >= 0.01) parts.push(`écart ${r.ecart > 0 ? '+' : ''}${r.ecart.toFixed(2)} €`)
-      else if (r.balance != null) parts.push('solde aligné')
+      if (r.aligned && r.balance != null) parts.push(`solde aligné : ${r.balance.toFixed(2)} €`)
       if (!r.complete) parts.push('⚠️ fenêtre incomplète, relance la synchro')
       setMsg(m => ({ ...m, [link_id]: parts.join(' · ') }))
       await reload()

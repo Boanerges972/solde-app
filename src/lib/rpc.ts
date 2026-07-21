@@ -83,14 +83,16 @@ export function rpcImportBatch(p: {
   }) as unknown as Promise<RpcResult>
 }
 
-/** Import agrégé (Open Banking) : dédup EXACTE par external_id, pas par
- *  multiplicité. Chaque ligne DOIT porter un external_id stable. */
-export function rpcImportExt(p: {
+/** Synchro bancaire ATOMIQUE (Open Banking) : dédup EXACTE par external_id
+ *  (sans toucher le solde par delta) + pose du solde = snapshot banque, dans une
+ *  seule transaction. `bankBalance: null` → le solde n'est pas modifié. */
+export function rpcSyncAccount(p: {
   operationId: string; accountId: string
   txs: { merchant: string; category: string; icon?: string; amount: number; tx_date: string; external_id: string }[]
+  bankBalance: number | null
 }): Promise<RpcResult> {
-  return db.rpc('rpc_import_ext', {
-    p_operation_id: p.operationId, p_account_id: p.accountId, p_txs: p.txs,
+  return db.rpc('rpc_sync_account', {
+    p_operation_id: p.operationId, p_account_id: p.accountId, p_txs: p.txs, p_bank_balance: p.bankBalance,
   }) as unknown as Promise<RpcResult>
 }
 

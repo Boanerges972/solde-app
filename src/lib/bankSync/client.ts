@@ -1,6 +1,6 @@
 import { db } from '../supabase'
 import { mapEbTransactions, type EbTransaction } from './mapEbTx'
-import { rpcImportExt, newOpId } from '../rpc'
+import { rpcSyncAccount, newOpId } from '../rpc'
 
 export interface BankLink {
   id: string
@@ -33,15 +33,20 @@ export const linkAccount = (link_id: string, account_id: string) =>
 export interface SyncResult {
   imported: number
   skipped: number
-  complete: boolean           // false = fenêtre tronquée, watermark NON avancé
-  balance: number | null      // solde banque (référence)
-  localBalance: number | null // solde QDQ après import
-  ecart: number | null        // banque − QDQ, arrondi au centime
+  complete: boolean       // false = fenêtre tronquée
+  balance: number | null  // solde banque, qui fait foi
+  aligned: boolean        // true = solde QDQ aligné sur la banque
 }
 
-/** Tire une liaison, mappe, importe via le RPC blindé, réconcilie le solde.
- *  L'écriture passe EXCLUSIVEMENT par rpcImportBatch (dédup + delta verrouillé) :
- *  la synchro n'ouvre aucune voie d'écriture parallèle. */
+/** Tire une liaison et la synchronise en UN appel atomique (rpc_sync_account) :
+ *  dédup exacte des transactions + pose du solde = snapshot banque, dans une
+ *  seule transaction.
+ *
+ *  Modèle : la BANQUE fait foi pour le solde. L'import ne touche JAMAIS le solde
+ *  par delta (sinon un re-tirage de 90 j s'ajouterait à un solde déjà à jour et
+ *  le gonflerait) ; le solde est posé = valeur /balances, atomiquement avec
+ *  l'import. Snapshot absent → solde inchangé (jamais de faux). Résultat :
+ *  QDQ = banque, exactement, à chaque synchro. */
 export async function syncLink(link_id: string): Promise<SyncResult> {
   const data = await invoke('fetch', { link_id })
   const account_id = data.account_id as string
@@ -49,37 +54,30 @@ export async function syncLink(link_id: string): Promise<SyncResult> {
   const mapped = mapEbTransactions((data.transactions as EbTransaction[]) || [])
 
   // La dédup exacte EXIGE un external_id ; Enable Banking en fournit toujours un
-  // (transaction_id ∥ entry_reference). Une ligne sans identifiant est écartée
-  // plutôt qu'importée sans filet de dédup.
+  // (transaction_id ∥ entry_reference). Une ligne sans identifiant est écartée.
   const withId = mapped.filter(t => t.externalId)
-  let imported = 0, skipped = mapped.length - withId.length
-  if (withId.length) {
-    const rows = withId.map(t => ({
-      merchant: t.merchant, category: t.category, icon: t.icon,
-      amount: t.amount, tx_date: t.dt, external_id: t.externalId as string,
-    }))
-    const { data: imp, error } = await rpcImportExt({ operationId: newOpId(), accountId: account_id, txs: rows })
-    if (error) throw new Error(error.message)
-    const r = imp as { imported?: number; skipped?: number } | null
-    imported = r?.imported ?? 0
-    skipped += r?.skipped ?? 0
-  }
+  const rows = withId.map(t => ({
+    merchant: t.merchant, category: t.category, icon: t.icon,
+    amount: t.amount, tx_date: t.dt, external_id: t.externalId as string,
+  }))
+  const bank = (data.balance as number | null)
 
-  // Enregistre la synchro. last_tx_date est informatif (la fenêtre de lecture
-  // est fixe à 90 j côté serveur) : on transmet la dernière date vue, ou rien
-  // si aucune transaction, pour ne pas effacer l'info sur une synchro vide.
-  // On ne marque QUE si la pagination était complète.
+  const { data: res, error } = await rpcSyncAccount({
+    operationId: newOpId(), accountId: account_id, txs: rows, bankBalance: bank,
+  })
+  if (error) throw new Error(error.message)
+  const r = res as { imported?: number; skipped?: number; balance_set?: boolean } | null
+  const imported = r?.imported ?? 0
+  const skipped = (mapped.length - withId.length) + (r?.skipped ?? 0)
+  const aligned = !!r?.balance_set
+
+  // Enregistre la synchro. last_tx_date est informatif (fenêtre fixe à 90 j) ;
+  // on ne marque QUE si la pagination était complète, et on n'écrase pas la
+  // dernière date connue sur une synchro vide.
   if (complete) {
     const maxDt = mapped.reduce((m, t) => (t.dt > m ? t.dt : m), '')
     await invoke('mark_synced', maxDt ? { link_id, last_tx_date: maxDt } : { link_id })
   }
 
-  let localBalance: number | null = null, ecart: number | null = null
-  const { data: acc } = await db.from('accounts').select('balance').eq('id', account_id).maybeSingle()
-  const bank = (data.balance as number | null)
-  if (acc) {
-    localBalance = Number((acc as { balance: number }).balance)
-    if (bank != null) ecart = Math.round((bank - localBalance) * 100) / 100
-  }
-  return { imported, skipped, complete, balance: bank, localBalance, ecart }
+  return { imported, skipped, complete, balance: bank, aligned }
 }

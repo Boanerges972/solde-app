@@ -258,6 +258,31 @@ Revue adversariale passée le 2026-07-21 sur toute la tranche.
    rattrape les antidatages jusqu'à 90 j. `last_tx_date` devient informatif.
    **Résiduel assumé** : un antidatage de plus de 90 j serait manqué (très rare).
 
+## 15 ter. Modèle de solde — la banque fait foi (revue Codex #2)
+
+Un premier jet « import (delta) puis override du solde » a été **bloqué par
+Codex** : deux RPC séparés, non atomiques → si l'override échoue, le delta reste
+(double-compte) ; si `/balances` renvoie null, le delta reste aussi. Corrigé par
+un **unique RPC atomique `rpc_sync_account`** :
+
+- Dédup exacte des transactions par `(account_id, external_id)`, **sans jamais
+  toucher le solde par delta**.
+- Pose du solde = **snapshot `/balances`**, dans la même transaction (compte
+  verrouillé `FOR UPDATE`). Snapshot absent (`null`) → solde **inchangé** :
+  jamais de faux solde silencieux.
+- Validé en base : import 2 tx + snapshot 2500 → solde 2500 (pas 985) ; re-tirage
+  + 2600 → 0 réimporté, solde 2600 ; snapshot null → solde inchangé.
+
+**Politique de compte** : un compte relié est **autoritaire côté solde** (reflète
+le dernier snapshot bancaire). Écritures manuelles/CSV sur un compte relié →
+visibles dans le fil, mais le solde suit la banque (recouvert au prochain
+snapshot). Ne pas piloter le solde d'un compte relié à la main.
+
+**Résiduels assumés** : (a) deux synchros concurrentes sur le même compte — la
+dernière `set_balance` gagne même si son snapshot est plus ancien (auto-corrigé
+à la synchro suivante ; synchros déclenchées manuellement, concurrence rare) ;
+(b) antidatage > 90 j (hors fenêtre).
+
 ## 16. Décision requise avant Phase 1
 
 1. Confirmer le choix Enable Banking.
