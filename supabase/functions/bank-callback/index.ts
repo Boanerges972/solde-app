@@ -97,8 +97,11 @@ Deno.serve(async (req: Request) => {
     if (!error) saved++
   }
 
-  if (saved === 0 && accounts.length > 0) {
-    return back('error') || html('Comptes détectés mais leur enregistrement a échoué. Réessaie depuis QDQ.')
+  // 0 compte enregistré : soit la banque n'a partagé aucun compte (certaines,
+  // comme le Crédit Mutuel, autorisent le consentement mais n'exposent pas le
+  // compte via Open Banking), soit l'utilisateur n'a rien sélectionné.
+  if (saved === 0) {
+    return back('error') || html('Aucun compte partagé par la banque. Ce compte n\'est peut-être pas accessible via Open Banking (import manuel possible).')
   }
   return back('connected', saved) || html(
     `Banque connectée. ${saved} compte(s) enregistré(s).<br><br>
