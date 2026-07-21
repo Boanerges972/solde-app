@@ -152,7 +152,14 @@ Deno.serve(async (req: Request) => {
     let balance: number | null = null
     if (bal.status < 400) {
       const list = (bal.body as { balances?: { balance_type?: string; balance_amount?: { amount?: string } }[] }).balances || []
-      const pick = list.find(b => b.balance_type === 'CLBD') || list.find(b => b.balance_type === 'CLAV') || list[0]
+      // On privilégie le solde « temps réel / disponible » (ce que l'utilisateur
+      // voit dans son appli bancaire), et non le seul comptabilisé. Boursorama
+      // expose XPCD = « temps réel » ; d'autres banques ITAV/CLAV. CLBD en
+      // dernier recours (comptabilisé, sans les opérations en attente).
+      const order = ['XPCD', 'ITAV', 'ITBD', 'CLAV', 'CLBD']
+      let pick = null as (typeof list)[number] | null
+      for (const type of order) { const f = list.find(b => b.balance_type === type); if (f) { pick = f; break } }
+      pick = pick || list[0]
       const amt = pick?.balance_amount?.amount
       if (amt != null) balance = parseFloat(amt)
     }
