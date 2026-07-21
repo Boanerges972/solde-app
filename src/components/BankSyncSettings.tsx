@@ -12,6 +12,7 @@ export const BankSyncSettings = ({ t, uid }: { t: Theme; uid: string }) => {
   const [links, setLinks] = useState<BankLink[]>([])
   const [accounts, setAccounts] = useState<LocalAccount[]>([])
   const [aspsps, setAspsps] = useState<{ name: string; country: string }[] | null>(null)
+  const [query, setQuery] = useState('')
   const [busy, setBusy] = useState<string | null>(null) // clé d'action en cours
   const [msg, setMsg] = useState<Record<string, string>>({})
   const [err, setErr] = useState('')
@@ -34,7 +35,7 @@ export const BankSyncSettings = ({ t, uid }: { t: Theme; uid: string }) => {
   }, [reload])
 
   const openConnect = async () => {
-    setErr(''); setBusy('aspsps')
+    setErr(''); setBusy('aspsps'); setQuery('')
     try { setAspsps(await listAspsps('FR')) }
     catch (e) { setErr(String((e as Error).message)) }
     finally { setBusy(null) }
@@ -93,21 +94,29 @@ export const BankSyncSettings = ({ t, uid }: { t: Theme; uid: string }) => {
 
       {err && <div role="alert" style={{ fontSize: 12, ...sp('o'), color: t.dangerText, background: t.rD, borderRadius: 8, padding: '8px 10px', marginBottom: 10 }}>{err}</div>}
 
-      {/* Sélecteur de banque */}
-      {aspsps && (
-        <div style={{ background: t.el, borderRadius: 10, padding: 10, marginBottom: 10 }}>
-          <div style={{ fontSize: 12, ...sp('o', 600), color: t.sub, marginBottom: 8 }}>Choisis ta banque</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {aspsps.length === 0 && <span style={{ fontSize: 12, color: t.sub }}>Aucune banque disponible.</span>}
-            {aspsps.map(a => (
-              <button key={a.name} onClick={() => connect(a.name)} disabled={busy === 'connect'}
-                style={{ padding: '6px 10px', borderRadius: 999, fontSize: 11.5, ...sp('o', 500), cursor: 'pointer', background: t.card, color: t.tx, border: '1px solid ' + t.bo, opacity: busy === 'connect' ? 0.5 : 1 }}>
-                {a.name}
-              </button>
-            ))}
+      {/* Sélecteur de banque : recherche + liste courte (la liste FR fait ~130
+          banques, on ne l'affiche jamais en entier). */}
+      {aspsps && (() => {
+        const q = query.trim().toLowerCase()
+        const shown = (q ? aspsps.filter(a => a.name.toLowerCase().includes(q)) : aspsps).slice(0, 30)
+        return (
+          <div style={{ background: t.el, borderRadius: 10, padding: 10, marginBottom: 10 }}>
+            <div style={{ fontSize: 12, ...sp('o', 600), color: t.sub, marginBottom: 8 }}>Cherche ta banque</div>
+            <input value={query} onChange={e => setQuery(e.target.value)} autoFocus
+              placeholder="ex : Boursorama, Crédit Mutuel…"
+              style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid ' + t.bo, background: t.card, color: t.tx, fontSize: 13, ...sp('o'), marginBottom: 8 }} />
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, maxHeight: 180, overflowY: 'auto' }}>
+              {shown.length === 0 && <span style={{ fontSize: 12, color: t.sub }}>Aucune banque ne correspond.</span>}
+              {shown.map(a => (
+                <button key={a.name} onClick={() => connect(a.name)} disabled={busy === 'connect'}
+                  style={{ padding: '6px 10px', borderRadius: 999, fontSize: 11.5, ...sp('o', 500), cursor: 'pointer', background: t.card, color: t.tx, border: '1px solid ' + t.bo, opacity: busy === 'connect' ? 0.5 : 1 }}>
+                  {a.name}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Liaisons */}
       {links.map(l => {
