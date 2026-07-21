@@ -20,8 +20,17 @@ const stateKey = new TextEncoder().encode(STATE_SECRET)
 
 const svc = createClient(SUPABASE_URL, SERVICE_KEY)
 
+// CORS : l'appel vient du front (origine différente). Le préflight OPTIONS n'a
+// pas de JWT → verify_jwt DOIT être désactivé au déploiement ; l'auth est faite
+// dans le code (getUser). Sans ces en-têtes : « Failed to send a request ».
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
+
 const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...CORS } })
 
 async function ebJwt(): Promise<string> {
   const key = await importPKCS8(PRIVATE_KEY, 'RS256')
@@ -42,6 +51,8 @@ async function ebFetch(path: string, init?: RequestInit) {
 }
 
 Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
+
   const authHeader = req.headers.get('Authorization') || ''
   const anon = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: authHeader } } })
   const { data: { user } } = await anon.auth.getUser()
