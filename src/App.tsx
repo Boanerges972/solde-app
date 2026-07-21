@@ -223,7 +223,13 @@ export default function App() {
   return (
     <div style={{
       width: '100%', maxWidth: isDesktop ? undefined : 480,
-      minHeight: '100vh', position: 'relative', background: t.bg,
+      // Desktop : app-shell verrouillé à la hauteur de l'écran, le document ne
+      // défile JAMAIS (sinon double scroll document + <main> → blocage). Seul
+      // <main> défile. Mobile : comportement page classique inchangé.
+      height: isDesktop ? '100vh' : undefined,
+      minHeight: isDesktop ? undefined : '100vh',
+      overflow: isDesktop ? 'hidden' : undefined,
+      position: 'relative', background: t.bg,
       display: isDesktop ? 'flex' : 'block',
       boxShadow: 'none',
       transition: 'background .3s',
