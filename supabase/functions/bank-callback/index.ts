@@ -42,12 +42,13 @@ Deno.serve(async (req: Request) => {
   if (err) return html(`Autorisation refusée par la banque (${err}).`)
   if (!code || !state) return html('Paramètres de retour manquants.')
 
-  let uid: string, aspspName: string, returnTo = ''
+  let uid: string, aspspName: string, returnTo = '', nonce = ''
   try {
     const { payload } = await jwtVerify(state, stateKey)
     uid = payload.uid as string
     aspspName = (payload.aspsp_name as string) || 'Banque'
     returnTo = (payload.return_to as string) || ''
+    nonce = (payload.nonce as string) || ''
   } catch {
     return html('Lien de retour invalide ou expiré. Relance la connexion depuis QDQ.')
   }
@@ -56,6 +57,15 @@ Deno.serve(async (req: Request) => {
   // en text/plain par la passerelle. Fallback HTML si l'origine est absente.
   const back = (status: string, n = 0) =>
     returnTo ? Response.redirect(`${returnTo}/?bank=${status}${n ? `&count=${n}` : ''}`, 302) : null
+
+  // Consomme le nonce : usage unique + expiration 30 min. Un state rejoué ou
+  // périmé ne supprime aucune ligne → on refuse.
+  const cutoff = new Date(Date.now() - 30 * 60000).toISOString()
+  const { data: consumed } = await svc.from('bank_auth_nonce')
+    .delete().eq('nonce', nonce).eq('user_id', uid).gte('created_at', cutoff).select('nonce')
+  if (!consumed || consumed.length === 0) {
+    return back('error') || html('Lien de consentement déjà utilisé ou expiré. Relance la connexion depuis QDQ.')
+  }
 
   const jwt = await ebJwt()
   const r = await fetch(`${EB}/sessions`, {

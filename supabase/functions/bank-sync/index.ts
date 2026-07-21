@@ -68,7 +68,13 @@ Deno.serve(async (req: Request) => {
     // On mémorise l'origine de l'app pour y renvoyer l'utilisateur après le
     // consentement (302), plutôt qu'une page cul-de-sac servie en text/plain.
     const returnTo = req.headers.get('origin') || ''
-    const state = await new SignJWT({ uid, aspsp_name: p.aspsp_name, aspsp_country: p.aspsp_country || 'FR', return_to: returnTo })
+    // Nonce à usage unique : le callback le consomme, un state rejoué échoue.
+    // Si l'insertion échoue, ne PAS envoyer l'utilisateur en SCA (le callback le
+    // refuserait faute de nonce stocké) — on remonte l'erreur tout de suite.
+    const nonce = crypto.randomUUID()
+    const { error: nonceErr } = await svc.from('bank_auth_nonce').insert({ nonce, user_id: uid })
+    if (nonceErr) return json({ error: nonceErr.message }, 500)
+    const state = await new SignJWT({ uid, aspsp_name: p.aspsp_name, aspsp_country: p.aspsp_country || 'FR', return_to: returnTo, nonce })
       .setProtectedHeader({ alg: 'HS256' }).setIssuedAt().setExpirationTime('30m').sign(stateKey)
     const { status, body } = await ebFetch('/auth', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -118,7 +124,11 @@ Deno.serve(async (req: Request) => {
     if (!link) return json({ error: 'Liaison introuvable' }, 404)
     if (!link.account_id) return json({ error: 'Compte non relié' }, 400)
 
-    const dateFrom = link.last_tx_date || new Date(Date.now() - 90 * 864e5).toISOString().slice(0, 10)
+    // Fenêtre FIXE de 90 jours à chaque synchro, et non une borne incrémentale.
+    // La dédup exacte par external_id rend le re-tirage gratuit (0 réimporté) et
+    // rattrape les transactions antidatées (régularisations) qu'un watermark
+    // glissant manquerait. Le volume perso reste modeste.
+    const dateFrom = new Date(Date.now() - 90 * 864e5).toISOString().slice(0, 10)
     const all: unknown[] = []
     let cont = ''
     // La garde haute couvre largement une fenêtre perso ; `complete` distingue
@@ -152,8 +162,12 @@ Deno.serve(async (req: Request) => {
 
   // Marque une liaison comme synchronisée (après import client réussi).
   if (action === 'mark_synced') {
-    const { error } = await svc.from('bank_links')
-      .update({ last_sync_at: new Date().toISOString(), last_tx_date: p.last_tx_date })
+    // last_tx_date est purement informatif (date de la dernière opération vue) :
+    // la fenêtre de lecture est fixe. On ne l'écrase que si des tx sont revenues,
+    // pour ne pas effacer l'info sur une synchro vide.
+    const patch: Record<string, string> = { last_sync_at: new Date().toISOString() }
+    if (p.last_tx_date) patch.last_tx_date = p.last_tx_date
+    const { error } = await svc.from('bank_links').update(patch)
       .eq('id', p.link_id).eq('user_id', uid)
     if (error) return json({ error: error.message }, 400)
     return json({ ok: true })

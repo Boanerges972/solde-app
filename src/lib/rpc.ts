@@ -83,6 +83,17 @@ export function rpcImportBatch(p: {
   }) as unknown as Promise<RpcResult>
 }
 
+/** Import agrégé (Open Banking) : dédup EXACTE par external_id, pas par
+ *  multiplicité. Chaque ligne DOIT porter un external_id stable. */
+export function rpcImportExt(p: {
+  operationId: string; accountId: string
+  txs: { merchant: string; category: string; icon?: string; amount: number; tx_date: string; external_id: string }[]
+}): Promise<RpcResult> {
+  return db.rpc('rpc_import_ext', {
+    p_operation_id: p.operationId, p_account_id: p.accountId, p_txs: p.txs,
+  }) as unknown as Promise<RpcResult>
+}
+
 export function rpcSetReserved(p: { accountId: string; reserved: number }): Promise<RpcResult> {
   return db.rpc('rpc_set_reserved', {
     p_account_id: p.accountId, p_reserved: p.reserved,

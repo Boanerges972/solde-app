@@ -239,25 +239,24 @@ Revue adversariale passée le 2026-07-21 sur toute la tranche.
 - `parseFloat` permissif (« 12.34EUR » → 12.34) → parse strict par regex.
 - Erreurs `mark_synced` / `list` / upsert callback masquées → remontées.
 
-**Gates AVANT de connecter des comptes de PRODUCTION (non requis en sandbox) :**
-1. **Consent-phishing via `state`** *(BLOQUANT en multi-utilisateur)* — le `state`
-   HS256 empêche la falsification mais pas le rejeu : un utilisateur authentifié
-   pourrait faire autoriser une victime et enregistrer ses comptes sous son
-   propre `uid`. Atténuation requise : **nonce persisté à usage unique**, lié à
-   la session initiatrice. Risque réel uniquement si le projet accepte
-   **plusieurs utilisateurs** — l'app est mono-utilisateur aujourd'hui.
-2. **Dédup exacte par `external_id`** — la dédup par multiplicité `(date, montant,
-   marchand)` se trompe si Enable Banking corrige un libellé ou une date entre
-   deux tirages → recompte. Ajouter `transactions.external_id` + index unique
-   `(user_id, external_id)` et un RPC d'import qui dédup dessus. `mapEbTx`
-   extrait déjà `externalId` (transaction_id ∥ entry_reference) — **il n'est pas
-   encore transmis au RPC**.
-3. **Marge de chevauchement du watermark** — une transaction antidatée (comptée
-   après coup avec une date antérieure) sous la borne `last_tx_date` ne serait
-   jamais retirée. Reculer la borne de quelques jours **une fois (2) en place**
-   (sinon le chevauchement recompte).
-
-Ces trois gates se tiennent : (2) rend (3) sûr, et (1) ne mord qu'en multi-user.
+**Gates pré-production — LEVÉS (2026-07-21) :**
+1. **Consent-phishing via `state`** → table `bank_auth_nonce` à **usage unique**
+   (30 min) : `start_auth` insère un nonce, le callback le consomme par
+   `DELETE ... RETURNING` (atomique, un seul callback réussit sous concurrence).
+   Un `state` rejoué/périmé ne consomme rien → refus. Le fondamental cross-user
+   reste couvert par le fait que l'app est **mono-utilisateur** (inscriptions
+   fermées) — à réévaluer si on ouvre à plusieurs users.
+2. **Dédup exacte par `external_id`** → `transactions.external_id` + index unique
+   partiel **`(account_id, external_id)`** (pas `user_id` : un même
+   `entry_reference` peut coexister sur les deux jambes d'un virement interne) +
+   `rpc_import_ext` (dédup intra-batch par `distinct on`, cross-sync par
+   `on conflict do nothing`, delta = insertion réelle). Validé en base : re-tirage
+   → 0 recompté.
+3. **Antidatage** → plutôt qu'un watermark glissant (qui reculait à l'infini sur
+   les synchros vides et ratait les régularisations), **fenêtre de lecture FIXE
+   de 90 jours** à chaque synchro. La dédup exacte rend le re-tirage gratuit et
+   rattrape les antidatages jusqu'à 90 j. `last_tx_date` devient informatif.
+   **Résiduel assumé** : un antidatage de plus de 90 j serait manqué (très rare).
 
 ## 16. Décision requise avant Phase 1
 

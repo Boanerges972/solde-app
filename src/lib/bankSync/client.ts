@@ -1,6 +1,6 @@
 import { db } from '../supabase'
 import { mapEbTransactions, type EbTransaction } from './mapEbTx'
-import { rpcImportBatch, newOpId } from '../rpc'
+import { rpcImportExt, newOpId } from '../rpc'
 
 export interface BankLink {
   id: string
@@ -48,23 +48,30 @@ export async function syncLink(link_id: string): Promise<SyncResult> {
   const complete = data.complete !== false
   const mapped = mapEbTransactions((data.transactions as EbTransaction[]) || [])
 
-  let imported = 0, skipped = 0
-  if (mapped.length) {
-    const rows = mapped.map(t => ({ merchant: t.merchant, category: t.category, icon: t.icon, amount: t.amount, tx_date: t.dt }))
-    const { data: imp, error } = await rpcImportBatch({ operationId: newOpId(), accountId: account_id, txs: rows })
+  // La dédup exacte EXIGE un external_id ; Enable Banking en fournit toujours un
+  // (transaction_id ∥ entry_reference). Une ligne sans identifiant est écartée
+  // plutôt qu'importée sans filet de dédup.
+  const withId = mapped.filter(t => t.externalId)
+  let imported = 0, skipped = mapped.length - withId.length
+  if (withId.length) {
+    const rows = withId.map(t => ({
+      merchant: t.merchant, category: t.category, icon: t.icon,
+      amount: t.amount, tx_date: t.dt, external_id: t.externalId as string,
+    }))
+    const { data: imp, error } = await rpcImportExt({ operationId: newOpId(), accountId: account_id, txs: rows })
     if (error) throw new Error(error.message)
     const r = imp as { imported?: number; skipped?: number } | null
     imported = r?.imported ?? 0
-    skipped = r?.skipped ?? 0
+    skipped += r?.skipped ?? 0
   }
 
-  // On n'avance le watermark QUE si la pagination a été complète : sinon des
-  // pages non lues antérieures à max(dt) deviendraient définitivement
-  // inaccessibles (finding Codex #2). Importer le partiel reste sûr — la dédup
-  // ignore les doublons au prochain passage.
+  // Enregistre la synchro. last_tx_date est informatif (la fenêtre de lecture
+  // est fixe à 90 j côté serveur) : on transmet la dernière date vue, ou rien
+  // si aucune transaction, pour ne pas effacer l'info sur une synchro vide.
+  // On ne marque QUE si la pagination était complète.
   if (complete) {
-    const lastDate = mapped.reduce((m, t) => (t.dt > m ? t.dt : m), (data.date_from as string) || '')
-    await invoke('mark_synced', { link_id, last_tx_date: lastDate })
+    const maxDt = mapped.reduce((m, t) => (t.dt > m ? t.dt : m), '')
+    await invoke('mark_synced', maxDt ? { link_id, last_tx_date: maxDt } : { link_id })
   }
 
   let localBalance: number | null = null, ecart: number | null = null
