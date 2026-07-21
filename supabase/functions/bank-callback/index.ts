@@ -42,14 +42,20 @@ Deno.serve(async (req: Request) => {
   if (err) return html(`Autorisation refusée par la banque (${err}).`)
   if (!code || !state) return html('Paramètres de retour manquants.')
 
-  let uid: string, aspspName: string
+  let uid: string, aspspName: string, returnTo = ''
   try {
     const { payload } = await jwtVerify(state, stateKey)
     uid = payload.uid as string
     aspspName = (payload.aspsp_name as string) || 'Banque'
+    returnTo = (payload.return_to as string) || ''
   } catch {
     return html('Lien de retour invalide ou expiré. Relance la connexion depuis QDQ.')
   }
+
+  // Renvoie l'utilisateur dans l'app avec un statut, plutôt qu'une page servie
+  // en text/plain par la passerelle. Fallback HTML si l'origine est absente.
+  const back = (status: string, n = 0) =>
+    returnTo ? Response.redirect(`${returnTo}/?bank=${status}${n ? `&count=${n}` : ''}`, 302) : null
 
   const jwt = await ebJwt()
   const r = await fetch(`${EB}/sessions`, {
@@ -62,7 +68,7 @@ Deno.serve(async (req: Request) => {
     accounts?: { uid: string; name?: string; account_id?: { iban?: string } }[]
     access?: { valid_until?: string }
   }
-  if (r.status >= 400) return html('Échec de la création de session. Réessaie depuis QDQ.')
+  if (r.status >= 400) return back('error') || html('Échec de la création de session. Réessaie depuis QDQ.')
 
   const accounts = body.accounts || []
   let saved = 0
@@ -82,9 +88,9 @@ Deno.serve(async (req: Request) => {
   }
 
   if (saved === 0 && accounts.length > 0) {
-    return html('Comptes détectés mais leur enregistrement a échoué. Réessaie depuis QDQ.')
+    return back('error') || html('Comptes détectés mais leur enregistrement a échoué. Réessaie depuis QDQ.')
   }
-  return html(
+  return back('connected', saved) || html(
     `Banque connectée. ${saved} compte(s) enregistré(s).<br><br>
      Retourne dans QDQ → Réglages → Synchronisation bancaire pour relier ces comptes aux tiens.`,
     true,

@@ -65,7 +65,10 @@ Deno.serve(async (req: Request) => {
   // Démarre l'autorisation : renvoie l'URL de redirection banque (SCA).
   if (action === 'start_auth') {
     const validUntil = new Date(Date.now() + 180 * 864e5).toISOString()
-    const state = await new SignJWT({ uid, aspsp_name: p.aspsp_name, aspsp_country: p.aspsp_country || 'FR' })
+    // On mémorise l'origine de l'app pour y renvoyer l'utilisateur après le
+    // consentement (302), plutôt qu'une page cul-de-sac servie en text/plain.
+    const returnTo = req.headers.get('origin') || ''
+    const state = await new SignJWT({ uid, aspsp_name: p.aspsp_name, aspsp_country: p.aspsp_country || 'FR', return_to: returnTo })
       .setProtectedHeader({ alg: 'HS256' }).setIssuedAt().setExpirationTime('30m').sign(stateKey)
     const { status, body } = await ebFetch('/auth', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
