@@ -230,11 +230,19 @@ export default function App() {
       paddingTop: isDesktop ? 0 : 'env(safe-area-inset-top,0px)',
     }}>
       {isDesktop && <Sidebar tab={tab} onTab={id => setTab(id)} onAdd={() => setShowEntry(true)} t={t} />}
-      <div style={{ flex: 1, maxWidth: isDesktop ? 1100 : undefined, margin: isDesktop ? '0 auto' : undefined, width: '100%' }}>
+      <div style={{ flex: 1, maxWidth: isDesktop ? 1100 : undefined, margin: isDesktop ? '0 auto' : undefined, width: '100%',
+        // Desktop : colonne de hauteur viewport pour que SEUL <main> défile.
+        // Sinon <main height:100vh> sous StatusBar dépasse l'écran → double
+        // scroll et impossibilité de remonter en haut.
+        height: isDesktop ? '100vh' : undefined,
+        display: isDesktop ? 'flex' : undefined, flexDirection: isDesktop ? 'column' : undefined,
+        overflow: isDesktop ? 'hidden' : undefined }}>
         <StatusBar t={t} />
         {showIOS && <IOSBanner t={t} onDismiss={() => { setShowIOS(false); localStorage.setItem('qdq-ios', '1'); }} />}
         <OfflineBanner isOnline={isOnline} pendingCount={pendingCount} failedCount={failedCount} isSyncing={isSyncing} t={t} />
-        <main style={{ height: isDesktop ? '100vh' : 'calc(100vh - 64px - env(safe-area-inset-top,0px))', overflowY: 'auto', paddingBottom: isDesktop ? 24 : 'calc(84px + env(safe-area-inset-bottom,0px))' }}>
+        <main style={{ flex: isDesktop ? 1 : undefined, minHeight: isDesktop ? 0 : undefined,
+          height: isDesktop ? undefined : 'calc(100vh - 64px - env(safe-area-inset-top,0px))',
+          overflowY: 'auto', paddingBottom: isDesktop ? 24 : 'calc(84px + env(safe-area-inset-bottom,0px))' }}>
           <div key={tab}>{renderMain()}</div>
         </main>
         {showEntry && data && <ExpEntry D={data} t={t} onClose={() => setShowEntry(false)} onSave={async (p: { merchant: string; category: string } & Record<string, unknown>) => { const r = await addTx(p as never); if (p.merchant && p.merchant !== p.category) learnRule(p.merchant, p.category); return r; }} group={group} members={members} uid={session.user.id} recurrings={recurrings || []} allHistory={allHistory || []} />}
