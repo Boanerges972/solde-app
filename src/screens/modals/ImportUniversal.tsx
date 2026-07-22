@@ -204,7 +204,7 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
       // PAS de déduplication ici : à ce stade la destination n'est pas encore
       // choisie. Filtrer contre le compte présélectionné ferait disparaître des
       // lignes qui n'existent pas sur le compte finalement retenu. La dédup est
-      // faite par rpc_import_batch, sur le compte RÉEL, et renvoie `skipped`.
+      // faite par rpc_import_csv, sur le compte RÉEL, et renvoie `skipped`.
       const sel: Record<number, boolean> = {}
       allParsed.forEach((_, i) => { sel[i] = true })
       setTxs(allParsed)

@@ -73,16 +73,6 @@ export function rpcDeleteTransfer(p: { operationId: string; transferId: string }
   }) as unknown as Promise<RpcResult>
 }
 
-/** Import en lot : N tx + UN delta. amount SIGNÉ par ligne. */
-export function rpcImportBatch(p: {
-  operationId: string; accountId: string
-  txs: { merchant: string; category: string; icon?: string; amount: number; tx_date: string }[]
-}): Promise<RpcResult> {
-  return db.rpc('rpc_import_batch', {
-    p_operation_id: p.operationId, p_account_id: p.accountId, p_txs: p.txs,
-  }) as unknown as Promise<RpcResult>
-}
-
 /** Import CSV/relevé : dédup par multiplicité + solde AUTORITAIRE optionnel.
  *  Si `bankBalance` est fourni (colonne « Solde » du relevé), il POSE le solde
  *  du compte dessus (le relevé fait foi) ; sinon delta comme l'import legacy. */
