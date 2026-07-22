@@ -166,9 +166,18 @@ Après import, comparer `GET /balances` (solde banque) au solde calculé QDQ :
 ## 9. Déclenchement
 
 - **Manuel** : bouton « Synchroniser » dans Réglages (MVP).
-- **Auto (phase 2)** : job `pg_cron` quotidien (comme `send-notifications`)
-  appelant `bank-sync` pour chaque `bank_link` non expiré. Respecter les quotas
-  Enable Banking (pas plus de N tirages/jour).
+- **Auto (LIVRÉ)** : job `pg_cron` `bank-cron-daily` (0 10 * * *) → Edge Function
+  `bank-cron` (balance-only). Pour chaque `bank_link` relié et non expiré : lit
+  `/balances` (devise EUR, parse strict, priorité XPCD>ITAV>ITBD>CLAV>CLBD) et
+  pose le solde via `rpc_refresh_balance_svc` (service_role, user_id explicite,
+  contrôle propriété). **Balance-only par choix** : les transactions restent
+  importées côté app (mapEbTx = source unique), pour ne pas dupliquer la logique
+  de mapping dans un contexte non supervisé. Résidu assumé (revue Codex) :
+  « dernier snapshot terminé gagne » en cas de rafraîchissement concurrent — rare
+  (quotidien, mono-user), s'auto-corrige.
+  **Le job pg_cron est provisionné À LA MAIN** (le `CRON_SECRET` ne doit pas
+  entrer dans une migration versionnée). Recréation :
+  `cron.schedule('bank-cron-daily', '0 10 * * *', <net.http_post vers bank-cron avec header x-cron-secret>)`.
 
 ## 10. Gestion de l'expiration du consentement
 
