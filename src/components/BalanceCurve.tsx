@@ -1,5 +1,5 @@
 import { useState, useId } from 'react'
-import { fmt } from '../lib/currency'
+import { fmtS } from '../lib/currency'
 import type { Theme } from '../types'
 
 interface BalanceCurveProps {
@@ -104,7 +104,7 @@ export const BalanceCurve = ({ points, color, t, height = 160 }: BalanceCurvePro
             textAnchor="end" fontSize={9} fill={t.sub}
             fontFamily="system-ui, sans-serif"
           >
-            {fmt(bal)}
+            {fmtS(bal)}
           </text>
         ))}
 
@@ -131,7 +131,7 @@ export const BalanceCurve = ({ points, color, t, height = 160 }: BalanceCurvePro
           textAnchor="middle" fontSize={9} fill={t.rose}
           fontFamily="system-ui, sans-serif"
         >
-          ★ min: {fmt(minBal)}
+          ★ min: {fmtS(minBal)}
         </text>
 
         {/* Touch vertical line */}
@@ -161,7 +161,7 @@ export const BalanceCurve = ({ points, color, t, height = 160 }: BalanceCurvePro
           boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
           fontFamily: 'system-ui, sans-serif',
         }}>
-          {touchPt.date} · {fmt(touchPt.bal)}
+          {touchPt.date} · {fmtS(touchPt.bal)}
         </div>
       )}
     </div>

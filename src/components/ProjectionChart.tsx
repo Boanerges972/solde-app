@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import { sp } from '../lib/theme'
-import { fmt } from '../lib/currency'
+import { fmtS } from '../lib/currency'
 import { projectBalanceWithMin, type ProjRecurring } from '../lib/projection'
 import type { Theme, Account, Recurring, Transaction } from '../types'
 
@@ -63,7 +63,7 @@ export const ProjectionChart = ({ t, accounts, recurrings, txs }: Props) => {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
-        <span style={{ fontSize: 22, ...sp('m', 700), color: t.tx }}>{fmt(points[points.length - 1].balance, 0)}</span>
+        <span style={{ fontSize: 22, ...sp('m', 700), color: t.tx }}>{fmtS(points[points.length - 1].balance, 0)}</span>
         <span style={{ fontSize: 12, ...sp('o'), color: t.sub }}>dans {horizon} jours</span>
         {goesNegative && (
           <span style={{ fontSize: 10.5, ...sp('o', 600), color: t.dangerText, background: t.rD, padding: '2px 8px', borderRadius: 6 }}>
@@ -87,7 +87,7 @@ export const ProjectionChart = ({ t, accounts, recurrings, txs }: Props) => {
             <Tooltip
               contentStyle={{ background: t.card, border: '1px solid ' + t.bo, borderRadius: 10, fontSize: 12 }}
               labelStyle={{ color: t.sub }}
-              formatter={(v: number) => [fmt(v), 'Solde']} />
+              formatter={(v: number) => [fmtS(v), 'Solde']} />
             <ReferenceLine y={0} stroke={t.rose} strokeDasharray="4 4" strokeOpacity={0.6} />
             <Area type="monotone" dataKey="balance" stroke={goesNegative ? t.rose : t.primary}
               strokeWidth={2} fill="url(#projGrad)" dot={false} />

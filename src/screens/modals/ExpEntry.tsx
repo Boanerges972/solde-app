@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { sp } from '../../lib/theme'
-import { fmt } from '../../lib/currency'
+import { fmt, fmtS } from '../../lib/currency'
 import type { Theme, AppData, Transaction, Recurring, Group, Member } from '../../types'
 import { scoreAccounts } from '../../lib/scoreAccounts'
 import { AccountScoreCard } from '../../components/AccountScoreCard'
@@ -410,8 +410,8 @@ export const ExpEntry = ({ D, t, onClose, onSave, group, members, uid, recurring
                     color: selectedAccId === a.id ? a.col : t.tx, flex: 1 }}>
                     {a.name}
                   </span>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: t.sub }}>
-                    {fmt(a.bal, 0)}
+                  <span style={{ fontSize: 13, fontWeight: 500, color: a.bal < 0 ? t.rose : t.sub }}>
+                    {fmtS(a.bal, 0)}
                   </span>
                   {selectedAccId === a.id && (
                     <div style={{ width: 22, height: 22, borderRadius: 11, background: a.col,
