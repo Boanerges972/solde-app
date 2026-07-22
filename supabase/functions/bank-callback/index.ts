@@ -9,7 +9,7 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const APP_ID = Deno.env.get('EB_APPLICATION_ID')!
 const PRIVATE_KEY = Deno.env.get('EB_PRIVATE_KEY')!
-const STATE_SECRET = Deno.env.get('CRON_SECRET')!
+const STATE_SECRET = Deno.env.get('STATE_SECRET')! // clé HMAC du state (secret dédié)
 const EB = 'https://api.enablebanking.com'
 const stateKey = new TextEncoder().encode(STATE_SECRET)
 

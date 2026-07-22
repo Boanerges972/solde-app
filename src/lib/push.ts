@@ -2,7 +2,7 @@ import { db } from './supabase'
 
 /** Clé publique VAPID (la clé privée vit dans les secrets de l'Edge Function). */
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY
-  || 'BLXn6Rbuo_E0lkq1EDO41Yx6QRBUufm1rhaKryQpPgbndnmBL4CYsHtBY2PWGwxbhGAmCyKGuyUtk8qFrWEeZ-Y'
+  || 'BP0mmGv2lr0Azb4LXLMDEQsYkSuuH7TB4QvbcZg5zC97V-y14N-lvrtb_QtQ7pbVH_AkHk3kqCzZx1W8CYObI-o'
 
 export interface PushPrefs {
   recurring: boolean
