@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { sp } from '../../lib/theme'
 import { fmt } from '../../lib/currency'
 import type { Theme, AppData, Transaction, Recurring, Group, Member } from '../../types'
@@ -15,7 +15,17 @@ interface Props {
 }
 
 export const ExpEntry = ({ D, t, onClose, onSave, group, members, uid, recurrings, allHistory }: Props) => {
-  const [cat, setCat] = useState('Courses')
+  // Catégorie par défaut = catégorie de dépense la plus fréquente de l'historique
+  const defaultCat = useMemo(() => {
+    const freq: Record<string, number> = {}
+    for (const tx of allHistory || []) {
+      if (tx.amt < 0 && tx.cat && tx.cat !== 'Virement interne' && CATS_E.some(c => c.n === tx.cat))
+        freq[tx.cat] = (freq[tx.cat] || 0) + 1
+    }
+    return Object.entries(freq).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Courses'
+  }, [allHistory])
+  const [cat, setCat] = useState(defaultCat)
+  const [catTouched, setCatTouched] = useState(false)
   const [selectedAccId, setSelectedAccId] = useState(D.accounts[0] ? D.accounts[0].id : '')
   const [showDebits, setShowDebits] = useState(false)
   const [amount, setAmount] = useState('')
@@ -27,6 +37,14 @@ export const ExpEntry = ({ D, t, onClose, onSave, group, members, uid, recurring
   const [showSuggestions, setShowSuggestions] = useState(true)
   const [isProPerso, setIsProPerso] = useState(false)
   const catO = CATS_E.find(c => c.n === cat) || CATS_E[0]
+
+  const amountRef = useRef<HTMLInputElement>(null)
+
+  // Historique chargé après montage → réappliquer le défaut tant que l'utilisateur n'a pas choisi
+  useEffect(() => { if (!catTouched) setCat(defaultCat) }, [defaultCat, catTouched])
+
+  // Ouvre le clavier direct sur le montant
+  useEffect(() => { amountRef.current?.focus() }, [])
 
   const memory = useMemo(() => buildMerchantMemory(allHistory || []), [allHistory])
   const suggestions = showSuggestions ? searchMerchants(note, memory, 4) : []
@@ -44,6 +62,7 @@ export const ExpEntry = ({ D, t, onClose, onSave, group, members, uid, recurring
   const applySuggestion = (s: any) => {
     setNote(s.name)
     setCat(s.cat || 'Courses')
+    setCatTouched(true)
     const accExists = D.accounts.find(a => a.id === s.accId)
     if (accExists) setSelectedAccId(s.accId)
     setShowSuggestions(false)
@@ -245,7 +264,7 @@ export const ExpEntry = ({ D, t, onClose, onSave, group, members, uid, recurring
             <span style={{fontSize:20,...sp('m',300),color:t.sub}}> €</span>
             <span style={{fontSize:42,...sp('m',300),color:t.mintText,animation:'blink 1s infinite',lineHeight:1}}>|</span>
           </div>
-          <input type="number" min="0" step="0.01" value={amount} onChange={e=>setAmount(e.target.value)}
+          <input ref={amountRef} type="number" inputMode="decimal" min="0" step="0.01" autoFocus value={amount} onChange={e=>setAmount(e.target.value)}
             style={{position:'absolute',opacity:0,width:'100%',height:'100%',top:0,left:0,cursor:'pointer'}}/>
         </div>
         {/* Champ note + suggestions marchands */}
@@ -320,7 +339,7 @@ export const ExpEntry = ({ D, t, onClose, onSave, group, members, uid, recurring
           <div style={{fontSize:11,...sp('s',600),color:t.sub,letterSpacing:.6,textTransform:'uppercase',marginBottom:6}}>Catégorie</div>
           <div style={{maxHeight:160,overflowY:'auto',borderRadius:12,border:'1px solid '+t.bo}}>
             {CATS_E.map((c,i)=>(
-              <button key={c.n} onClick={()=>setCat(c.n)} style={{
+              <button key={c.n} onClick={()=>{setCat(c.n);setCatTouched(true)}} style={{
                 display:'flex',alignItems:'center',gap:10,width:'100%',padding:'9px 12px',
                 background:cat===c.n?c.col+'18':i%2===0?t.card:t.el+'88',
                 border:'none',borderBottom:i<CATS_E.length-1?'1px solid '+t.bo:'none',
