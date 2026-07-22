@@ -38,6 +38,8 @@ export type PendingOp =
       uid: string
       account_id: string
       txs: { merchant: string; category: string; icon?: string; amount: number; tx_date: string }[]
+      // Pas de solde autoritaire en file : un rejeu différé pourrait poser un
+      // solde périmé. Le rejeu retombe sur le delta (cf. ImportUniversal).
     }
 
 /** Format legacy des entrées mises en file AVANT l'outbox : uniquement des

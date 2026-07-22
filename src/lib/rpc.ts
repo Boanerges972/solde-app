@@ -83,6 +83,19 @@ export function rpcImportBatch(p: {
   }) as unknown as Promise<RpcResult>
 }
 
+/** Import CSV/relevé : dédup par multiplicité + solde AUTORITAIRE optionnel.
+ *  Si `bankBalance` est fourni (colonne « Solde » du relevé), il POSE le solde
+ *  du compte dessus (le relevé fait foi) ; sinon delta comme l'import legacy. */
+export function rpcImportCsv(p: {
+  operationId: string; accountId: string
+  txs: { merchant: string; category: string; icon?: string; amount: number; tx_date: string }[]
+  bankBalance: number | null
+}): Promise<RpcResult> {
+  return db.rpc('rpc_import_csv', {
+    p_operation_id: p.operationId, p_account_id: p.accountId, p_txs: p.txs, p_bank_balance: p.bankBalance,
+  }) as unknown as Promise<RpcResult>
+}
+
 /** Synchro bancaire ATOMIQUE (Open Banking) : dédup EXACTE par external_id
  *  (sans toucher le solde par delta) + pose du solde = snapshot banque, dans une
  *  seule transaction. `bankBalance: null` → le solde n'est pas modifié. */

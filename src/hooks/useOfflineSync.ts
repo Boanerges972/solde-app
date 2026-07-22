@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { loadQueue, removeFromQueue, updateQueueEntry } from '../lib/idb'
 import type { PendingEntry, PendingOp } from '../lib/idb'
-import { newOpId, rpcAddTx, rpcTransfer, rpcImportBatch } from '../lib/rpc'
+import { newOpId, rpcAddTx, rpcTransfer, rpcImportCsv } from '../lib/rpc'
 import type { AppData, Transaction } from '../types'
 
 export interface OfflineSyncState {
@@ -51,8 +51,10 @@ async function replayOp(op: PendingOp): Promise<{ message: string } | null> {
         txDate: op.tx_date, note: op.note,
       })).error
     case 'import':
-      return (await rpcImportBatch({
-        operationId: op.operation_id, accountId: op.account_id, txs: op.txs,
+      // Rejeu = delta (bankBalance null) : le solde autoritaire n'est jamais mis
+      // en file, un rejeu différé pourrait poser une valeur périmée.
+      return (await rpcImportCsv({
+        operationId: op.operation_id, accountId: op.account_id, txs: op.txs, bankBalance: null,
       })).error
   }
 }

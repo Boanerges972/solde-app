@@ -5,10 +5,11 @@ import { fmt } from '../../lib/currency'
 import { Ic } from '../../components/Icon'
 import { detectAndParseFile, SUPPORTED_BANKS } from '../../lib/parsers/index'
 import { hashAB, getStoredHashes, saveHashes, parseNickelPDF } from '../../lib/parsers/nickel'
+import { extractClosingBalance, type ClosingBalance } from '../../lib/parsers/closingBalance'
 import type { ParsedTx } from '../../lib/parsers/index'
 import { iconForCat } from '../../lib/parsers/categories'
 import { matchRule, type MerchantRule } from '../../lib/merchantRules'
-import { newOpId, isNetworkError, rpcImportBatch } from '../../lib/rpc'
+import { newOpId, isNetworkError, rpcImportCsv } from '../../lib/rpc'
 import { friendlyError } from '../../lib/errors'
 import { enqueue } from '../../lib/idb'
 import type { Theme, Account } from '../../types'
@@ -33,6 +34,32 @@ const eq = (x: string, y: string) => !!x && x === y
 const sub = (x: string, y: string) => x.length >= 3 && y.length >= 3 && (x.includes(y) || y.includes(x))
 
 const txKey = (tx: ParsedTx) => `${tx.dt}|${tx.amount.toFixed(2)}|${tx.merchant}`
+
+/** Décide si le solde de clôture du relevé peut être POSÉ comme solde autoritaire,
+ *  ou s'il faut retomber sur l'accumulation par delta (retourne null).
+ *
+ *  Poser un solde absolu n'est sûr que si le relevé décrit l'état COMPLET et le
+ *  plus RÉCENT du compte. On refuse sinon (findings Codex) :
+ *   - `allSelected` faux : des lignes décochées → le solde ne correspondrait pas
+ *     aux transactions importées.
+ *   - `closing.date !== allMaxDt` : un fichier plus récent (sans colonne Solde)
+ *     apporte des opérations postérieures → le snapshot serait périmé.
+ *   - `closing.date < accountLatestDt` : le relevé est plus ancien que des
+ *     opérations déjà en base → on n'écrase pas le solde actuel par un ancien.
+ *  Exporté pour test. */
+export function safeBankBalance(p: {
+  closing: ClosingBalance | null
+  allMaxDt: string
+  allSelected: boolean
+  accountLatestDt: string | null
+}): number | null {
+  const { closing, allMaxDt, allSelected, accountLatestDt } = p
+  if (!closing) return null
+  if (!allSelected) return null
+  if (closing.date !== allMaxDt) return null
+  if (accountLatestDt && closing.date < accountLatestDt) return null
+  return closing.balance
+}
 
 /** Fusionne les lignes de plusieurs fichiers d'un même import.
  *  Deux relevés peuvent SE CHEVAUCHER (mêmes opérations dans les deux). On
@@ -71,6 +98,11 @@ export function matchAccount(accounts: Account[], bankDef: { id: string; name: s
 export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, onCreateAccount }: Props) => {
   const [step, setStep] = useState<'upload' | 'preview' | 'done'>('upload')
   const [txs, setTxs] = useState<ParsedTx[]>([])
+  // Solde de clôture lu dans le relevé (colonne « Solde ») + sa date, et la date
+  // max des opérations importées. Servent à décider (safeBankBalance) si on POSE
+  // le solde (la banque fait foi) ou si on retombe sur le delta.
+  const [closing, setClosing] = useState<ClosingBalance | null>(null)
+  const [allMaxDt, setAllMaxDt] = useState('')
   const [selected, setSelected] = useState<Record<number, boolean>>({})
   // accId '' = mode « créer un nouveau compte ». Sinon = importer dans ce compte.
   const [accId, setAccId] = useState('')
@@ -115,6 +147,11 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
       const dups: string[] = []
       const freshHashes: string[] = []
       const storedHashes = isNickel ? new Set(getStoredHashes(uid)) : null
+      // Solde de clôture le plus récent (colonne Solde de la ligne à la date
+      // max) + date max de TOUTES les opérations (tous fichiers), pour vérifier
+      // qu'aucun fichier plus récent n'apporte d'opérations postérieures au solde.
+      let best: ClosingBalance | null = null
+      let maxDt = ''
 
       for (let f = 0; f < files.length; f++) {
         const file = files[f]
@@ -126,13 +163,23 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
             continue
           }
           freshHashes.push(hash)
-          perFile.push(await parseNickelPDF(ab))
+          const parsed = await parseNickelPDF(ab)
+          perFile.push(parsed)
+          for (const tx of parsed) if (tx.dt > maxDt) maxDt = tx.dt
         } else {
-          perFile.push(await detectAndParseFile(file, bank))
+          const parsed = await detectAndParseFile(file, bank)
+          perFile.push(parsed)
+          for (const tx of parsed) if (tx.dt > maxDt) maxDt = tx.dt
+          try {
+            const c = extractClosingBalance(await file.text())
+            if (c && (!best || c.date >= best.date)) best = c
+          } catch { /* fichier binaire : pas de colonne Solde */ }
         }
       }
       setDupFileNames(dups)
       setPendingHashes(freshHashes)
+      setClosing(best)
+      setAllMaxDt(maxDt)
 
       // Fusion des fichiers : gère le chevauchement SANS écraser les vraies
       // occurrences multiples d'une même opération (cf. mergeParsedFiles).
@@ -191,11 +238,28 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
       merchant: tx.merchant, category: tx.category, icon: tx.icon,
       amount: tx.amount, tx_date: tx.dt,
     }))
-    const { data, error } = await rpcImportBatch({ operationId: opId, accountId: accId, txs: rows })
+    // Solde autoritaire seulement si le relevé est complet ET plus récent que ce
+    // qui est déjà en base (cf. safeBankBalance). Si on ne PEUT PAS lire la
+    // fraîcheur (erreur DB), on NE pose PAS : fraîcheur inconnue = fail-closed.
+    const allSelected = toImport.length === txs.length
+    let bankBalance: number | null = null
+    if (allSelected && closing) {
+      const { data: latest, error: latestErr } = await db.from('transactions')
+        .select('tx_date').eq('account_id', accId).order('tx_date', { ascending: false }).limit(1).maybeSingle()
+      if (!latestErr) {
+        const accountLatestDt = latest ? ((latest as { tx_date: string }).tx_date) : null
+        bankBalance = safeBankBalance({ closing, allMaxDt, allSelected, accountLatestDt })
+      }
+    }
+    const { data, error } = await rpcImportCsv({ operationId: opId, accountId: accId, txs: rows, bankBalance })
     if (error) {
       if (!isNetworkError(error)) { setErr(friendlyError(error)); setLoading(false); return }
       // Réponse perdue : l'import a peut-être été commité. File d'attente avec
       // LE MÊME opId → le rejeu ne réimportera pas une seconde fois.
+      // NB : on NE met PAS le solde autoritaire en file. Un rejeu différé
+      // pourrait poser un solde devenu périmé (des opérations ayant pu arriver
+      // entre-temps). Le rejeu retombe donc sur le delta ; le solde se réaligne
+      // au prochain import complet en ligne.
       const queued = await enqueue({
         op: { kind: 'import', operation_id: opId, uid, account_id: accId, txs: rows },
         timestamp: Date.now(), retries: 0,
@@ -228,7 +292,8 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
     if (!toImport.length) { setCreateErr('Sélectionne au moins une transaction'); setLoading(false); return }
 
     const newId = newAccName.trim().toLowerCase().replace(/\s+/g, '_') + '_' + uid.slice(0, 6) + '_' + Math.random().toString(36).slice(2, 6)
-    // Compte créé à 0 : le solde vient du delta appliqué par rpc_import_batch.
+    // Compte créé à 0 : le solde vient du relevé (colonne Solde) si présent,
+    // sinon du delta appliqué par rpc_import_csv.
     const { error } = await db.from('accounts').insert({
       id: newId, name: newAccName.trim(), short_name: newAccName.trim().slice(0, 4),
       balance: 0, free: 0, type: newAccType, color: newAccColor, user_id: uid, reserved: 0,
@@ -242,8 +307,10 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
       merchant: tx.merchant, category: tx.category, icon: tx.icon,
       amount: tx.amount, tx_date: tx.dt,
     }))
-    const { data: impData, error: impErr } = await rpcImportBatch({
-      operationId: impOpId, accountId: newId, txs: rows,
+    // Compte neuf : aucune opération préexistante, donc accountLatestDt = null.
+    const bankBalance = safeBankBalance({ closing, allMaxDt, allSelected: toImport.length === txs.length, accountLatestDt: null })
+    const { data: impData, error: impErr } = await rpcImportCsv({
+      operationId: impOpId, accountId: newId, txs: rows, bankBalance,
     })
     if (impErr) {
       if (isNetworkError(impErr)) {
@@ -251,6 +318,7 @@ export const ImportUniversal = ({ t, uid, accounts, bank, onClose, onImported, o
         // supprimer le compte (il contiendrait déjà les transactions). On met
         // l'import en file avec le MÊME opId → le rejeu sera un no-op s'il a
         // déjà eu lieu, sinon il passera. Le compte reste, c'est le bon état.
+        // Solde autoritaire non mis en file (cf. doImport) : rejeu = delta.
         const queued = await enqueue({
           op: { kind: 'import', operation_id: impOpId, uid, account_id: newId, txs: rows },
           timestamp: Date.now(), retries: 0,
