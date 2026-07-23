@@ -214,6 +214,10 @@ export function useData(uid: string | null) {
         scheduleLoad)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'weekly_budgets', filter: 'user_id=eq.' + uid },
         scheduleLoad)
+      // acc.debits est dérivé de next_debits : recharger quand un récurrent change,
+      // sinon le compte de prélèvements (écran Comptes) reste obsolète.
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'next_debits', filter: 'user_id=eq.' + uid },
+        scheduleLoad)
       .subscribe()
     return () => {
       if (timer) clearTimeout(timer)
