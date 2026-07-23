@@ -14,7 +14,7 @@ export const calcARD = (accounts: Account[], recurrings: Recurring[], days = 31)
     status: 'danger' | 'warning' | 'ok'
   }> = {}
   accounts.forEach(acc => {
-    const debits = recurrings.filter(r => r.account_id === acc.id).map(r => {
+    const debits = recurrings.filter(r => r.account_id === acc.id && r.kind !== 'credit').map(r => {
       const dayOfMonth = parseInt(r.date_label || '1', 10)
       const next = new Date(today.getFullYear(), today.getMonth(), dayOfMonth)
       if (next < today) next.setMonth(next.getMonth() + 1)

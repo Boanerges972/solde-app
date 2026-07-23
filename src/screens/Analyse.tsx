@@ -222,13 +222,13 @@ export const Analyse = ({ D, t, allTxs, allHistory, recurrings }: Props) => {
         {activeTab === 'prel' && (
           <div style={{ background: t.card, borderRadius: 20, padding: '18px', marginBottom: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid ' + t.bo }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: t.tx, marginBottom: 16 }}>Prélèvements récurrents</div>
-            {(recurrings || []).length === 0 ? (
+            {(recurrings || []).filter(r => r.kind !== 'credit').length === 0 ? (
               <div style={{ textAlign: 'center', padding: '20px 0', color: t.muted, fontSize: 13 }}>
                 Aucun prélèvement configuré
               </div>
             ) : (
               <>
-                {(recurrings || []).map(r => {
+                {(recurrings || []).filter(r => r.kind !== 'credit').map(r => {
                   const acc = D.accounts.find(a => a.id === r.account_id)
                   return (
                     <div key={r.id} style={{
@@ -253,7 +253,7 @@ export const Analyse = ({ D, t, allTxs, allHistory, recurrings }: Props) => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 14, paddingTop: 12, borderTop: '1px solid ' + t.bo }}>
                   <span style={{ fontSize: 13, fontWeight: 600, color: t.tx }}>Total mensuel</span>
                   <span style={{ fontSize: 14, fontWeight: 700, color: '#FFA726', fontFamily: 'IBM Plex Mono, monospace' }}>
-                    −{(recurrings || []).reduce((s, r) => s + parseFloat(String(r.amount) || '0'), 0).toFixed(2).replace('.', ',')} €
+                    −{(recurrings || []).filter(r => r.kind !== 'credit').reduce((s, r) => s + parseFloat(String(r.amount) || '0'), 0).toFixed(2).replace('.', ',')} €
                   </span>
                 </div>
               </>

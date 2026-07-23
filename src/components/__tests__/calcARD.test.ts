@@ -39,6 +39,13 @@ describe('calcARD', () => {
     expect(result['a1'].committed).toBe(0)
   })
 
+  it('exclut les revenus (kind credit) du committed', () => {
+    const salaire: Recurring = { ...makeRecurring('a1', 1650, '02'), kind: 'credit' }
+    const result = calcARD([makeAccount('a1', 1000)], [salaire], 31)
+    expect(result['a1'].committed).toBe(0)
+    expect(result['a1'].ard).toBe(1000) // bal 1000 + overdraft 0 - committed 0
+  })
+
   it('committed < balance → status ok', () => {
     const result = calcARD(
       [makeAccount('a1', 500)],

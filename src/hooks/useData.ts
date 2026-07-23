@@ -87,7 +87,7 @@ export function useData(uid: string | null) {
         isPro: a.type === 'Pro',
         // Découvert autorisé (stocké en localStorage, positif = montant autorisé)
         overdraft: parseFloat(localStorage.getItem('qdq-od-' + a.id) || '0'),
-        debits: ((r4.data || []) as any[]).filter(d => d.account_id === a.id).map(d => ({ n: d.name, d: d.date_label, a: parseFloat(d.amount) })),
+        debits: ((r4.data || []) as any[]).filter(d => d.account_id === a.id && d.kind !== 'credit').map(d => ({ n: d.name, d: d.date_label, a: parseFloat(d.amount) })),
       }))
       const proAccIds = new Set(accs.filter(a => a.isPro).map(a => a.id))
       const txs: Transaction[] = ((r2.data || []) as any[]).map(tx => ({

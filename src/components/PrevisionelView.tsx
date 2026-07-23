@@ -49,10 +49,12 @@ export const PrevisionelView = ({ t, recurrings, accounts }: Props) => {
 
   const [selectedAccId, setSelectedAccId] = useState<string>('all')
 
-  // Filter recurrings by selected account
+  // Vue dédiée aux prélèvements : exclure les revenus récurrents (kind credit),
+  // sinon un salaire serait soustrait du prévisionnel et affiché en négatif.
+  const debitRecurrings = (recurrings || []).filter(r => r.kind !== 'credit')
   const filteredRecurrings = selectedAccId === 'all'
-    ? (recurrings || [])
-    : (recurrings || []).filter(r => r.account_id === selectedAccId)
+    ? debitRecurrings
+    : debitRecurrings.filter(r => r.account_id === selectedAccId)
 
   if (!recurrings || recurrings.length === 0) {
     return (

@@ -64,8 +64,9 @@ export const Home = ({
   const cats = D.cats || []
   const depensesCats = cats.filter(c => c.amt > 0)
 
-  /* Aperçu: prélèvements total */
-  const totalPrel = recurrings.reduce((s, r) => s + parseFloat(String(r.amount || 0)), 0)
+  /* Aperçu: prélèvements total (débits seulement, hors revenus récurrents) */
+  const debitRecurrings = recurrings.filter(r => r.kind !== 'credit')
+  const totalPrel = debitRecurrings.reduce((s, r) => s + parseFloat(String(r.amount || 0)), 0)
 
   /* Pill style helper */
   const pillStyle = (active: boolean): React.CSSProperties => ({
@@ -338,17 +339,17 @@ export const Home = ({
           {/* Tab: Prélèvements */}
           {apercuTab === 'prel' && (
             <div>
-              {recurrings.length === 0 ? (
+              {debitRecurrings.length === 0 ? (
                 <div style={{ fontSize: 13, ...sp('s', 400), color: t.muted, textAlign: 'center', padding: '20px 0' }}>
                   Aucun prélèvement configuré
                 </div>
               ) : (
                 <>
-                  {recurrings.slice(0, 5).map((r, i) => (
+                  {debitRecurrings.slice(0, 5).map((r, i) => (
                     <div key={r.id} style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                       padding: '8px 0',
-                      borderBottom: i < Math.min(recurrings.length, 5) - 1 ? `1px solid ${t.bo}` : 'none',
+                      borderBottom: i < Math.min(debitRecurrings.length, 5) - 1 ? `1px solid ${t.bo}` : 'none',
                     }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 13, ...sp('s', 600), color: t.tx,

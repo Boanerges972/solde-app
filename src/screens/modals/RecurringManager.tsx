@@ -31,8 +31,10 @@ export const RecurringManager = ({ t, accounts, recurrings, allHistory, onAdd, o
   const detected=useMemo(()=>[...detectedDebits,...detectedIncome],[detectedDebits,detectedIncome]);
 
   // Déjà dans next_debits ? (pour éviter doublons dans détectés)
-  const existingNames=new Set(recurrings.map(r=>r.name?.toUpperCase().trim().substring(0,25)));
-  const newDetected=detected.filter(d=>!existingNames.has(d.key));
+  // Identité = sens + nom normalisé : un débit confirmé ne doit pas masquer un
+  // crédit détecté homonyme (ni l'inverse), et les clés ne doivent pas entrer en collision.
+  const existingNames=new Set(recurrings.map(r=>(r.kind==='credit'?'credit':'debit')+':'+(r.name?.toUpperCase().trim().substring(0,25))));
+  const newDetected=detected.filter(d=>!existingNames.has(d.kind+':'+d.key));
   const confirmedDetected=newDetected.filter(d=>d.confidence==='confirmed');
   const probableDetected=newDetected.filter(d=>d.confidence==='probable');
   const watchingDetected=newDetected.filter(d=>d.confidence==='watching');
@@ -247,9 +249,10 @@ export const RecurringManager = ({ t, accounts, recurrings, allHistory, onAdd, o
                 {group.items.map((d)=>{
                   const conf=CONF_LABEL[d.confidence];
                   const acc=accounts.find(a=>a.id===d.topAcc);
-                  const isAdding=addingKey===d.key;
+                  const dkey=d.kind+':'+d.key;
+                  const isAdding=addingKey===dkey;
                   return(
-                    <div key={d.key} style={{marginBottom:8,borderRadius:16,
+                    <div key={dkey} style={{marginBottom:8,borderRadius:16,
                       background:t.el,overflow:'hidden',
                       border:'1px solid '+(d.confidence==='confirmed'?t.mint+'33':t.bo)}}>
                       {/* Ligne principale */}
@@ -295,7 +298,7 @@ export const RecurringManager = ({ t, accounts, recurrings, allHistory, onAdd, o
                             borderRight:'1px solid '+t.bo+'66'}}>
                           ✓ Ajouter aux prélèvements
                         </button>
-                        <button onClick={()=>setAddingKey(isAdding?null:d.key)}
+                        <button onClick={()=>setAddingKey(isAdding?null:dkey)}
                           style={{padding:'10px 14px',background:'none',border:'none',
                             cursor:'pointer',fontSize:11,...sp('o'),color:t.sub}}>
                           ✎
@@ -308,22 +311,22 @@ export const RecurringManager = ({ t, accounts, recurrings, allHistory, onAdd, o
                           <div style={{display:'flex',gap:8}}>
                             <div style={{flex:1}}>
                               <div style={{fontSize:10,...sp('o'),color:t.muted,marginBottom:4}}>Montant</div>
-                              <input type="number" defaultValue={d.avg.toFixed(2)} id={'amt-'+d.key}
+                              <input type="number" defaultValue={d.avg.toFixed(2)} id={'amt-'+dkey}
                                 style={{width:'100%',padding:'8px 10px',background:t.el,
                                   border:'1px solid '+t.bo,borderRadius:10,...sp('m'),
                                   fontSize:14,color:t.dangerText,outline:'none'}}/>
                             </div>
                             <div style={{flex:1}}>
                               <div style={{fontSize:10,...sp('o'),color:t.muted,marginBottom:4}}>Jour</div>
-                              <input type="number" min="1" max="31" defaultValue={d.typicalDay} id={'day-'+d.key}
+                              <input type="number" min="1" max="31" defaultValue={d.typicalDay} id={'day-'+dkey}
                                 style={{width:'100%',padding:'8px 10px',background:t.el,
                                   border:'1px solid '+t.bo,borderRadius:10,...sp('m'),
                                   fontSize:14,color:t.tx,outline:'none'}}/>
                             </div>
                           </div>
                           <button onClick={()=>{
-                            const amtEl=document.getElementById('amt-'+d.key) as HTMLInputElement|null;
-                            const dayEl=document.getElementById('day-'+d.key) as HTMLInputElement|null;
+                            const amtEl=document.getElementById('amt-'+dkey) as HTMLInputElement|null;
+                            const dayEl=document.getElementById('day-'+dkey) as HTMLInputElement|null;
                             const accExists=accounts.find(a=>a.id===d.topAcc);
                             save({
                               name:d.name,

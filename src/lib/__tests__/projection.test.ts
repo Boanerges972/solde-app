@@ -77,6 +77,18 @@ describe('projectBalance', () => {
     expect(pts[pts.length - 1].balance).toBeCloseTo(500 - 30, 0)
   })
 
+  it('un revenu récurrent ne retire pas une dépense homonyme de la moyenne', () => {
+    // recNames (noms des récurrents exclus de la moyenne variable) ne doit
+    // contenir QUE des débits. Un crédit récurrent homonyme d'une dépense ne
+    // doit pas faire disparaître cette dépense de la moyenne (projection trop
+    // optimiste sinon). Dépense ACME −30 sur 30j couverts → 1 €/j.
+    const recs: ProjRecurring[] = [{ name: 'ACME', amount: 1650, day: 2, kind: 'credit' }]
+    const txs = [tx('2026-06-16', -30, 'ACME')]
+    const pts = projectBalance(500, recs, txs, 30, NOW)
+    // −30 (dépense comptée) + 1650 (salaire le 2 août, dans l'horizon)
+    expect(pts[pts.length - 1].balance).toBeCloseTo(500 - 30 + 1650, 0)
+  })
+
   it('divise par la période RÉELLEMENT couverte, pas par 90 en dur', () => {
     // Compte récent : 30 € dépensés sur 30 jours d'historique = 1 €/jour.
     // L'ancien code divisait par 90 → 0,33 €/jour, soit une projection 3x trop

@@ -61,7 +61,9 @@ function dueDay(day: number, d: Date): number {
 function avgDailyVariable(txs: Transaction[], recurrings: ProjRecurring[], now: Date): number {
   const from = iso(addDays(now, -WINDOW_DAYS))
   const today = iso(now)
-  const recNames = new Set(recurrings.map(r => r.name.trim().toLowerCase()))
+  // Seuls les DÉBITS excluent leur homonyme de la moyenne variable : un crédit
+  // récurrent (salaire) ne doit pas faire disparaître une dépense de même nom.
+  const recNames = new Set(recurrings.filter(r => r.kind !== 'credit').map(r => r.name.trim().toLowerCase()))
 
   // Bornée des DEUX côtés : une opération datée dans le futur (import erroné,
   // saisie fautive) gonflerait le total et, en devenant la « plus ancienne »,
