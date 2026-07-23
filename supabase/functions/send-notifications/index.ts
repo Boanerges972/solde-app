@@ -62,9 +62,10 @@ Deno.serve(async (req: Request) => {
   for (const [uid, userSubs] of byUser) {
     // 1) Rappels prélèvements J-2
     const targetDay = new Date(now.getTime() + 2 * 86400000).getDate()
-    const { data: recs } = await db.from('next_debits').select('name,amount,date_label').eq('user_id', uid)
+    const { data: recs } = await db.from('next_debits').select('name,amount,date_label,kind').eq('user_id', uid)
     for (const r of recs || []) {
       if (dayFromLabel(r.date_label) !== targetDay) continue
+      if (r.kind === 'credit') continue   // v1 : pas de notif pour les revenus
       for (const s of userSubs.filter(s => s.prefs?.recurring !== false)) {
         if (await send(s, {
           title: 'Prélèvement dans 2 jours',
