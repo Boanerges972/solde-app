@@ -56,7 +56,7 @@ export function scoreAccounts(
   const results: AccountScore[] = targets.map(acc => {
     // Calcul committed : prélèvements récurrents dus dans 31j
     const committed = recurrings
-      .filter(r => r.account_id === acc.id)
+      .filter(r => r.account_id === acc.id && r.kind !== 'credit')
       .reduce((sum, r) => {
         const dayOfMonth = parseInt(String(r.date_label || '1'), 10)
         const next = new Date(today.getFullYear(), today.getMonth(), dayOfMonth)

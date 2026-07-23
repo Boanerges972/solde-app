@@ -156,4 +156,16 @@ describe('scoreAccounts', () => {
     const results = scoreAccounts([acc], [], 50, D, [])
     expect(results[0].breakdown.budget).toBe(0)
   })
+
+  it('excludes recurring income (kind=credit) from committed', () => {
+    // Un recurring de type 'credit' (salaire) ne doit jamais compter comme un prélèvement
+    const acc = mkAcc({ id: 'a1' })
+    const rec: Recurring = {
+      id: 'r1', user_id: 'u', account_id: 'a1',
+      name: 'Salaire', amount: 1650, date_label: '02', kind: 'credit',
+    }
+    const D = mkD({ accounts: [acc], persoAccs: [acc] })
+    const scored = scoreAccounts([acc], [rec], 50, D, [])
+    expect(scored[0].committed).toBe(0)
+  })
 })
