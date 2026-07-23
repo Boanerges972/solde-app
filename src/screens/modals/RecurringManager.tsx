@@ -110,7 +110,7 @@ export const RecurringManager = ({ t, accounts, recurrings, allHistory, onAdd, o
         {tab!=='add'&&(
           <div style={{display:'flex',background:t.el,borderRadius:14,padding:3,marginBottom:14}}>
             {([
-              ['confirmed','Confirmés',sorted.length],
+              ['confirmed','Confirmés',recurrings.length],
               ['detected','Détectés',newDetected.length],
             ] as [string, string, number][]).map(([id,lb,count])=>(
               <button key={id} onClick={()=>setTab(id)}
@@ -146,7 +146,7 @@ export const RecurringManager = ({ t, accounts, recurrings, allHistory, onAdd, o
               )}
             </div>
 
-            {sorted.length===0?(
+            {recurrings.length===0?(
               <div style={{padding:'32px 0',textAlign:'center'}}>
                 <div style={{fontSize:36,marginBottom:10}}>📋</div>
                 <div style={{fontSize:14,...sp('o',500),color:t.sub}}>Aucun prélèvement confirmé</div>
