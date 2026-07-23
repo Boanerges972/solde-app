@@ -6,7 +6,11 @@ import { detectRecurrings } from '../../lib/detectRecurrings'
 
 interface Props {
   t: Theme; accounts: Account[]; recurrings: Recurring[]
-  allHistory: Transaction[]; onAdd: (r: any) => Promise<any>
+  allHistory: Transaction[]
+  onAdd: (r: {
+    account_id: string; name: string; amount: number | string; date_label: string
+    kind?: 'debit' | 'credit'
+  }) => Promise<any>
   onDelete: (id: string) => Promise<void>; onUpdate: (id: string, fields: any) => Promise<void>
   onClose: () => void
 }
@@ -22,7 +26,9 @@ export const RecurringManager = ({ t, accounts, recurrings, allHistory, onAdd, o
   const[addingKey,setAddingKey]=useState<string|null>(null); // clé du détecté en cours d'ajout
 
   // Calcul détection
-  const detected=useMemo(()=>detectRecurrings(allHistory||[],2),[allHistory]);
+  const detectedDebits=useMemo(()=>detectRecurrings(allHistory||[],2,'debit'),[allHistory]);
+  const detectedIncome=useMemo(()=>detectRecurrings(allHistory||[],2,'credit'),[allHistory]);
+  const detected=useMemo(()=>[...detectedDebits,...detectedIncome],[detectedDebits,detectedIncome]);
 
   // Déjà dans next_debits ? (pour éviter doublons dans détectés)
   const existingNames=new Set(recurrings.map(r=>r.name?.toUpperCase().trim().substring(0,25)));
@@ -31,8 +37,12 @@ export const RecurringManager = ({ t, accounts, recurrings, allHistory, onAdd, o
   const probableDetected=newDetected.filter(d=>d.confidence==='probable');
   const watchingDetected=newDetected.filter(d=>d.confidence==='watching');
 
-  const totalMonthly=recurrings.reduce((s,r)=>s+parseFloat(String(r.amount||0)),0);
-  const sorted=[...recurrings].sort((a,b)=>parseInt(String(a.date_label||0))-parseInt(String(b.date_label||0)));
+  const debitsConfirmes=[...recurrings].filter(r=>r.kind!=='credit')
+    .sort((a,b)=>parseInt(String(a.date_label||0))-parseInt(String(b.date_label||0)));
+  const revenusConfirmes=[...recurrings].filter(r=>r.kind==='credit')
+    .sort((a,b)=>parseInt(String(a.date_label||0))-parseInt(String(b.date_label||0)));
+  const sorted=debitsConfirmes;
+  const totalMonthly=debitsConfirmes.reduce((s,r)=>s+parseFloat(String(r.amount||0)),0);
 
   const save=async(overrides: any={})=>{
     const n=overrides.name||name.trim();
@@ -41,7 +51,7 @@ export const RecurringManager = ({ t, accounts, recurrings, allHistory, onAdd, o
     const acc=overrides.accId||accId;
     if(!n||!a||!acc){setErr('Remplis tous les champs');return;}
     setSaving(true);setErr('');
-    const e=await onAdd({name:n,amount:a,date_label:String(d).padStart(2,'0'),account_id:acc});
+    const e=await onAdd({name:n,amount:a,date_label:String(d).padStart(2,'0'),account_id:acc,kind:overrides.kind||'debit'});
     setSaving(false);
     if(e){setErr(e.message);}
     else{setTab('confirmed');setName('');setAmount('');setAddingKey(null);}
@@ -53,6 +63,7 @@ export const RecurringManager = ({ t, accounts, recurrings, allHistory, onAdd, o
     await save({
       name:d.name,amount:parseFloat(d.avg.toFixed(2)),
       dayOfMonth:d.typicalDay,accId:accExists?d.topAcc:accounts[0]?.id||'',
+      kind:d.kind,
     });
   };
 
@@ -168,6 +179,37 @@ export const RecurringManager = ({ t, accounts, recurrings, allHistory, onAdd, o
                 </div>
               );
             })}
+
+            {revenusConfirmes.length>0&&(
+              <>
+                <div style={{fontSize:11,...sp('s',600),color:t.sub,letterSpacing:.6,
+                  textTransform:'uppercase',margin:'18px 0 8px'}}>Revenus récurrents</div>
+                {revenusConfirmes.map((r)=>{
+                  const acc=accounts.find(a=>a.id===r.account_id);
+                  return(
+                    <div key={r.id} style={{display:'flex',alignItems:'center',gap:12,
+                      padding:'12px 14px',background:t.el,borderRadius:14,marginBottom:8}}>
+                      <div style={{width:38,height:38,borderRadius:12,flexShrink:0,
+                        background:t.mint+'22',display:'flex',alignItems:'center',
+                        justifyContent:'center',fontSize:17}}>💰</div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:13,...sp('o',600),color:t.tx,overflow:'hidden',
+                          textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.name}</div>
+                        <div style={{fontSize:11,...sp('o'),color:t.sub}}>
+                          le {r.date_label} du mois{acc?' · '+acc.name:''}
+                        </div>
+                      </div>
+                      <span style={{fontSize:13,...sp('m',600),color:t.mintText}}>
+                        +{parseFloat(String(r.amount)).toLocaleString('fr-FR',{minimumFractionDigits:2})} €
+                      </span>
+                      <button onClick={()=>onDelete(r.id)}
+                        style={{background:'none',border:'none',cursor:'pointer',
+                          fontSize:15,color:t.muted,padding:0,flexShrink:0}}>✕</button>
+                    </div>
+                  )
+                })}
+              </>
+            )}
           </>
         )}
 
@@ -288,6 +330,7 @@ export const RecurringManager = ({ t, accounts, recurrings, allHistory, onAdd, o
                               amount:parseFloat(amtEl?.value||String(d.avg)),
                               dayOfMonth:parseInt(dayEl?.value||String(d.typicalDay)),
                               accId:accExists?d.topAcc:accounts[0]?.id||'',
+                              kind:d.kind,
                             });
                           }}
                             style={{padding:'10px',background:t.primary,border:'none',
