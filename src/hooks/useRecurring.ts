@@ -25,14 +25,16 @@ export function useRecurring(uid: string | null) {
 
   const addRecurring = async (r: {
     account_id: string; name: string; amount: number | string; date_label: string
+    kind?: 'debit' | 'credit'
   }) => {
-    // Colonnes existantes dans next_debits : user_id, account_id, name, amount, date_label
+    // Colonnes next_debits : user_id, account_id, name, amount, date_label, kind
     const { error } = await db.from('next_debits').insert({
       user_id: uid,
       account_id: r.account_id,
       name: r.name,
       amount: Math.abs(parseFloat(String(r.amount))),
       date_label: r.date_label,
+      kind: r.kind || 'debit',
     })
     if (!error) await load()
     return error
