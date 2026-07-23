@@ -30,7 +30,12 @@ export const ProjectionChart = ({ t, accounts, recurrings, txs }: Props) => {
 
   const projRecs: ProjRecurring[] = useMemo(() =>
     (recurrings || [])
-      .map(r => ({ name: r.name, amount: Math.abs(parseFloat(String(r.amount)) || 0), day: dayFromLabel(r.date_label) }))
+      .map(r => ({
+        name: r.name,
+        amount: Math.abs(parseFloat(String(r.amount)) || 0),
+        day: dayFromLabel(r.date_label),
+        kind: r.kind === 'credit' ? 'credit' as const : 'debit' as const,
+      }))
       .filter(r => r.amount > 0),
     [recurrings])
 
