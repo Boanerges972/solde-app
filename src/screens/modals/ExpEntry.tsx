@@ -48,6 +48,7 @@ export const ExpEntry = ({ D, t, onClose, onSave, group, members, uid, recurring
 
   const memory = useMemo(() => buildMerchantMemory(allHistory || []), [allHistory])
   const suggestions = showSuggestions ? searchMerchants(note, memory, 4) : []
+  const debitRecurrings = (recurrings || []).filter(r => r.kind !== 'credit')
 
   const scores = useMemo(() => {
     const n = parseFloat((amount || '0').replace(',', '.'))
@@ -423,7 +424,7 @@ export const ExpEntry = ({ D, t, onClose, onSave, group, members, uid, recurring
           </div>
         )}
         {/* Lien prélèvements */}
-        {scores.length > 0 && recurrings && recurrings.length > 0 && (
+        {scores.length > 0 && debitRecurrings.length > 0 && (
           <div style={{ marginBottom: 16 }}>
             <button
               onClick={() => setShowDebits(d => !d)}
@@ -434,10 +435,10 @@ export const ExpEntry = ({ D, t, onClose, onSave, group, members, uid, recurring
             {showDebits && (
               <div style={{ marginTop: 10, borderRadius: 14, border: '1px solid ' + t.bo,
                 background: t.card, overflow: 'hidden' }}>
-                {recurrings.slice(0, 6).map((r, i) => (
+                {debitRecurrings.slice(0, 6).map((r, i) => (
                   <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between',
                     alignItems: 'center', padding: '10px 14px',
-                    borderBottom: i < recurrings.slice(0, 6).length - 1 ? '1px solid ' + t.bo : 'none' }}>
+                    borderBottom: i < debitRecurrings.slice(0, 6).length - 1 ? '1px solid ' + t.bo : 'none' }}>
                     <div>
                       <div style={{ fontSize: 13, fontWeight: 500, color: t.tx }}>{r.name}</div>
                       <div style={{ fontSize: 11, color: t.sub }}>le {r.date_label} du mois</div>
