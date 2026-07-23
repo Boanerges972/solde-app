@@ -282,8 +282,8 @@ export const RecurringManager = ({ t, accounts, recurrings, allHistory, onAdd, o
                           </div>
                         </div>
                         <div style={{textAlign:'right',flexShrink:0}}>
-                          <div style={{fontSize:13,...sp('m',600),color:t.dangerText,lineHeight:1}}>
-                            ~{fmt(d.avg,2)}
+                          <div style={{fontSize:13,...sp('m',600),color:d.kind==='credit'?t.mintText:t.dangerText,lineHeight:1}}>
+                            {d.kind==='credit'?'+':'~'}{fmt(d.avg,2)}
                           </div>
                           <div style={{fontSize:9,...sp('o'),color:t.muted,marginTop:2}}>
                             /mois
@@ -296,7 +296,7 @@ export const RecurringManager = ({ t, accounts, recurrings, allHistory, onAdd, o
                           style={{flex:1,padding:'10px',background:'none',border:'none',
                             cursor:'pointer',fontSize:12,...sp('o',600),color:t.mintText,
                             borderRight:'1px solid '+t.bo+'66'}}>
-                          ✓ Ajouter aux prélèvements
+                          ✓ {d.kind==='credit'?'Ajouter aux revenus':'Ajouter aux prélèvements'}
                         </button>
                         <button onClick={()=>setAddingKey(isAdding?null:dkey)}
                           style={{padding:'10px 14px',background:'none',border:'none',
@@ -314,7 +314,7 @@ export const RecurringManager = ({ t, accounts, recurrings, allHistory, onAdd, o
                               <input type="number" defaultValue={d.avg.toFixed(2)} id={'amt-'+dkey}
                                 style={{width:'100%',padding:'8px 10px',background:t.el,
                                   border:'1px solid '+t.bo,borderRadius:10,...sp('m'),
-                                  fontSize:14,color:t.dangerText,outline:'none'}}/>
+                                  fontSize:14,color:d.kind==='credit'?t.mintText:t.dangerText,outline:'none'}}/>
                             </div>
                             <div style={{flex:1}}>
                               <div style={{fontSize:10,...sp('o'),color:t.muted,marginBottom:4}}>Jour</div>
