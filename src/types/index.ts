@@ -63,6 +63,7 @@ export interface Recurring {
   id: string; user_id: string; account_id: string
   name: string; amount: string | number; date_label: string
   icon?: string
+  kind?: 'debit' | 'credit'
 }
 
 export interface DetectedRecurring {
@@ -71,6 +72,7 @@ export interface DetectedRecurring {
   consecutive: number; consecutiveRate: number; isRegularAmt: boolean
   confidence: 'confirmed' | 'probable' | 'watching'
   lastDate: string; txs: Transaction[]
+  kind: 'debit' | 'credit'
 }
 
 export interface Group {

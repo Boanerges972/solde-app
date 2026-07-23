@@ -3,8 +3,9 @@ import { isoLocal, addDaysLocal, isCalendarDate } from './dates'
 
 export interface ProjRecurring {
   name: string
-  amount: number   // valeur positive = montant prélevé
+  amount: number   // valeur positive = montant du flux
   day: number      // jour du mois (1-31)
+  kind?: 'debit' | 'credit'  // défaut debit
 }
 
 export interface ProjPoint {
@@ -103,7 +104,11 @@ export function projectBalance(
       const dayOfMonth = d.getDate()
       // Un prélèvement au 31 ne doit pas DISPARAÎTRE des mois plus courts :
       // il est débité le dernier jour du mois (30 en avril, 28/29 en février).
-      recurrings.forEach(r => { if (dueDay(r.day, d) === dayOfMonth) bal -= r.amount })
+      recurrings.forEach(r => {
+        if (dueDay(r.day, d) === dayOfMonth) {
+          bal += r.kind === 'credit' ? r.amount : -r.amount
+        }
+      })
     }
     points.push({ date: iso(d), balance: Math.round(bal * 100) / 100 })
   }

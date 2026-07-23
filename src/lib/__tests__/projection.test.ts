@@ -44,6 +44,32 @@ describe('projectBalance', () => {
     expect(minPoint.balance).toBe(100)
   })
 
+  it('ajoute un revenu (kind credit) à sa date', () => {
+    const recs: ProjRecurring[] = [{ name: 'Salaire', amount: 1650, day: 2, kind: 'credit' }]
+    const pts = projectBalance(1000, recs, [], 30, NOW)
+    const before = pts.find(p => p.date === '2026-08-01')!
+    const after = pts.find(p => p.date === '2026-08-02')!
+    expect(after.balance - before.balance).toBe(1650)
+  })
+
+  it('mélange débit et crédit sur le même horizon', () => {
+    const recs: ProjRecurring[] = [
+      { name: 'Loyer', amount: 750, day: 5, kind: 'debit' },
+      { name: 'Salaire', amount: 1650, day: 2, kind: 'credit' },
+    ]
+    const pts = projectBalance(1000, recs, [], 30, NOW)
+    const last = pts[pts.length - 1]
+    expect(last.balance).toBe(1000 + 1650 - 750)
+  })
+
+  it('un récurrent sans kind est traité comme un débit (rétrocompat)', () => {
+    const recs: ProjRecurring[] = [{ name: 'Loyer', amount: 750, day: 20 }]
+    const pts = projectBalance(1000, recs, [], 30, NOW)
+    const before = pts.find(p => p.date === '2026-07-19')!
+    const after = pts.find(p => p.date === '2026-07-20')!
+    expect(before.balance - after.balance).toBe(750)
+  })
+
   it('les revenus (amt > 0) sont exclus de la moyenne des dépenses', () => {
     // 90 € de dépenses sur 90 jours → 1 €/jour ; le revenu ne doit rien changer.
     const txs = [tx('2026-04-17', -90), tx('2026-06-05', 2000)]
