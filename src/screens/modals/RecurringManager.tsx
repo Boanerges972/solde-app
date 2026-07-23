@@ -2,81 +2,13 @@ import { useState, useMemo } from 'react'
 import { sp } from '../../lib/theme'
 import { fmt } from '../../lib/currency'
 import type { Theme, Account, Recurring, Transaction, DetectedRecurring } from '../../types'
+import { detectRecurrings } from '../../lib/detectRecurrings'
 
 interface Props {
   t: Theme; accounts: Account[]; recurrings: Recurring[]
   allHistory: Transaction[]; onAdd: (r: any) => Promise<any>
   onDelete: (id: string) => Promise<void>; onUpdate: (id: string, fields: any) => Promise<void>
   onClose: () => void
-}
-
-function detectRecurrings(txs: Transaction[], minMonths = 2): DetectedRecurring[] {
-  // Ne garder que les dépenses (pas virements internes)
-  const debits = txs.filter(tx => tx.amt < 0 && tx.cat !== 'Virement interne' && tx.m);
-
-  // Normaliser le nom du marchand (upper, tronqué à 25 chars)
-  const norm = (s: string) => s.toUpperCase().replace(/\s+/g, ' ').trim().substring(0, 25);
-
-  // Regrouper par marchand normalisé
-  const map: Record<string, { name: string; key: string; txs: Transaction[]; months: Set<string>; accounts: Record<string, number> }> = {};
-  debits.forEach(tx => {
-    const key = norm(tx.m);
-    if (!map[key]) map[key] = { name: tx.m, key, txs: [], months: new Set(), accounts: {} };
-    const ym = tx.tx_date ? tx.tx_date.substring(0, 7) : '';
-    if (ym) map[key].months.add(ym);
-    map[key].txs.push(tx);
-    // compte le plus fréquent pour ce marchand
-    const aid = tx.acc || '';
-    map[key].accounts[aid] = (map[key].accounts[aid] || 0) + 1;
-  });
-
-  return Object.values(map)
-    .filter(g => g.months.size >= minMonths)
-    .map(g => {
-      const months = [...g.months].sort();
-      const nMonths = g.months.size;
-      // Montant moyen et écart-type
-      const amts = g.txs.map(tx => Math.abs(tx.amt));
-      const avg = amts.reduce((s, a) => s + a, 0) / amts.length;
-      const std = Math.sqrt(amts.map(a => (a - avg) ** 2).reduce((s, v) => s + v, 0) / amts.length);
-      const isRegularAmt = std / avg < 0.15; // <15% d'écart → montant stable
-
-      // Jour du mois le plus fréquent
-      const days = g.txs.map(tx => tx.tx_date ? parseInt(tx.tx_date.split('-')[2]) : 1);
-      const dayFreq: Record<number, number> = {};
-      days.forEach(d => dayFreq[d] = (dayFreq[d] || 0) + 1);
-      const typicalDay = parseInt(Object.entries(dayFreq).sort(([, a], [, b]) => b - a)[0][0]);
-
-      // Compte le plus souvent débité
-      const topAcc = Object.entries(g.accounts).sort(([, a], [, b]) => b - a)[0][0];
-
-      // Vérifier la consécutivité des mois (mois manquants ?)
-      let consecutive = 0;
-      for (let i = 1; i < months.length; i++) {
-        const [y1, m1] = months[i - 1].split('-').map(Number);
-        const [y2, m2] = months[i].split('-').map(Number);
-        const diff = (y2 - y1) * 12 + (m2 - m1);
-        if (diff === 1) consecutive++;
-      }
-      const consecutiveRate = months.length > 1 ? consecutive / (months.length - 1) : 0;
-
-      // Score de confiance
-      let confidence: 'confirmed' | 'probable' | 'watching';
-      if (nMonths >= 6 && consecutiveRate >= 0.8 && isRegularAmt) confidence = 'confirmed';
-      else if (nMonths >= 6 || (nMonths >= 3 && consecutiveRate >= 0.6)) confidence = 'probable';
-      else confidence = 'watching';
-
-      return {
-        name: g.name, key: g.key, nMonths, avg, std, typicalDay,
-        topAcc, consecutive, consecutiveRate, isRegularAmt, confidence,
-        lastDate: months[months.length - 1], txs: g.txs,
-      };
-    })
-    .filter(g => g.confidence !== 'watching' || g.nMonths >= 3)
-    .sort((a, b) => {
-      const rank: Record<string, number> = { confirmed: 0, probable: 1, watching: 2 };
-      return rank[a.confidence] - rank[b.confidence] || b.nMonths - a.nMonths;
-    });
 }
 
 export const RecurringManager = ({ t, accounts, recurrings, allHistory, onAdd, onDelete, onUpdate, onClose }: Props) => {
